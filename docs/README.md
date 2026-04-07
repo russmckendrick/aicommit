@@ -12,6 +12,7 @@ This folder is the detailed documentation entry point for `aic`, the Rust CLI fo
 - [Architecture](architecture.md): understand the Rust modules and data flow.
 - [Testing](testing.md): run the verification suite.
 - [Roadmap](roadmap.md): see deferred v1 items.
+- [Release Notes](releases/0.0.1.md): review the 0.0.1 release notes.
 
 ## Workflow Map
 
