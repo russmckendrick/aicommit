@@ -34,3 +34,32 @@ async fn openai_compatible_engine_reads_chat_response() {
 
     assert_eq!(response, "feat: add cli");
 }
+
+#[tokio::test]
+async fn azure_openai_engine_uses_api_key_header() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/openai/v1/chat/completions"))
+        .and(header("api-key", "key"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "choices": [
+                { "message": { "content": "feat: add azure openai" } }
+            ]
+        })))
+        .mount(&server)
+        .await;
+
+    let config = Config {
+        ai_provider: "azure-openai".to_owned(),
+        api_key: Some("key".to_owned()),
+        api_url: Some(format!("{}/openai/v1", server.uri())),
+        ..Config::default()
+    };
+    let engine = OpenAiCompatEngine::new(config).unwrap();
+    let response = engine
+        .generate_commit_message(&[ChatMessage::user("diff")])
+        .await
+        .unwrap();
+
+    assert_eq!(response, "feat: add azure openai");
+}

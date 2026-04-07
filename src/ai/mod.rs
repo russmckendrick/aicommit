@@ -2,12 +2,8 @@ use anyhow::{Result, bail};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    ai::{ollama::OllamaEngine, openai_compat::OpenAiCompatEngine},
-    config::Config,
-};
+use crate::{ai::openai_compat::OpenAiCompatEngine, config::Config};
 
-pub mod ollama;
 pub mod openai_compat;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -46,14 +42,11 @@ pub trait AiEngine: Send + Sync {
 
 pub fn engine_from_config(config: &Config) -> Result<Box<dyn AiEngine>> {
     match config.ai_provider.as_str() {
-        "ollama" => Ok(Box::new(OllamaEngine::new(config.clone()))),
-        "openai" | "groq" | "deepseek" | "openrouter" | "aimlapi" => {
-            Ok(Box::new(OpenAiCompatEngine::new(config.clone())?))
-        }
+        "openai" | "azure-openai" => Ok(Box::new(OpenAiCompatEngine::new(config.clone())?)),
         "test" => Ok(Box::new(TestEngine)),
-        unsupported => bail!(
-            "provider '{unsupported}' is planned but not implemented in this v1 build; use openai, groq, deepseek, openrouter, aimlapi, ollama, or test"
-        ),
+        unsupported => {
+            bail!("provider '{unsupported}' is not supported; use openai or azure-openai")
+        }
     }
 }
 

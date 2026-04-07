@@ -4,7 +4,7 @@ Deferred from v1:
 
 - GitHub Action support for rewriting pushed commit messages.
 - Commitlint-style config inference.
-- Native provider payloads for Anthropic, Gemini, Mistral, Azure, and Flowise.
+- Optional support for additional OpenAI API features as the CLI grows.
 - Broader language prompt examples.
 - Shell completion generation.
 - Release packaging for common package managers.

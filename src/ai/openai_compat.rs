@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ai::{AiEngine, ChatMessage},
-    config::{Config, provider_base_url},
+    config::Config,
     errors::normalize_provider_error,
     prompt::remove_content_tags,
     token::count_messages,
@@ -55,11 +55,15 @@ impl OpenAiCompatEngine {
         }
 
         let client = builder.build()?;
-        let base_url = config
-            .api_url
-            .clone()
-            .or_else(|| provider_base_url(&config.ai_provider).map(str::to_owned))
-            .unwrap_or_else(|| "https://api.openai.com/v1".to_owned());
+        let base_url = match config.ai_provider.as_str() {
+            "azure-openai" => config.api_url.clone().context(
+                "AIC_API_URL is required for Azure OpenAI; use https://<resource>.openai.azure.com/openai/v1",
+            )?,
+            _ => config
+                .api_url
+                .clone()
+                .unwrap_or_else(|| "https://api.openai.com/v1".to_owned()),
+        };
 
         Ok(Self {
             config,
@@ -103,17 +107,15 @@ impl AiEngine for OpenAiCompatEngine {
         let mut request = self.client.post(self.chat_url()).json(&payload);
 
         if let Some(api_key) = &self.config.api_key {
-            request = request.bearer_auth(api_key);
+            request = if self.config.ai_provider == "azure-openai" {
+                request.header("api-key", api_key)
+            } else {
+                request.bearer_auth(api_key)
+            };
         }
 
         for (key, value) in &self.config.api_custom_headers {
             request = request.header(key, value);
-        }
-
-        if self.config.ai_provider == "openrouter" || self.config.ai_provider == "aimlapi" {
-            request = request
-                .header("HTTP-Referer", "https://github.com/aicommit/aicommit")
-                .header("X-Title", "aicommit");
         }
 
         let response = request.send().await.context("failed to call AI provider")?;

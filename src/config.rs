@@ -164,7 +164,7 @@ impl Config {
     }
 
     pub fn provider_needs_api_key(&self) -> bool {
-        !matches!(self.ai_provider.as_str(), "ollama" | "test")
+        !matches!(self.ai_provider.as_str(), "test")
     }
 }
 
@@ -178,69 +178,22 @@ pub fn global_model_cache_path() -> Result<PathBuf> {
 
 pub fn default_model_for_provider(provider: &str) -> &'static str {
     match provider {
-        "anthropic" => "claude-sonnet-4-20250514",
-        "groq" => "llama3-70b-8192",
-        "mistral" => "mistral-small-latest",
-        "deepseek" => "deepseek-chat",
-        "openrouter" => "openai/gpt-5.4-mini",
-        "aimlapi" => "gpt-5.4-mini",
-        "ollama" => "mistral",
+        "azure-openai" => "gpt-5.4-mini",
         _ => "gpt-5.4-mini",
     }
 }
 
-pub fn provider_base_url(provider: &str) -> Option<&'static str> {
-    match provider {
-        "groq" => Some("https://api.groq.com/openai/v1"),
-        "deepseek" => Some("https://api.deepseek.com/v1"),
-        "openrouter" => Some("https://openrouter.ai/api/v1"),
-        "aimlapi" => Some("https://api.aimlapi.com/v1"),
-        _ => None,
-    }
-}
-
 pub fn supported_providers() -> &'static [&'static str] {
-    &[
-        "openai",
-        "ollama",
-        "groq",
-        "deepseek",
-        "openrouter",
-        "aimlapi",
-        "anthropic",
-        "gemini",
-        "mistral",
-        "azure",
-        "flowise",
-        "test",
-    ]
+    &["openai", "azure-openai"]
 }
 
 pub fn enabled_providers() -> &'static [&'static str] {
-    &[
-        "openai",
-        "ollama",
-        "groq",
-        "deepseek",
-        "openrouter",
-        "aimlapi",
-    ]
+    supported_providers()
 }
 
 pub fn model_list(provider: &str) -> &'static [&'static str] {
     match provider {
-        "ollama" => &["mistral", "llama3:8b"],
-        "groq" => &["llama3-70b-8192", "llama3-8b-8192", "gemma2-9b-it"],
-        "deepseek" => &["deepseek-chat", "deepseek-reasoner"],
-        "openrouter" => &[
-            "openai/gpt-5.4-mini",
-            "openai/gpt-5.4",
-            "anthropic/claude-sonnet-4",
-        ],
-        "aimlapi" => &["gpt-5.4-mini", "openai/gpt-5.4", "google/gemini-2.5-flash"],
-        "anthropic" => &["claude-sonnet-4-20250514", "claude-opus-4-20250514"],
-        "gemini" => &["gemini-1.5-flash", "gemini-1.5-pro"],
-        "mistral" => &["mistral-small-latest", "mistral-large-latest"],
+        "azure-openai" => &["gpt-5.4-mini", "gpt-5.4", "gpt-5.4-nano"],
         _ => &["gpt-5.4-mini", "gpt-5.4", "gpt-5.4-nano"],
     }
 }
@@ -252,7 +205,10 @@ pub fn config_descriptions() -> HashMap<&'static str, &'static str> {
             "AI provider to use for commit generation",
         ),
         ("AIC_API_KEY", "API key for the selected provider"),
-        ("AIC_API_URL", "Custom provider API URL"),
+        (
+            "AIC_API_URL",
+            "Custom provider API URL; required for Azure OpenAI",
+        ),
         (
             "AIC_API_CUSTOM_HEADERS",
             "JSON object of custom HTTP headers",
@@ -394,7 +350,12 @@ fn apply_value(config: &mut Config, key: &str, value: &str) -> Result<()> {
     }
 
     match key {
-        "AIC_AI_PROVIDER" => config.ai_provider = value.to_lowercase(),
+        "AIC_AI_PROVIDER" => {
+            config.ai_provider = match value.to_lowercase().as_str() {
+                "azure" => "azure-openai".to_owned(),
+                provider => provider.to_owned(),
+            }
+        }
         "AIC_API_KEY" => config.api_key = optional_string(value),
         "AIC_API_URL" => config.api_url = optional_string(value),
         "AIC_API_CUSTOM_HEADERS" => {
@@ -471,10 +432,20 @@ fn parse_headers(value: &str) -> Result<BTreeMap<String, String>> {
 }
 
 fn validate_config(config: &Config) -> Result<()> {
-    if !supported_providers().contains(&config.ai_provider.as_str()) {
+    if !supported_providers().contains(&config.ai_provider.as_str())
+        && config.ai_provider.as_str() != "test"
+    {
         bail!(AicError::InvalidConfigValue {
             key: "AIC_AI_PROVIDER".to_owned(),
             message: format!("supported values: {}", supported_providers().join(", ")),
+        });
+    }
+
+    if config.ai_provider == "azure-openai" && config.api_url.is_none() {
+        bail!(AicError::InvalidConfigValue {
+            key: "AIC_API_URL".to_owned(),
+            message: "required for Azure OpenAI; use https://<resource>.openai.azure.com/openai/v1"
+                .to_owned(),
         });
     }
 

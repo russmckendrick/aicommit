@@ -69,6 +69,8 @@ AIC_EMOJI=true
 
 `AIC_DESCRIPTION` and `AIC_EMOJI` default to `true` for new configs.
 
+For Azure OpenAI, set `AIC_AI_PROVIDER=azure-openai`, set `AIC_API_URL` to your Azure OpenAI v1 endpoint, and use your deployment name as `AIC_MODEL`.
+
 ## Prompt Template
 
 The default system prompt template lives at `prompts/commit-system.md`.

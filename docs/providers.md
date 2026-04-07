@@ -4,28 +4,22 @@ V1 ships with these provider paths:
 
 ```text
 openai
-groq
-deepseek
-openrouter
-aimlapi
-ollama
-test
+azure-openai
 ```
 
-`openai`, `groq`, `deepseek`, `openrouter`, and `aimlapi` use the OpenAI-compatible chat-completions wire format.
+Both providers use the OpenAI chat-completions wire format.
 
 ```mermaid
 flowchart TD
-    Config["AIC_AI_PROVIDER"] --> OpenAICompat{"OpenAI-compatible?"}
-    OpenAICompat -->|Yes| Chat["Chat completions request"]
-    OpenAICompat -->|No| Ollama{"Ollama?"}
-    Ollama -->|Yes| Local["Local Ollama chat API"]
-    Ollama -->|No| Error["Unsupported in v1"]
+    Config["AIC_AI_PROVIDER"] --> Provider{"Provider"}
+    Provider -->|openai| OpenAI["OpenAI API"]
+    Provider -->|azure-openai| Azure["Azure OpenAI v1 API"]
+    OpenAI --> Chat["Chat completions request"]
+    Azure --> Chat
     Chat --> Result["Generated commit message"]
-    Local --> Result
 ```
 
-Configure OpenAI-compatible providers:
+Configure OpenAI:
 
 ```sh
 aic config set AIC_AI_PROVIDER=openai AIC_API_KEY=<key> AIC_MODEL=gpt-5.4-mini
@@ -39,20 +33,20 @@ Use a custom compatible endpoint:
 aic config set AIC_AI_PROVIDER=openai AIC_API_URL=https://example.com/v1
 ```
 
-Configure Ollama:
+Configure Azure OpenAI:
 
 ```sh
-aic config set AIC_AI_PROVIDER=ollama AIC_API_URL=http://localhost:11434 AIC_MODEL=mistral
+aic config set AIC_AI_PROVIDER=azure-openai AIC_API_KEY=<key> AIC_API_URL=https://<resource>.openai.azure.com/openai/v1 AIC_MODEL=<deployment-name>
 ```
+
+For Azure OpenAI, `AIC_MODEL` is the deployment name used by your Azure OpenAI resource. `AIC_API_URL` must point at the Azure OpenAI v1 base URL.
 
 List cached or fallback models:
 
 ```sh
 aic models
 aic models --refresh
-aic models --provider ollama
+aic models --provider azure-openai
 ```
 
 The model cache is stored at `~/.aicommit-models.json` and uses a 7-day TTL.
-
-Anthropic, Gemini, Mistral-native, Azure, and Flowise are represented as planned provider names but are not enabled in this v1 provider implementation.

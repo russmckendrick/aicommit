@@ -25,7 +25,7 @@ flowchart LR
     Generator --> Prompt["src/prompt.rs"]
     Generator --> Token["src/token.rs"]
     Generator --> Ai["src/ai"]
-    Ai --> Provider["OpenAI-compatible or Ollama"]
+    Ai --> Provider["OpenAI or Azure OpenAI"]
 ```
 
 Provider implementations use an `AiEngine` trait that accepts normalized chat messages and returns a commit message string. This keeps the commit flow independent of provider-specific HTTP payloads.

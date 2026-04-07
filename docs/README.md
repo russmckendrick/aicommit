@@ -7,7 +7,7 @@ This folder is the detailed documentation entry point for `aic`, the Rust CLI fo
 - [Installation](installation.md): build and install the `aic` binary.
 - [Usage](usage.md): run the commit-message workflow and pass Git flags through.
 - [Configuration](configuration.md): set provider, model, prompt, token, hook, and output behavior.
-- [Providers](providers.md): choose OpenAI-compatible providers or Ollama.
+- [Providers](providers.md): choose OpenAI or Azure OpenAI.
 - [Hooks](hooks.md): install or remove the Git `prepare-commit-msg` hook.
 - [Architecture](architecture.md): understand the Rust modules and data flow.
 - [Testing](testing.md): run the verification suite.
@@ -28,4 +28,3 @@ flowchart TD
     I -->|Yes| J["git push"]
     I -->|No| K["Done"]
 ```
-

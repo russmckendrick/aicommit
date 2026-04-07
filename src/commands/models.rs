@@ -4,12 +4,12 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::{Config, global_model_cache_path, model_list},
+    config::{Config, global_model_cache_path, model_list, supported_providers},
     ui,
 };
 
@@ -24,6 +24,13 @@ struct ModelCache {
 pub async fn run(provider: Option<String>, refresh: bool) -> Result<()> {
     let config = Config::load()?;
     let provider = provider.unwrap_or_else(|| config.ai_provider.clone());
+    if !supported_providers().contains(&provider.as_str()) {
+        bail!(
+            "unsupported provider '{provider}'; supported values: {}",
+            supported_providers().join(", ")
+        );
+    }
+
     let cache_path = global_model_cache_path()?;
     let mut cache = read_cache(&cache_path).unwrap_or_default();
 
@@ -66,10 +73,33 @@ pub async fn run(provider: Option<String>, refresh: bool) -> Result<()> {
 
 async fn fetch_models(provider: &str, config: &Config) -> Result<Vec<String>> {
     match provider {
-        "openai" => fetch_openai_models("https://api.openai.com/v1/models", config).await,
-        "groq" => fetch_openai_models("https://api.groq.com/openai/v1/models", config).await,
-        "deepseek" => fetch_openai_models("https://api.deepseek.com/v1/models", config).await,
-        "ollama" => fetch_ollama_models(config).await,
+        "openai" => {
+            let base = config
+                .api_url
+                .as_deref()
+                .unwrap_or("https://api.openai.com/v1");
+            fetch_openai_models(
+                provider,
+                &format!("{}/models", base.trim_end_matches('/')),
+                config,
+            )
+            .await
+        }
+        "azure-openai" => {
+            if let Some(base) = config.api_url.as_deref() {
+                fetch_openai_models(
+                    provider,
+                    &format!("{}/models", base.trim_end_matches('/')),
+                    config,
+                )
+                .await
+            } else {
+                Ok(model_list(provider)
+                    .iter()
+                    .map(|model| model.to_string())
+                    .collect())
+            }
+        }
         _ => Ok(model_list(provider)
             .iter()
             .map(|model| model.to_string())
@@ -77,7 +107,7 @@ async fn fetch_models(provider: &str, config: &Config) -> Result<Vec<String>> {
     }
 }
 
-async fn fetch_openai_models(url: &str, config: &Config) -> Result<Vec<String>> {
+async fn fetch_openai_models(provider: &str, url: &str, config: &Config) -> Result<Vec<String>> {
     #[derive(Debug, Deserialize)]
     struct Response {
         data: Vec<Model>,
@@ -90,7 +120,11 @@ async fn fetch_openai_models(url: &str, config: &Config) -> Result<Vec<String>> 
 
     let mut request = Client::new().get(url);
     if let Some(api_key) = &config.api_key {
-        request = request.bearer_auth(api_key);
+        request = if provider == "azure-openai" {
+            request.header("api-key", api_key)
+        } else {
+            request.bearer_auth(api_key)
+        };
     }
     let response = request
         .send()
@@ -107,44 +141,10 @@ async fn fetch_openai_models(url: &str, config: &Config) -> Result<Vec<String>> 
                 || model.starts_with("o1")
                 || model.starts_with("o3")
                 || model.starts_with("o4")
-                || model.starts_with("deepseek")
-                || model.starts_with("llama")
-                || model.starts_with("gemma")
         })
         .collect::<Vec<_>>();
     models.sort();
     Ok(models)
-}
-
-async fn fetch_ollama_models(config: &Config) -> Result<Vec<String>> {
-    #[derive(Debug, Deserialize)]
-    struct Response {
-        models: Vec<Model>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    struct Model {
-        name: String,
-    }
-
-    let base = config
-        .api_url
-        .as_deref()
-        .unwrap_or("http://localhost:11434")
-        .trim_end_matches('/')
-        .to_owned();
-    let response = Client::new()
-        .get(format!("{base}/api/tags"))
-        .send()
-        .await?
-        .error_for_status()?
-        .json::<Response>()
-        .await?;
-    Ok(response
-        .models
-        .into_iter()
-        .map(|model| model.name)
-        .collect())
 }
 
 fn read_cache(path: &std::path::Path) -> Result<ModelCache> {

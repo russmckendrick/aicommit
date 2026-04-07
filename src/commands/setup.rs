@@ -22,11 +22,14 @@ pub async fn run() -> Result<()> {
         ),
     ];
 
-    if !matches!(provider.as_str(), "ollama") {
-        let api_key = ui::text("Enter your API key", None)?;
-        key_values.push(("AIC_API_KEY".to_owned(), api_key));
-    } else {
-        let api_url = ui::text("Ollama URL", Some("http://localhost:11434"))?;
+    let api_key = ui::text("Enter your API key", None)?;
+    key_values.push(("AIC_API_KEY".to_owned(), api_key));
+
+    if provider == "azure-openai" {
+        let api_url = ui::text(
+            "Azure OpenAI endpoint",
+            Some("https://<resource>.openai.azure.com/openai/v1"),
+        )?;
         key_values.push(("AIC_API_URL".to_owned(), api_url));
     }
 
