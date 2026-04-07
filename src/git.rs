@@ -23,21 +23,49 @@ const GIT_HOSTS_TOML: &str = include_str!("git_hosts.toml");
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GitProvider {
     label: Option<String>,
+    nerd_font_icon: Option<String>,
+    emoji_icon: Option<String>,
 }
 
 impl GitProvider {
     pub fn known(label: impl Into<String>) -> Self {
         Self {
             label: Some(label.into()),
+            nerd_font_icon: None,
+            emoji_icon: None,
+        }
+    }
+
+    pub fn known_with_icons(
+        label: impl Into<String>,
+        nerd_font_icon: Option<String>,
+        emoji_icon: Option<String>,
+    ) -> Self {
+        Self {
+            label: Some(label.into()),
+            nerd_font_icon,
+            emoji_icon,
         }
     }
 
     pub fn unknown() -> Self {
-        Self { label: None }
+        Self {
+            label: None,
+            nerd_font_icon: None,
+            emoji_icon: None,
+        }
     }
 
     pub fn label(&self) -> Option<&str> {
         self.label.as_deref()
+    }
+
+    pub fn nerd_font_icon(&self) -> Option<&str> {
+        self.nerd_font_icon.as_deref()
+    }
+
+    pub fn emoji_icon(&self) -> Option<&str> {
+        self.emoji_icon.as_deref()
     }
 }
 
@@ -85,6 +113,8 @@ struct GitHostConfig {
 #[derive(Debug, Deserialize)]
 struct GitHostProvider {
     label: String,
+    nerd_font_icon: Option<String>,
+    emoji_icon: Option<String>,
     #[serde(default)]
     hosts: Vec<String>,
     #[serde(default)]
@@ -272,7 +302,13 @@ fn remote_url_info(url: &str) -> Option<RemoteUrlInfo> {
     let (host, path) = remote_url_host_and_path(url)?;
     let provider_config = provider_for_host(&host);
     let provider = provider_config
-        .map(|provider| GitProvider::known(provider.label.clone()))
+        .map(|provider| {
+            GitProvider::known_with_icons(
+                provider.label.clone(),
+                provider.nerd_font_icon.clone(),
+                provider.emoji_icon.clone(),
+            )
+        })
         .unwrap_or_else(GitProvider::unknown);
     let web_url = web_url_for_remote(&host, &path, provider_config);
 

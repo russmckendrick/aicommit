@@ -3,18 +3,26 @@
 
 [[providers]]
 label = "GitHub"
+nerd_font_icon = ""
+emoji_icon = "🐙"
 hosts = ["github.com"]
 
 [[providers]]
 label = "Bitbucket"
+nerd_font_icon = ""
+emoji_icon = "🪣"
 hosts = ["bitbucket.org"]
 
 [[providers]]
 label = "GitLab"
+nerd_font_icon = ""
+emoji_icon = "🦊"
 hosts = ["gitlab.com"]
 
 [[providers]]
 label = "Azure DevOps"
+nerd_font_icon = ""
+emoji_icon = "☁"
 hosts = ["dev.azure.com", "ssh.dev.azure.com"]
 host_suffixes = [".visualstudio.com"]
 
