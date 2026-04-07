@@ -12,6 +12,7 @@ aic
 
 Detailed documentation lives in `docs/`:
 
+- [Documentation Home](docs/README.md)
 - [Installation](docs/installation.md)
 - [Usage](docs/usage.md)
 - [Configuration](docs/configuration.md)

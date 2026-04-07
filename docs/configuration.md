@@ -7,6 +7,14 @@
 3. Local `.env`
 4. Process environment variables
 
+```mermaid
+flowchart LR
+    Defaults["Built-in defaults"] --> Global["~/.aicommit"]
+    Global --> Local["Local .env"]
+    Local --> Env["Process environment"]
+    Env --> Runtime["Resolved runtime config"]
+```
+
 Set global values:
 
 ```sh

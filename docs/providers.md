@@ -14,6 +14,17 @@ test
 
 `openai`, `groq`, `deepseek`, `openrouter`, and `aimlapi` use the OpenAI-compatible chat-completions wire format.
 
+```mermaid
+flowchart TD
+    Config["AIC_AI_PROVIDER"] --> OpenAICompat{"OpenAI-compatible?"}
+    OpenAICompat -->|Yes| Chat["Chat completions request"]
+    OpenAICompat -->|No| Ollama{"Ollama?"}
+    Ollama -->|Yes| Local["Local Ollama chat API"]
+    Ollama -->|No| Error["Unsupported in v1"]
+    Chat --> Result["Generated commit message"]
+    Local --> Result
+```
+
 Configure OpenAI-compatible providers:
 
 ```sh
