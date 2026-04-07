@@ -55,9 +55,11 @@ Example local `.env`:
 ```env
 AIC_AI_PROVIDER=openai
 AIC_MODEL=gpt-5.4-mini
-AIC_DESCRIPTION=false
-AIC_EMOJI=false
+AIC_DESCRIPTION=true
+AIC_EMOJI=true
 ```
+
+`AIC_DESCRIPTION` and `AIC_EMOJI` default to `true` for new configs.
 
 ## Prompt Template
 
@@ -76,6 +78,7 @@ Prompt templates can use these placeholders:
 {{body_instruction}}
 {{line_mode_instruction}}
 {{scope_instruction}}
+{{style_examples}}
 {{language}}
 {{context_instruction}}
 ```

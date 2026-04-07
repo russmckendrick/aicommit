@@ -43,7 +43,7 @@ pub fn system_prompt(config: &Config, full_gitmoji_spec: bool, context: &str) ->
     };
 
     let body_instruction = if config.description {
-        "After the subject, add one blank line and a concise body explaining why the change matters."
+        "After the subject, add one blank line, then 2-4 tight bullet points. Each bullet should explain a meaningful change or why it matters. Do not repeat the subject."
     } else {
         "Return only the subject line. Do not add a body, bullet list, markdown, or explanation."
     };
@@ -51,7 +51,7 @@ pub fn system_prompt(config: &Config, full_gitmoji_spec: bool, context: &str) ->
     let line_mode_instruction = if config.one_line_commit {
         "Use exactly one concise subject line."
     } else {
-        "Prefer exactly one subject line. Add a body only when body output is explicitly enabled."
+        "Use a subject plus body when body output is enabled. Keep the body scannable and useful in GitHub's commit view."
     };
 
     let scope_instruction = if config.omit_scope {
@@ -75,8 +75,26 @@ pub fn system_prompt(config: &Config, full_gitmoji_spec: bool, context: &str) ->
         .replace("{{body_instruction}}", body_instruction)
         .replace("{{line_mode_instruction}}", line_mode_instruction)
         .replace("{{scope_instruction}}", scope_instruction)
+        .replace("{{style_examples}}", &style_examples(config))
         .replace("{{language}}", &config.language)
         .replace("{{context_instruction}}", &context_instruction))
+}
+
+fn style_examples(config: &Config) -> String {
+    let prompt_subject = if config.emoji {
+        "✨ feat(prompt): make commit generation prompt-driven and resilient"
+    } else {
+        "feat(prompt): make commit generation prompt-driven and resilient"
+    };
+    let diff_subject = if config.emoji {
+        "🐛 fix(diff): prevent oversized staged changes from aborting commits"
+    } else {
+        "fix(diff): prevent oversized staged changes from aborting commits"
+    };
+
+    format!(
+        "{prompt_subject}\n\n- Move the default system prompt into a reusable template\n- Teach generation to synthesize chunked diffs into one polished message\n- Document how to tune prompt behavior without rebuilding\n\n{diff_subject}\n\n- Split oversized diff lines instead of failing the whole generation flow\n- Raise the default input budget for newer OpenAI models"
+    )
 }
 
 fn prompt_template(config: &Config) -> Result<String> {
