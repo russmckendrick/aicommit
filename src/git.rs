@@ -218,7 +218,7 @@ pub fn remove_hook_if_owned(binary_path: &Path) -> Result<Option<PathBuf>> {
 
     let content = fs::read_to_string(&hook_path)?;
     if !content.contains(&binary_path.display().to_string()) || !content.contains("__hook-run") {
-        bail!("prepare-commit-msg already exists and is not managed by aicommit");
+        bail!("prepare-commit-msg already exists and is not managed by aic");
     }
 
     fs::remove_file(&hook_path)?;

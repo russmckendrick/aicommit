@@ -9,10 +9,6 @@ license = "MIT"
 name = "aic"
 path = "src/bin/aic.rs"
 
-[[bin]]
-name = "aicommit"
-path = "src/bin/aicommit.rs"
-
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"

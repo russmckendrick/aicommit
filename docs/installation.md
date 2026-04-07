@@ -10,7 +10,6 @@ The release binaries are:
 
 ```text
 target/release/aic
-target/release/aicommit
 ```
 
 Install locally with Cargo:

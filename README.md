@@ -1,17 +1,11 @@
 # aicommit
 
-`aicommit` is a Rust CLI for generating Git commit messages with AI.
+`aicommit` is a Rust project for generating Git commit messages with AI.
 
-Use the short command:
+Use the CLI:
 
 ```sh
 aic
-```
-
-or the full command:
-
-```sh
-aicommit
 ```
 
 ## Documentation

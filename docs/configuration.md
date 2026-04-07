@@ -1,6 +1,6 @@
 # Configuration
 
-`aicommit` reads configuration in this order:
+`aic` reads configuration in this order:
 
 1. Built-in defaults
 2. Global config at `~/.aicommit`

@@ -17,7 +17,7 @@ pub fn unset() -> Result<()> {
     let binary = current_binary()?;
     match git::remove_hook_if_owned(&binary)? {
         Some(path) => ui::success(format!("hook removed from {}", path.display())),
-        None => ui::info("no aicommit hook was set"),
+        None => ui::info("no aic hook was set"),
     }
     Ok(())
 }
@@ -48,7 +48,7 @@ pub async fn run_hook(message_file: String, commit_source: Option<String>) -> Re
         format!("{message}\n\n{existing}")
     } else {
         format!(
-            "# {message}\n\n# ---------- [aicommit] ---------- #\n# Remove the leading # above to use this generated message.\n# Close the editor without saving to cancel the commit.\n\n{existing}"
+            "# {message}\n\n# ---------- [aic] ---------- #\n# Remove the leading # above to use this generated message.\n# Close the editor without saving to cancel the commit.\n\n{existing}"
         )
     };
     fs::write(message_file, content)?;

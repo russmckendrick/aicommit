@@ -81,5 +81,5 @@ fn hook_run_writes_commented_message() {
 
     let content = fs::read_to_string(message_file).unwrap();
     assert!(content.contains("# feat: add generated commit message"));
-    assert!(content.contains("[aicommit]"));
+    assert!(content.contains("[aic]"));
 }

@@ -13,7 +13,7 @@ src/generator.rs        Prompt, chunking, and AI engine orchestration
 src/ai/                 Provider trait and provider implementations
 ```
 
-Two binaries, `aic` and `aicommit`, call the same shared library entrypoint.
+The `aic` binary calls the shared library entrypoint.
 
 Provider implementations use an `AiEngine` trait that accepts normalized chat messages and returns a commit message string. This keeps the commit flow independent of provider-specific HTTP payloads.
 
