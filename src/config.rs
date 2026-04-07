@@ -34,6 +34,7 @@ pub const CONFIG_KEYS: &[&str] = &[
     "AIC_ONE_LINE_COMMIT",
     "AIC_OMIT_SCOPE",
     "AIC_GITPUSH",
+    "AIC_REMOTE_ICON_STYLE",
     "AIC_HOOK_AUTO_UNCOMMENT",
 ];
 
@@ -55,6 +56,7 @@ pub struct Config {
     pub one_line_commit: bool,
     pub omit_scope: bool,
     pub gitpush: bool,
+    pub remote_icon_style: String,
     pub hook_auto_uncomment: bool,
 }
 
@@ -83,6 +85,7 @@ impl Default for Config {
             one_line_commit: false,
             omit_scope: false,
             gitpush: true,
+            remote_icon_style: "auto".to_owned(),
             hook_auto_uncomment: false,
         }
     }
@@ -150,6 +153,7 @@ impl Config {
             ("AIC_ONE_LINE_COMMIT", self.one_line_commit.to_string()),
             ("AIC_OMIT_SCOPE", self.omit_scope.to_string()),
             ("AIC_GITPUSH", self.gitpush.to_string()),
+            ("AIC_REMOTE_ICON_STYLE", self.remote_icon_style.clone()),
             (
                 "AIC_HOOK_AUTO_UNCOMMENT",
                 self.hook_auto_uncomment.to_string(),
@@ -228,6 +232,10 @@ pub fn config_descriptions() -> HashMap<&'static str, &'static str> {
         ("AIC_ONE_LINE_COMMIT", "Generate a single-line message"),
         ("AIC_OMIT_SCOPE", "Avoid conventional commit scopes"),
         ("AIC_GITPUSH", "Ask whether to push after committing"),
+        (
+            "AIC_REMOTE_ICON_STYLE",
+            "Remote host icon style for push prompts: auto, nerd-font, emoji, or label",
+        ),
         (
             "AIC_HOOK_AUTO_UNCOMMENT",
             "Write hook-generated messages uncommented",
@@ -375,6 +383,7 @@ fn apply_value(config: &mut Config, key: &str, value: &str) -> Result<()> {
         "AIC_ONE_LINE_COMMIT" => config.one_line_commit = parse_bool(key, value)?,
         "AIC_OMIT_SCOPE" => config.omit_scope = parse_bool(key, value)?,
         "AIC_GITPUSH" => config.gitpush = parse_bool(key, value)?,
+        "AIC_REMOTE_ICON_STYLE" => config.remote_icon_style = normalize_remote_icon_style(value)?,
         "AIC_HOOK_AUTO_UNCOMMENT" => config.hook_auto_uncomment = parse_bool(key, value)?,
         _ => unreachable!("all config keys are handled"),
     }
@@ -429,6 +438,20 @@ fn parse_headers(value: &str) -> Result<BTreeMap<String, String>> {
         }
         .into()
     })
+}
+
+fn normalize_remote_icon_style(value: &str) -> Result<String> {
+    match value.trim().to_lowercase().as_str() {
+        "auto" | "" => Ok("auto".to_owned()),
+        "nerd" | "nerd-font" | "nerdfont" => Ok("nerd-font".to_owned()),
+        "emoji" => Ok("emoji".to_owned()),
+        "label" | "labels" | "none" | "off" => Ok("label".to_owned()),
+        _ => Err(AicError::InvalidConfigValue {
+            key: "AIC_REMOTE_ICON_STYLE".to_owned(),
+            message: "expected auto, nerd-font, emoji, or label".to_owned(),
+        }
+        .into()),
+    }
 }
 
 fn validate_config(config: &Config) -> Result<()> {

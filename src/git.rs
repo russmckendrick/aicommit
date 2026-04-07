@@ -525,13 +525,21 @@ pub fn remove_hook_if_owned(binary_path: &Path) -> Result<Option<PathBuf>> {
 mod tests {
     use super::*;
 
+    fn known_provider(label: &str, nerd_font_icon: &str, emoji_icon: &str) -> GitProvider {
+        GitProvider::known_with_icons(
+            label,
+            Some(nerd_font_icon.to_owned()),
+            Some(emoji_icon.to_owned()),
+        )
+    }
+
     #[test]
     fn parses_github_https_remote() {
         assert_eq!(
             remote_url_info("https://github.com/russmckendrick/aicommit.git"),
             Some(RemoteUrlInfo {
                 web_url: "https://github.com/russmckendrick/aicommit".to_owned(),
-                provider: GitProvider::known("GitHub"),
+                provider: known_provider("GitHub", "", "🐙"),
             })
         );
     }
@@ -542,7 +550,7 @@ mod tests {
             remote_url_info("git@bitbucket.org:workspace/project.git"),
             Some(RemoteUrlInfo {
                 web_url: "https://bitbucket.org/workspace/project".to_owned(),
-                provider: GitProvider::known("Bitbucket"),
+                provider: known_provider("Bitbucket", "", "🪣"),
             })
         );
     }
@@ -553,7 +561,7 @@ mod tests {
             remote_url_info("git@gitlab.com:group/project.git"),
             Some(RemoteUrlInfo {
                 web_url: "https://gitlab.com/group/project".to_owned(),
-                provider: GitProvider::known("GitLab"),
+                provider: known_provider("GitLab", "", "🦊"),
             })
         );
     }
@@ -564,7 +572,7 @@ mod tests {
             remote_url_info("https://organization@dev.azure.com/organization/project/_git/repo"),
             Some(RemoteUrlInfo {
                 web_url: "https://dev.azure.com/organization/project/_git/repo".to_owned(),
-                provider: GitProvider::known("Azure DevOps"),
+                provider: known_provider("Azure DevOps", "", "☁"),
             })
         );
     }
@@ -575,7 +583,7 @@ mod tests {
             remote_url_info("git@ssh.dev.azure.com:v3/organization/project/repo"),
             Some(RemoteUrlInfo {
                 web_url: "https://dev.azure.com/organization/project/_git/repo".to_owned(),
-                provider: GitProvider::known("Azure DevOps"),
+                provider: known_provider("Azure DevOps", "", "☁"),
             })
         );
     }
@@ -597,7 +605,7 @@ mod tests {
             remote_url_info("ssh://git@github.com:22/team/repo.git"),
             Some(RemoteUrlInfo {
                 web_url: "https://github.com/team/repo".to_owned(),
-                provider: GitProvider::known("GitHub"),
+                provider: known_provider("GitHub", "", "🐙"),
             })
         );
     }

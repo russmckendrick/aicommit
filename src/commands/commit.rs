@@ -180,12 +180,61 @@ fn commit_and_maybe_push(config: &Config, message: &str, extra_args: &[String]) 
 }
 
 fn remote_display_label(remote: &git::GitRemoteMetadata) -> String {
-    match (remote.provider.label(), remote.web_url.as_deref()) {
+    remote_display_label_with_icon_style(remote, RemoteIconStyle::from_env())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RemoteIconStyle {
+    Auto,
+    NerdFont,
+    Emoji,
+    Label,
+}
+
+impl RemoteIconStyle {
+    fn from_env() -> Self {
+        match std::env::var("AIC_REMOTE_ICON_STYLE") {
+            Ok(value) => match value.trim().to_lowercase().as_str() {
+                "nerd" | "nerd-font" | "nerdfont" => Self::NerdFont,
+                "emoji" => Self::Emoji,
+                "label" | "labels" | "none" | "off" => Self::Label,
+                _ => Self::Auto,
+            },
+            Err(_) => Self::Auto,
+        }
+    }
+}
+
+fn remote_display_label_with_icon_style(
+    remote: &git::GitRemoteMetadata,
+    style: RemoteIconStyle,
+) -> String {
+    match (
+        provider_display_label(&remote.provider, style).as_deref(),
+        remote.web_url.as_deref(),
+    ) {
         (Some(provider), Some(url)) => format!("[{provider}] {} {url}", remote.name),
         (Some(provider), None) => format!("[{provider}] {}", remote.name),
         (None, Some(url)) => format!("{} {url}", remote.name),
         (None, None) => remote.name.clone(),
     }
+}
+
+fn provider_display_label(provider: &git::GitProvider, style: RemoteIconStyle) -> Option<String> {
+    let label = provider.label()?;
+    let icon = match style {
+        RemoteIconStyle::Auto | RemoteIconStyle::NerdFont => provider
+            .nerd_font_icon()
+            .or_else(|| provider.emoji_icon())
+            .filter(|_| style != RemoteIconStyle::Label),
+        RemoteIconStyle::Emoji => provider.emoji_icon(),
+        RemoteIconStyle::Label => None,
+    };
+
+    Some(match icon {
+        Some(icon) => format!("{icon} {label}"),
+        None => label.to_owned(),
+    })
 }
 
 #[cfg(test)]
@@ -207,11 +256,91 @@ mod tests {
             fetch_url: Some("https://github.com/russmckendrick/aicommit.git".to_owned()),
             push_url: Some("https://github.com/russmckendrick/aicommit.git".to_owned()),
             web_url: Some("https://github.com/russmckendrick/aicommit".to_owned()),
+            provider: git::GitProvider::known_with_icons(
+                "GitHub",
+                Some("GH".to_owned()),
+                Some("octo".to_owned()),
+            ),
+        };
+
+        assert_eq!(
+            remote_display_label_with_icon_style(&remote, RemoteIconStyle::NerdFont),
+            "[GH GitHub] origin https://github.com/russmckendrick/aicommit"
+        );
+    }
+
+    #[test]
+    fn falls_back_to_emoji_when_nerd_font_icon_is_missing() {
+        let remote = git::GitRemoteMetadata {
+            name: "origin".to_owned(),
+            fetch_url: Some("https://gitlab.com/group/project.git".to_owned()),
+            push_url: Some("https://gitlab.com/group/project.git".to_owned()),
+            web_url: Some("https://gitlab.com/group/project".to_owned()),
+            provider: git::GitProvider::known_with_icons(
+                "GitLab",
+                None,
+                Some("fox".to_owned()),
+            ),
+        };
+
+        assert_eq!(
+            remote_display_label_with_icon_style(&remote, RemoteIconStyle::NerdFont),
+            "[fox GitLab] origin https://gitlab.com/group/project"
+        );
+    }
+
+    #[test]
+    fn falls_back_to_label_when_icons_are_missing() {
+        let remote = git::GitRemoteMetadata {
+            name: "origin".to_owned(),
+            fetch_url: Some("https://github.com/russmckendrick/aicommit.git".to_owned()),
+            push_url: Some("https://github.com/russmckendrick/aicommit.git".to_owned()),
+            web_url: Some("https://github.com/russmckendrick/aicommit".to_owned()),
             provider: git::GitProvider::known("GitHub"),
         };
 
         assert_eq!(
-            remote_display_label(&remote),
+            remote_display_label_with_icon_style(&remote, RemoteIconStyle::NerdFont),
+            "[GitHub] origin https://github.com/russmckendrick/aicommit"
+        );
+    }
+
+    #[test]
+    fn can_force_emoji_icon_style() {
+        let remote = git::GitRemoteMetadata {
+            name: "origin".to_owned(),
+            fetch_url: Some("https://github.com/russmckendrick/aicommit.git".to_owned()),
+            push_url: Some("https://github.com/russmckendrick/aicommit.git".to_owned()),
+            web_url: Some("https://github.com/russmckendrick/aicommit".to_owned()),
+            provider: git::GitProvider::known_with_icons(
+                "GitHub",
+                Some("GH".to_owned()),
+                Some("octo".to_owned()),
+            ),
+        };
+
+        assert_eq!(
+            remote_display_label_with_icon_style(&remote, RemoteIconStyle::Emoji),
+            "[octo GitHub] origin https://github.com/russmckendrick/aicommit"
+        );
+    }
+
+    #[test]
+    fn can_force_label_icon_style() {
+        let remote = git::GitRemoteMetadata {
+            name: "origin".to_owned(),
+            fetch_url: Some("https://github.com/russmckendrick/aicommit.git".to_owned()),
+            push_url: Some("https://github.com/russmckendrick/aicommit.git".to_owned()),
+            web_url: Some("https://github.com/russmckendrick/aicommit".to_owned()),
+            provider: git::GitProvider::known_with_icons(
+                "GitHub",
+                Some("GH".to_owned()),
+                Some("octo".to_owned()),
+            ),
+        };
+
+        assert_eq!(
+            remote_display_label_with_icon_style(&remote, RemoteIconStyle::Label),
             "[GitHub] origin https://github.com/russmckendrick/aicommit"
         );
     }
