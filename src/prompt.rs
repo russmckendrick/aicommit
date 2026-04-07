@@ -1,33 +1,37 @@
+use std::fs;
+
+use anyhow::{Context, Result};
+
 use crate::{ai::ChatMessage, config::Config};
 
-const IDENTITY: &str = "You write clear Git commit messages.";
-const SHORT_GITMOJI_HELP: &str = "Use GitMoji when helpful: bug fixes use 🐛, features use ✨, docs use 📝, deployments use 🚀, tests use ✅, refactors use ♻️, dependency updates use ⬆️, configuration uses 🔧, localization uses 🌐, and comments use 💡.";
-const FULL_GITMOJI_HELP: &str = "Use GitMoji when helpful. Prefer the official intent of each emoji, including 🐛 for fixes, ✨ for features, 📝 for docs, 🚀 for deploys, ✅ for tests, ♻️ for refactors, ⬆️ for dependency upgrades, 🔧 for configuration, 🌐 for localization, 💡 for comments, 🎨 for code structure, ⚡️ for performance, 🔥 for removals, 🚑️ for hotfixes, 💄 for UI styles, 🔒️ for security, 🚨 for warning fixes, 👷 for CI, 📦️ for packaging, 💥 for breaking changes, ♿️ for accessibility, 💬 for copy changes, 🏗️ for architecture, 🧑‍💻 for developer experience, and 🦺 for validation.";
+const DEFAULT_SYSTEM_PROMPT: &str = include_str!("../prompts/commit-system.md");
+const SHORT_GITMOJI_HELP: &str = "If an emoji is useful, use only one GitMoji prefix: 🐛 fix, ✨ feature, 📝 docs, 🚀 deploy, ✅ tests, ♻️ refactor, ⬆️ dependencies, 🔧 config, 🌐 localization, or 💡 comments.";
+const FULL_GITMOJI_HELP: &str = "If an emoji is useful, use one GitMoji prefix that best matches the whole change. Prefer the official intent of each emoji; never stack multiple emojis.";
 
 pub fn build_messages(
     config: &Config,
     diff: &str,
     full_gitmoji_spec: bool,
     context: &str,
-) -> Vec<ChatMessage> {
-    let mut messages = initial_messages(config, full_gitmoji_spec, context);
+) -> Result<Vec<ChatMessage>> {
+    let mut messages = initial_messages(config, full_gitmoji_spec, context)?;
     messages.push(ChatMessage::user(diff));
-    messages
+    Ok(messages)
 }
 
 pub fn initial_messages(
     config: &Config,
     full_gitmoji_spec: bool,
     context: &str,
-) -> Vec<ChatMessage> {
-    vec![
-        ChatMessage::system(system_prompt(config, full_gitmoji_spec, context)),
+) -> Result<Vec<ChatMessage>> {
+    Ok(vec![
+        ChatMessage::system(system_prompt(config, full_gitmoji_spec, context)?),
         ChatMessage::user(example_diff()),
         ChatMessage::assistant(example_commit(config)),
-    ]
+    ])
 }
 
-pub fn system_prompt(config: &Config, full_gitmoji_spec: bool, context: &str) -> String {
+pub fn system_prompt(config: &Config, full_gitmoji_spec: bool, context: &str) -> Result<String> {
     let convention = if config.emoji {
         if full_gitmoji_spec {
             FULL_GITMOJI_HELP
@@ -38,25 +42,25 @@ pub fn system_prompt(config: &Config, full_gitmoji_spec: bool, context: &str) ->
         "Use conventional commit keywords only: fix, feat, build, chore, ci, docs, style, refactor, perf, or test."
     };
 
-    let description = if config.description {
-        "Add a short body explaining why the change was made. Do not start the body with 'This commit'."
+    let body_instruction = if config.description {
+        "After the subject, add one blank line and a concise body explaining why the change matters."
     } else {
-        "Return only the commit message, without a body or extra explanation."
+        "Return only the subject line. Do not add a body, bullet list, markdown, or explanation."
     };
 
-    let one_line = if config.one_line_commit {
-        "Generate a single concise sentence that captures the primary change."
+    let line_mode_instruction = if config.one_line_commit {
+        "Use exactly one concise subject line."
     } else {
-        ""
+        "Prefer exactly one subject line. Add a body only when body output is explicitly enabled."
     };
 
-    let scope = if config.omit_scope {
+    let scope_instruction = if config.omit_scope {
         "Do not include a scope; use '<type>: <subject>' when using conventional commits."
     } else {
-        "Include a scope only when it improves clarity."
+        "Use at most one scope, and only when it clarifies the single overall change."
     };
 
-    let context = if context.trim().is_empty() {
+    let context_instruction = if context.trim().is_empty() {
         String::new()
     } else {
         format!(
@@ -65,10 +69,22 @@ pub fn system_prompt(config: &Config, full_gitmoji_spec: bool, context: &str) ->
         )
     };
 
-    format!(
-        "{IDENTITY}\nConvert the user's staged Git diff into one commit message.\n{convention}\n{description}\n{one_line}\n{scope}\nUse present tense. Keep lines under 74 characters. Use language: {}.\n{context}",
-        config.language
-    )
+    let template = prompt_template(config)?;
+    Ok(template
+        .replace("{{commit_convention}}", convention)
+        .replace("{{body_instruction}}", body_instruction)
+        .replace("{{line_mode_instruction}}", line_mode_instruction)
+        .replace("{{scope_instruction}}", scope_instruction)
+        .replace("{{language}}", &config.language)
+        .replace("{{context_instruction}}", &context_instruction))
+}
+
+fn prompt_template(config: &Config) -> Result<String> {
+    match &config.prompt_file {
+        Some(path) => fs::read_to_string(path)
+            .with_context(|| format!("failed to read prompt template from {path}")),
+        None => Ok(DEFAULT_SYSTEM_PROMPT.to_owned()),
+    }
 }
 
 fn example_diff() -> String {
@@ -116,7 +132,7 @@ mod tests {
             emoji: true,
             ..Config::default()
         };
-        let prompt = system_prompt(&config, false, "issue 123");
+        let prompt = system_prompt(&config, false, "issue 123").unwrap();
         assert!(prompt.contains("issue 123"));
         assert!(prompt.contains("GitMoji"));
     }

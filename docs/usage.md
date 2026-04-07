@@ -40,3 +40,5 @@ aic "issue-123: $msg"
 ```
 
 The placeholder defaults to `$msg` and can be changed with `AIC_MESSAGE_TEMPLATE_PLACEHOLDER`.
+
+Tune the system prompt without recompiling by setting `AIC_PROMPT_FILE` to a custom prompt-template path.

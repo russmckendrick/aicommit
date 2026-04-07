@@ -14,7 +14,7 @@ use crate::errors::AicError;
 pub const GLOBAL_CONFIG_FILE: &str = ".aicommit";
 pub const MODEL_CACHE_FILE: &str = ".aicommit-models.json";
 pub const REPO_IGNORE_FILE: &str = ".aicommitignore";
-pub const DEFAULT_MAX_TOKENS_INPUT: usize = 4096;
+pub const DEFAULT_MAX_TOKENS_INPUT: usize = 128_000;
 pub const DEFAULT_MAX_TOKENS_OUTPUT: usize = 500;
 
 pub const CONFIG_KEYS: &[&str] = &[
@@ -30,6 +30,7 @@ pub const CONFIG_KEYS: &[&str] = &[
     "AIC_MODEL",
     "AIC_LANGUAGE",
     "AIC_MESSAGE_TEMPLATE_PLACEHOLDER",
+    "AIC_PROMPT_FILE",
     "AIC_ONE_LINE_COMMIT",
     "AIC_OMIT_SCOPE",
     "AIC_GITPUSH",
@@ -50,6 +51,7 @@ pub struct Config {
     pub model: String,
     pub language: String,
     pub message_template_placeholder: String,
+    pub prompt_file: Option<String>,
     pub one_line_commit: bool,
     pub omit_scope: bool,
     pub gitpush: bool,
@@ -77,6 +79,7 @@ impl Default for Config {
             model: default_model_for_provider("openai").to_owned(),
             language: "en".to_owned(),
             message_template_placeholder: "$msg".to_owned(),
+            prompt_file: None,
             one_line_commit: false,
             omit_scope: false,
             gitpush: true,
@@ -140,6 +143,10 @@ impl Config {
                 "AIC_MESSAGE_TEMPLATE_PLACEHOLDER",
                 self.message_template_placeholder.clone(),
             ),
+            (
+                "AIC_PROMPT_FILE",
+                self.prompt_file.clone().unwrap_or_default(),
+            ),
             ("AIC_ONE_LINE_COMMIT", self.one_line_commit.to_string()),
             ("AIC_OMIT_SCOPE", self.omit_scope.to_string()),
             ("AIC_GITPUSH", self.gitpush.to_string()),
@@ -175,10 +182,10 @@ pub fn default_model_for_provider(provider: &str) -> &'static str {
         "groq" => "llama3-70b-8192",
         "mistral" => "mistral-small-latest",
         "deepseek" => "deepseek-chat",
-        "openrouter" => "openai/gpt-4o-mini",
-        "aimlapi" => "gpt-4o-mini",
+        "openrouter" => "openai/gpt-5.4-mini",
+        "aimlapi" => "gpt-5.4-mini",
         "ollama" => "mistral",
-        _ => "gpt-4o-mini",
+        _ => "gpt-5.4-mini",
     }
 }
 
@@ -226,15 +233,15 @@ pub fn model_list(provider: &str) -> &'static [&'static str] {
         "groq" => &["llama3-70b-8192", "llama3-8b-8192", "gemma2-9b-it"],
         "deepseek" => &["deepseek-chat", "deepseek-reasoner"],
         "openrouter" => &[
-            "openai/gpt-4o-mini",
-            "openai/gpt-4o",
+            "openai/gpt-5.4-mini",
+            "openai/gpt-5.4",
             "anthropic/claude-sonnet-4",
         ],
-        "aimlapi" => &["gpt-4o-mini", "openai/gpt-4o", "google/gemini-2.5-flash"],
+        "aimlapi" => &["gpt-5.4-mini", "openai/gpt-5.4", "google/gemini-2.5-flash"],
         "anthropic" => &["claude-sonnet-4-20250514", "claude-opus-4-20250514"],
         "gemini" => &["gemini-1.5-flash", "gemini-1.5-pro"],
         "mistral" => &["mistral-small-latest", "mistral-large-latest"],
-        _ => &["gpt-4o-mini", "gpt-4o", "gpt-4-turbo"],
+        _ => &["gpt-5.4-mini", "gpt-5.4", "gpt-5.4-nano"],
     }
 }
 
@@ -261,6 +268,7 @@ pub fn config_descriptions() -> HashMap<&'static str, &'static str> {
             "AIC_MESSAGE_TEMPLATE_PLACEHOLDER",
             "Placeholder used in message templates",
         ),
+        ("AIC_PROMPT_FILE", "Path to a custom system prompt template"),
         ("AIC_ONE_LINE_COMMIT", "Generate a single-line message"),
         ("AIC_OMIT_SCOPE", "Avoid conventional commit scopes"),
         ("AIC_GITPUSH", "Ask whether to push after committing"),
@@ -402,6 +410,7 @@ fn apply_value(config: &mut Config, key: &str, value: &str) -> Result<()> {
         "AIC_MESSAGE_TEMPLATE_PLACEHOLDER" => {
             config.message_template_placeholder = value.to_owned()
         }
+        "AIC_PROMPT_FILE" => config.prompt_file = optional_string(value),
         "AIC_ONE_LINE_COMMIT" => config.one_line_commit = parse_bool(key, value)?,
         "AIC_OMIT_SCOPE" => config.omit_scope = parse_bool(key, value)?,
         "AIC_GITPUSH" => config.gitpush = parse_bool(key, value)?,
@@ -498,7 +507,7 @@ mod tests {
         let env_file = temp.path().join(".env");
         fs::write(
             &global,
-            "AIC_API_KEY = \"global\"\nAIC_MODEL = \"gpt-4o-mini\"\n",
+            "AIC_API_KEY = \"global\"\nAIC_MODEL = \"gpt-5.4-mini\"\n",
         )
         .unwrap();
         fs::write(&env_file, "AIC_API_KEY=local\nAIC_DESCRIPTION=true\n").unwrap();
@@ -506,7 +515,7 @@ mod tests {
         let config = Config::load_from(&ConfigPaths { global, env_file }).unwrap();
 
         assert_eq!(config.api_key.as_deref(), Some("local"));
-        assert_eq!(config.model, "gpt-4o-mini");
+        assert_eq!(config.model, "gpt-5.4-mini");
         assert!(config.description);
     }
 

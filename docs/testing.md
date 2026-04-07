@@ -24,4 +24,4 @@ Run tests:
 cargo test
 ```
 
-The test suite is designed to cover configuration precedence, prompt construction, token splitting, provider payload handling, Git repository flows, ignore-file behavior, and hook message insertion.
+The test suite is designed to cover configuration precedence, prompt-template interpolation, token splitting, provider payload handling, Git repository flows, ignore-file behavior, and hook message insertion.

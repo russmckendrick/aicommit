@@ -10,7 +10,7 @@
 Set global values:
 
 ```sh
-aic config set AIC_API_KEY=<key> AIC_MODEL=gpt-4o-mini
+aic config set AIC_API_KEY=<key> AIC_MODEL=gpt-5.4-mini
 ```
 
 Read values:
@@ -41,19 +41,43 @@ AIC_EMOJI
 AIC_MODEL
 AIC_LANGUAGE
 AIC_MESSAGE_TEMPLATE_PLACEHOLDER
+AIC_PROMPT_FILE
 AIC_ONE_LINE_COMMIT
 AIC_OMIT_SCOPE
 AIC_GITPUSH
 AIC_HOOK_AUTO_UNCOMMENT
 ```
 
+`AIC_TOKENS_MAX_INPUT` defaults to `128000` for new configs.
+
 Example local `.env`:
 
 ```env
 AIC_AI_PROVIDER=openai
-AIC_MODEL=gpt-4o-mini
+AIC_MODEL=gpt-5.4-mini
 AIC_DESCRIPTION=false
 AIC_EMOJI=false
+```
+
+## Prompt Template
+
+The default system prompt template lives at `prompts/commit-system.md`.
+
+Use a custom prompt template without recompiling:
+
+```sh
+aic config set AIC_PROMPT_FILE=/absolute/path/to/commit-system.md
+```
+
+Prompt templates can use these placeholders:
+
+```text
+{{commit_convention}}
+{{body_instruction}}
+{{line_mode_instruction}}
+{{scope_instruction}}
+{{language}}
+{{context_instruction}}
 ```
 
 Use `.aicommitignore` in a repository to exclude files from AI diff input:

@@ -17,8 +17,10 @@ test
 Configure OpenAI-compatible providers:
 
 ```sh
-aic config set AIC_AI_PROVIDER=openai AIC_API_KEY=<key> AIC_MODEL=gpt-4o-mini
+aic config set AIC_AI_PROVIDER=openai AIC_API_KEY=<key> AIC_MODEL=gpt-5.4-mini
 ```
+
+The default OpenAI model is `gpt-5.4-mini`, the cost-efficient GPT-5.4 variant.
 
 Use a custom compatible endpoint:
 
