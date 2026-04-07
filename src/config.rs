@@ -63,7 +63,6 @@ pub struct Config {
 #[derive(Debug, Clone)]
 pub struct ConfigPaths {
     pub global: PathBuf,
-    pub env_file: PathBuf,
 }
 
 impl Default for Config {
@@ -100,7 +99,6 @@ impl ConfigPaths {
 
         Ok(Self {
             global: home.join(GLOBAL_CONFIG_FILE),
-            env_file: env::current_dir()?.join(".env"),
         })
     }
 }
@@ -113,7 +111,6 @@ impl Config {
     pub fn load_from(paths: &ConfigPaths) -> Result<Self> {
         let mut config = Self::default();
         apply_file(&mut config, &paths.global)?;
-        apply_env_file(&mut config, &paths.env_file)?;
         apply_process_env(&mut config)?;
 
         if config.proxy.is_none() {
@@ -244,12 +241,8 @@ pub fn config_descriptions() -> HashMap<&'static str, &'static str> {
 }
 
 pub fn set_global_config(key_values: &[(String, String)], global_path: &Path) -> Result<Config> {
-    let paths = ConfigPaths {
-        global: global_path.to_path_buf(),
-        env_file: PathBuf::from("__aicommit_no_env__"),
-    };
     let mut config = Config::default();
-    apply_file(&mut config, &paths.global)?;
+    apply_file(&mut config, global_path)?;
 
     for (key, value) in key_values {
         apply_value(&mut config, key, value)?;
@@ -305,21 +298,6 @@ fn apply_file(config: &mut Config, path: &Path) -> Result<()> {
             apply_toml_item(config, key, item)?;
         }
     }
-    Ok(())
-}
-
-fn apply_env_file(config: &mut Config, path: &Path) -> Result<()> {
-    if !path.exists() {
-        return Ok(());
-    }
-
-    for item in dotenvy::from_path_iter(path)? {
-        let (key, value) = item?;
-        if CONFIG_KEYS.contains(&key.as_str()) {
-            apply_value(config, &key, &value)?;
-        }
-    }
-
     Ok(())
 }
 
@@ -495,22 +473,25 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn env_file_overrides_global_config() {
+    fn load_from_ignores_neighbor_dotenv_file() {
         let temp = TempDir::new().unwrap();
         let global = temp.path().join(".aicommit");
-        let env_file = temp.path().join(".env");
+        let dotenv_path = temp.path().join(".env");
         fs::write(
             &global,
             "AIC_API_KEY = \"global\"\nAIC_MODEL = \"gpt-5.4-mini\"\n",
         )
         .unwrap();
-        fs::write(&env_file, "AIC_API_KEY=local\nAIC_DESCRIPTION=true\n").unwrap();
+        fs::write(
+            &dotenv_path,
+            "AIC_API_KEY=local\nsid=1:abc; _cfuvid=value; uid=123\nAIC_MODEL=gpt-5.4\n",
+        )
+        .unwrap();
 
-        let config = Config::load_from(&ConfigPaths { global, env_file }).unwrap();
+        let config = Config::load_from(&ConfigPaths { global }).unwrap();
 
-        assert_eq!(config.api_key.as_deref(), Some("local"));
+        assert_eq!(config.api_key.as_deref(), Some("global"));
         assert_eq!(config.model, "gpt-5.4-mini");
-        assert!(config.description);
     }
 
     #[test]

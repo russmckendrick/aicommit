@@ -4,14 +4,12 @@
 
 1. Built-in defaults
 2. Global config at `~/.aicommit`
-3. Local `.env`
-4. Process environment variables
+3. Process environment variables
 
 ```mermaid
 flowchart LR
     Defaults["Built-in defaults"] --> Global["~/.aicommit"]
-    Global --> Local["Local .env"]
-    Local --> Env["Process environment"]
+    Global --> Env["Process environment"]
     Env --> Runtime["Resolved runtime config"]
 ```
 
@@ -59,14 +57,13 @@ AIC_HOOK_AUTO_UNCOMMENT
 
 `AIC_TOKENS_MAX_INPUT` defaults to `128000` for new configs.
 
-Example local `.env`:
+Example one-off environment override:
 
-```env
-AIC_AI_PROVIDER=openai
-AIC_MODEL=gpt-5.4-mini
-AIC_DESCRIPTION=true
-AIC_EMOJI=true
+```sh
+AIC_MODEL=gpt-5.4-mini aic
 ```
+
+`aic` intentionally does not read local `.env` files. Project `.env` files often contain unrelated application secrets, cookies, or service credentials, so configuration should be set with `aic config set` or explicit process environment variables instead.
 
 `AIC_DESCRIPTION` and `AIC_EMOJI` default to `true` for new configs.
 
