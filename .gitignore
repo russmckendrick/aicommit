@@ -1,0 +1,23 @@
+# Rust
+/target/
+
+# Local environment and generated config
+.env
+.env.*
+!.env.example
+.aicommit
+.aicommit-models.json
+
+# OS/editor noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Temporary files from commit-message experiments
+commit-*.txt
+count.txt
+rebase-exec.sh
+CLAUDE.md
+**/CLAUDE.md
