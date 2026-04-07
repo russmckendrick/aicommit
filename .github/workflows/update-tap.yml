@@ -1,0 +1,102 @@
+name: Manual Homebrew Tap Update
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-tap:
+    name: Update Homebrew Tap
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get release version
+        id: version
+        run: |
+          VERSION=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
+
+          if [ -z "${VERSION}" ] || [ "${VERSION}" = "null" ]; then
+            echo "Unable to determine release version" >&2
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Using version: ${VERSION}"
+
+      - name: Download checksums
+        run: |
+          mkdir -p build
+          VERSION=${{ steps.version.outputs.version }}
+
+          for file in aic-darwin-amd64.sha256 aic-darwin-arm64.sha256; do
+            for attempt in 1 2 3 4 5; do
+              if curl -L --fail -o "build/${file}" "https://github.com/${{ github.repository }}/releases/download/${VERSION}/${file}"; then
+                break
+              fi
+
+              if [ "${attempt}" -eq 5 ]; then
+                echo "Failed to download ${file} after ${attempt} attempts" >&2
+                exit 1
+              fi
+
+              echo "${file} not ready yet, retrying..."
+              sleep 5
+            done
+          done
+
+      - name: Clone homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          AMD64_SHA=$(cut -d' ' -f1 build/aic-darwin-amd64.sha256)
+          ARM64_SHA=$(cut -d' ' -f1 build/aic-darwin-arm64.sha256)
+
+          cd homebrew-tap
+          mkdir -p Formula
+
+          cat > Formula/aicommit.rb << EOF
+          class Aicommit < Formula
+            desc "AI-assisted Git commit messages"
+            homepage "https://github.com/${{ github.repository }}"
+            version "${VERSION#v}"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/aic-darwin-arm64"
+                sha256 "${ARM64_SHA}"
+              else
+                url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/aic-darwin-amd64"
+                sha256 "${AMD64_SHA}"
+              end
+            end
+
+            def install
+              if Hardware::CPU.arm?
+                bin.install "aic-darwin-arm64" => "aic"
+              else
+                bin.install "aic-darwin-amd64" => "aic"
+              end
+            end
+
+            test do
+              system "#{bin}/aic", "--version"
+            end
+          end
+          EOF
+
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          git add Formula/aicommit.rb
+
+          if git diff --cached --quiet; then
+            echo "Formula already up to date"
+            exit 0
+          fi
+
+          git commit -m "Update aicommit to ${VERSION}"
+          git push
