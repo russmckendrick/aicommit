@@ -1,0 +1,24 @@
+# Remote host metadata used to label push prompts.
+# Add providers here before changing Rust code when a host only needs label/host matching.
+
+[[providers]]
+label = "GitHub"
+hosts = ["github.com"]
+
+[[providers]]
+label = "Bitbucket"
+hosts = ["bitbucket.org"]
+
+[[providers]]
+label = "GitLab"
+hosts = ["gitlab.com"]
+
+[[providers]]
+label = "Azure DevOps"
+hosts = ["dev.azure.com", "ssh.dev.azure.com"]
+host_suffixes = [".visualstudio.com"]
+
+[[providers.rewrites]]
+host = "ssh.dev.azure.com"
+path_prefix = "v3"
+template = "https://dev.azure.com/{1}/{2}/_git/{3+}"

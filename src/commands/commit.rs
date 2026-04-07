@@ -139,13 +139,14 @@ fn commit_and_maybe_push(config: &Config, message: &str, extra_args: &[String]) 
         return Ok(());
     }
 
-    let remotes = git::remotes()?;
+    let remotes = git::remote_metadata()?;
     match remotes.as_slice() {
         [] => Ok(()),
         [remote] => {
-            if ui::confirm(&format!("Run git push {remote}?"), false)? {
-                let output = git::push(Some(remote))?;
-                ui::success(format!("pushed to {remote}"));
+            let label = remote_display_label(remote);
+            if ui::confirm(&format!("Run git push {label}?"), false)? {
+                let output = git::push(Some(&remote.name))?;
+                ui::success(format!("pushed to {label}"));
                 if !output.stdout.is_empty() {
                     ui::secondary(output.stdout);
                 }
@@ -153,18 +154,37 @@ fn commit_and_maybe_push(config: &Config, message: &str, extra_args: &[String]) 
             Ok(())
         }
         remotes => {
-            let mut options = remotes.to_vec();
+            let remote_options = remotes
+                .iter()
+                .map(|remote| (remote.name.clone(), remote_display_label(remote)))
+                .collect::<Vec<_>>();
+            let mut options = remote_options
+                .iter()
+                .map(|(_, label)| label.clone())
+                .collect::<Vec<_>>();
             options.push("do not push".to_owned());
             let selected = ui::select("Choose a remote to push to", options)?;
-            if selected != "do not push" {
-                let output = git::push(Some(&selected))?;
-                ui::success(format!("pushed to {selected}"));
+            if let Some((remote, label)) = remote_options
+                .iter()
+                .find(|(_, label)| label.as_str() == selected)
+            {
+                let output = git::push(Some(remote))?;
+                ui::success(format!("pushed to {label}"));
                 if !output.stdout.is_empty() {
                     ui::secondary(output.stdout);
                 }
             }
             Ok(())
         }
+    }
+}
+
+fn remote_display_label(remote: &git::GitRemoteMetadata) -> String {
+    match (remote.provider.label(), remote.web_url.as_deref()) {
+        (Some(provider), Some(url)) => format!("[{provider}] {} {url}", remote.name),
+        (Some(provider), None) => format!("[{provider}] {}", remote.name),
+        (None, Some(url)) => format!("{} {url}", remote.name),
+        (None, None) => remote.name.clone(),
     }
 }
 
@@ -178,5 +198,37 @@ mod tests {
         let result =
             apply_message_template(&config, &["issue-123: $msg".to_owned()], "feat: add cli");
         assert_eq!(result, "issue-123: feat: add cli");
+    }
+
+    #[test]
+    fn formats_known_remote_with_provider_and_url() {
+        let remote = git::GitRemoteMetadata {
+            name: "origin".to_owned(),
+            fetch_url: Some("https://github.com/russmckendrick/aicommit.git".to_owned()),
+            push_url: Some("https://github.com/russmckendrick/aicommit.git".to_owned()),
+            web_url: Some("https://github.com/russmckendrick/aicommit".to_owned()),
+            provider: git::GitProvider::known("GitHub"),
+        };
+
+        assert_eq!(
+            remote_display_label(&remote),
+            "[GitHub] origin https://github.com/russmckendrick/aicommit"
+        );
+    }
+
+    #[test]
+    fn formats_unknown_remote_with_url_but_no_provider_label() {
+        let remote = git::GitRemoteMetadata {
+            name: "mirror".to_owned(),
+            fetch_url: Some("https://git.example.test/team/repo.git".to_owned()),
+            push_url: Some("https://git.example.test/team/repo.git".to_owned()),
+            web_url: Some("https://git.example.test/team/repo".to_owned()),
+            provider: git::GitProvider::unknown(),
+        };
+
+        assert_eq!(
+            remote_display_label(&remote),
+            "mirror https://git.example.test/team/repo"
+        );
     }
 }
