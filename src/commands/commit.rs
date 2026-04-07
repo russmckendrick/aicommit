@@ -143,7 +143,7 @@ fn commit_and_maybe_push(config: &Config, message: &str, extra_args: &[String]) 
     match remotes.as_slice() {
         [] => Ok(()),
         [remote] => {
-            let label = remote_display_label(remote);
+            let label = remote_display_label(remote, &config.remote_icon_style);
             if ui::confirm(&format!("Run git push {label}?"), false)? {
                 let output = git::push(Some(&remote.name))?;
                 ui::success(format!("pushed to {label}"));
@@ -156,7 +156,12 @@ fn commit_and_maybe_push(config: &Config, message: &str, extra_args: &[String]) 
         remotes => {
             let remote_options = remotes
                 .iter()
-                .map(|remote| (remote.name.clone(), remote_display_label(remote)))
+                .map(|remote| {
+                    (
+                        remote.name.clone(),
+                        remote_display_label(remote, &config.remote_icon_style),
+                    )
+                })
                 .collect::<Vec<_>>();
             let mut options = remote_options
                 .iter()
@@ -179,8 +184,8 @@ fn commit_and_maybe_push(config: &Config, message: &str, extra_args: &[String]) 
     }
 }
 
-fn remote_display_label(remote: &git::GitRemoteMetadata) -> String {
-    remote_display_label_with_icon_style(remote, RemoteIconStyle::from_env())
+fn remote_display_label(remote: &git::GitRemoteMetadata, icon_style: &str) -> String {
+    remote_display_label_with_icon_style(remote, RemoteIconStyle::from_config(icon_style))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -192,15 +197,12 @@ enum RemoteIconStyle {
 }
 
 impl RemoteIconStyle {
-    fn from_env() -> Self {
-        match std::env::var("AIC_REMOTE_ICON_STYLE") {
-            Ok(value) => match value.trim().to_lowercase().as_str() {
-                "nerd" | "nerd-font" | "nerdfont" => Self::NerdFont,
-                "emoji" => Self::Emoji,
-                "label" | "labels" | "none" | "off" => Self::Label,
-                _ => Self::Auto,
-            },
-            Err(_) => Self::Auto,
+    fn from_config(value: &str) -> Self {
+        match value.trim().to_lowercase().as_str() {
+            "nerd" | "nerd-font" | "nerdfont" => Self::NerdFont,
+            "emoji" => Self::Emoji,
+            "label" | "labels" | "none" | "off" => Self::Label,
+            _ => Self::Auto,
         }
     }
 }
@@ -276,11 +278,7 @@ mod tests {
             fetch_url: Some("https://gitlab.com/group/project.git".to_owned()),
             push_url: Some("https://gitlab.com/group/project.git".to_owned()),
             web_url: Some("https://gitlab.com/group/project".to_owned()),
-            provider: git::GitProvider::known_with_icons(
-                "GitLab",
-                None,
-                Some("fox".to_owned()),
-            ),
+            provider: git::GitProvider::known_with_icons("GitLab", None, Some("fox".to_owned())),
         };
 
         assert_eq!(
@@ -356,7 +354,7 @@ mod tests {
         };
 
         assert_eq!(
-            remote_display_label(&remote),
+            remote_display_label(&remote, "auto"),
             "mirror https://git.example.test/team/repo"
         );
     }

@@ -53,6 +53,7 @@ AIC_PROMPT_FILE
 AIC_ONE_LINE_COMMIT
 AIC_OMIT_SCOPE
 AIC_GITPUSH
+AIC_REMOTE_ICON_STYLE
 AIC_HOOK_AUTO_UNCOMMENT
 ```
 
@@ -70,6 +71,8 @@ AIC_EMOJI=true
 `AIC_DESCRIPTION` and `AIC_EMOJI` default to `true` for new configs.
 
 For Azure OpenAI, set `AIC_AI_PROVIDER=azure-openai`, set `AIC_API_URL` to your Azure OpenAI v1 endpoint, and use your deployment name as `AIC_MODEL`.
+
+`AIC_REMOTE_ICON_STYLE` controls Git host icons in push prompts. Use `auto` or `nerd-font` for Nerd Font icons with emoji and label fallback, `emoji` for emoji with label fallback, or `label` for plain provider labels only.
 
 ## Prompt Template
 
