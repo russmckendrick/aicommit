@@ -19,6 +19,7 @@ dependencies = [
  "assert_cmd",
  "async-trait",
  "clap",
+ "console",
  "directories",
  "dotenvy",
  "ignore",

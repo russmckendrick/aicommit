@@ -1,4 +1,5 @@
 use anyhow::Result;
+use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use inquire::{Confirm, MultiSelect, Select, Text};
 
@@ -7,17 +8,51 @@ pub fn info(message: impl AsRef<str>) {
 }
 
 pub fn success(message: impl AsRef<str>) {
-    println!("✔ {}", message.as_ref());
+    println!("{} {}", style("✔").green(), style(message.as_ref()).green());
 }
 
 pub fn warn(message: impl AsRef<str>) {
-    eprintln!("warning: {}", message.as_ref());
+    eprintln!(
+        "{} {}",
+        style("warning:").yellow(),
+        style(message.as_ref()).yellow()
+    );
+}
+
+pub fn section(title: impl AsRef<str>) {
+    println!("{} {}", style("◇").cyan(), style(title.as_ref()).bold());
+}
+
+pub fn blank_line() {
+    println!();
+}
+
+pub fn bullet(message: impl AsRef<str>) {
+    println!("  {} {}", style("•").cyan().dim(), message.as_ref());
+}
+
+pub fn secondary(message: impl AsRef<str>) {
+    for line in message.as_ref().lines() {
+        println!("  {}", style(line).dim());
+    }
+}
+
+pub fn commit_message(message: impl AsRef<str>) {
+    for (index, line) in message.as_ref().lines().enumerate() {
+        if index == 0 {
+            println!("  {}", style(line).bold());
+        } else if line.trim().is_empty() {
+            println!();
+        } else {
+            println!("  {line}");
+        }
+    }
 }
 
 pub fn spinner(message: impl Into<String>) -> ProgressBar {
     let pb = ProgressBar::new_spinner();
     pb.set_style(
-        ProgressStyle::with_template("{spinner} {msg}")
+        ProgressStyle::with_template("{spinner:.cyan} {msg}")
             .unwrap_or_else(|_| ProgressStyle::default_spinner()),
     );
     pb.enable_steady_tick(std::time::Duration::from_millis(80));

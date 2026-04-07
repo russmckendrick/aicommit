@@ -21,15 +21,10 @@ pub async fn run(
         bail!(AicError::NoChanges);
     }
 
-    ui::info(format!(
-        "{} staged file(s):\n{}",
-        staged.len(),
-        staged
-            .iter()
-            .map(|file| format!("  {file}"))
-            .collect::<Vec<_>>()
-            .join("\n")
-    ));
+    ui::section(format!("Staged files ({})", staged.len()));
+    for file in &staged {
+        ui::bullet(file);
+    }
 
     let diff = git::staged_diff(&staged)?;
     if diff.trim().is_empty() {
@@ -89,9 +84,9 @@ async fn generate_confirm_and_commit(
         let mut commit_message = commit_message?;
         commit_message = apply_message_template(config, extra_args, &commit_message);
 
-        ui::info(format!(
-            "Generated commit message:\n------------------------------\n{commit_message}\n------------------------------"
-        ));
+        ui::blank_line();
+        ui::section("Generated commit message");
+        ui::commit_message(&commit_message);
 
         let action = if skip_confirmation {
             "Yes".to_owned()
@@ -134,10 +129,10 @@ fn commit_and_maybe_push(config: &Config, message: &str, extra_args: &[String]) 
     let output = git::commit(message, &filtered_extra_args(config, extra_args))?;
     ui::success("committed changes");
     if !output.stdout.is_empty() {
-        ui::info(output.stdout);
+        ui::secondary(output.stdout);
     }
     if !output.stderr.is_empty() {
-        ui::info(output.stderr);
+        ui::secondary(output.stderr);
     }
 
     if !config.gitpush {
@@ -152,7 +147,7 @@ fn commit_and_maybe_push(config: &Config, message: &str, extra_args: &[String]) 
                 let output = git::push(Some(remote))?;
                 ui::success(format!("pushed to {remote}"));
                 if !output.stdout.is_empty() {
-                    ui::info(output.stdout);
+                    ui::secondary(output.stdout);
                 }
             }
             Ok(())
@@ -165,7 +160,7 @@ fn commit_and_maybe_push(config: &Config, message: &str, extra_args: &[String]) 
                 let output = git::push(Some(&selected))?;
                 ui::success(format!("pushed to {selected}"));
                 if !output.stdout.is_empty() {
-                    ui::info(output.stdout);
+                    ui::secondary(output.stdout);
                 }
             }
             Ok(())
