@@ -139,7 +139,7 @@ jobs:
           ls -la release/
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v6
         with:
           files: release/*
           draft: false
