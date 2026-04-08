@@ -17,7 +17,7 @@ When the hook runs, it generates a commit message for staged files and writes it
 ```mermaid
 flowchart TD
     A["git commit opens message file"] --> B["prepare-commit-msg hook"]
-    B --> C["aic __hook-run"]
+    B --> C["aic hookrun"]
     C --> D["Read staged diff"]
     D --> E["Generate message"]
     E --> F{"AIC_HOOK_AUTO_UNCOMMENT"}

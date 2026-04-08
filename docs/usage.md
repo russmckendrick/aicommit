@@ -27,6 +27,18 @@ Use the full GitMoji prompt:
 aic --fgm
 ```
 
+Generate and display the message without committing:
+
+```sh
+aic --dry-run
+```
+
+Regenerate and amend the last commit message:
+
+```sh
+aic --amend
+```
+
 Pass Git commit flags through:
 
 ```sh
@@ -42,3 +54,17 @@ aic "issue-123: $msg"
 The placeholder defaults to `$msg` and can be changed with `AIC_MESSAGE_TEMPLATE_PLACEHOLDER`.
 
 Tune the system prompt without recompiling by setting `AIC_PROMPT_FILE` to a custom prompt-template path.
+
+## Branch Name Context
+
+`aic` automatically detects ticket or issue references in the current branch name and feeds them into the prompt. For example, on a branch named `feature/PROJ-123-add-auth`, the generated message may reference `PROJ-123`. Both JIRA-style (`PROJ-123`) and GitHub-style (`#456`) patterns are recognised.
+
+## Shell Completions
+
+Generate shell completions:
+
+```sh
+aic completions bash
+aic completions zsh
+aic completions fish
+```

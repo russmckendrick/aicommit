@@ -7,13 +7,13 @@ The v1 priority is a reliable Rust CLI for local commit generation through `aic`
 - **Additional AI providers** — Anthropic (Claude), Ollama / local models, Google Gemini, and a first-class "generic OpenAI-compatible" provider name for endpoints like Groq, Together, and Mistral.
 - **`aic log` — rewrite past commit messages** — clean up the last N commit messages on a branch using AI before opening a PR. Subsumes the earlier GitHub Action idea for rewriting pushed commit messages.
 - **`aic review` — AI-powered diff review** — get feedback on the staged diff (bugs, style, security) using a review-focused prompt and the existing provider infrastructure.
-- **Shell completion generation** — use `clap_complete` to add an `aic completions <shell>` subcommand.
+- ~~**Shell completion generation**~~ — ✅ `aic completions <shell>` subcommand added via `clap_complete`.
 
 ## Medium Impact, Low Effort
 
-- **`--dry-run` flag** — generate and display the commit message without committing. Useful for testing prompt tweaks.
-- **`--amend` flag** — regenerate and amend the last commit message.
-- **Branch name as context** — automatically extract ticket/issue numbers from branch names (e.g. `feature/PROJ-123-add-auth`) and feed them into the prompt.
+- ~~**`--dry-run` flag**~~ — ✅ generate and display the commit message without committing.
+- ~~**`--amend` flag**~~ — ✅ regenerate and amend the last commit message.
+- ~~**Branch name as context**~~ — ✅ ticket/issue numbers extracted from branch names and fed into the prompt.
 - **Conventional commit scope hints** — detect likely scopes from changed file paths to improve scope consistency.
 - **Commit message history** — keep a local log of generated messages (`~/.aicommit-history.json`) and add `aic history` to browse them.
 

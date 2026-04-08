@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
+use clap_complete::Shell;
 
 use crate::commands;
 
@@ -23,6 +24,16 @@ pub struct Cli {
     #[arg(short = 'y', long, help = "Skip commit confirmation")]
     yes: bool,
 
+    #[arg(
+        short = 'd',
+        long,
+        help = "Generate and print the message without committing"
+    )]
+    dry_run: bool,
+
+    #[arg(long, help = "Regenerate and amend the last commit message")]
+    amend: bool,
+
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     git_args: Vec<String>,
 }
@@ -33,8 +44,9 @@ enum Command {
     Setup,
     Models(ModelsCommand),
     Hook(HookCommand),
-    #[command(name = "__hook-run", hide = true)]
+    #[command(name = "hookrun", hide = true)]
     HookRun(HookRunCommand),
+    Completions(CompletionsCommand),
 }
 
 #[derive(Debug, Args)]
@@ -76,6 +88,13 @@ struct HookRunCommand {
     commit_source: Option<String>,
 }
 
+#[derive(Debug, Args)]
+#[command(about = "Generate shell completions")]
+struct CompletionsCommand {
+    #[arg(help = "Shell to generate completions for")]
+    shell: Shell,
+}
+
 pub async fn run() -> Result<()> {
     let cli = Cli::parse();
 
@@ -96,8 +115,20 @@ pub async fn run() -> Result<()> {
         Some(Command::HookRun(command)) => {
             commands::hook::run_hook(command.message_file, command.commit_source).await
         }
+        Some(Command::Completions(command)) => {
+            commands::completions::run(command.shell);
+            Ok(())
+        }
         None => {
-            commands::commit::run(cli.git_args, cli.context, cli.full_gitmoji_spec, cli.yes).await
+            commands::commit::run(
+                cli.git_args,
+                cli.context,
+                cli.full_gitmoji_spec,
+                cli.yes,
+                cli.dry_run,
+                cli.amend,
+            )
+            .await
         }
     }
 }

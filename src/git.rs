@@ -190,6 +190,74 @@ pub fn staged_diff(files: &[String]) -> Result<String> {
     Ok(run_git_dynamic_in(&root, args)?.stdout)
 }
 
+pub fn last_commit_files() -> Result<Vec<String>> {
+    let root = repo_root()?;
+    let output = run_git_in(&root, ["diff", "--name-only", "HEAD~1", "HEAD"])?;
+    let files = parse_lines(&output.stdout);
+    filter_ignored(&root, files)
+}
+
+pub fn last_commit_diff() -> Result<String> {
+    let root = repo_root()?;
+    Ok(run_git_in(&root, ["diff", "HEAD~1", "HEAD"])?.stdout)
+}
+
+pub fn current_branch() -> Option<String> {
+    run_git(["rev-parse", "--abbrev-ref", "HEAD"])
+        .ok()
+        .map(|output| output.stdout)
+        .filter(|branch| !branch.is_empty() && branch != "HEAD")
+}
+
+pub fn ticket_from_branch() -> Option<String> {
+    let branch = current_branch()?;
+    extract_ticket(&branch)
+}
+
+fn extract_ticket(branch: &str) -> Option<String> {
+    // Match JIRA-style tickets: PROJ-123
+    let mut start = None;
+    let chars: Vec<char> = branch.chars().collect();
+    for i in 0..chars.len() {
+        let c = chars[i];
+        if c.is_ascii_uppercase() {
+            if start.is_none() {
+                start = Some(i);
+            }
+        } else if c == '-' {
+            if let Some(s) = start {
+                // Check we had at least one uppercase letter before the dash
+                if i > s {
+                    // Check digits follow the dash
+                    let digit_start = i + 1;
+                    let mut digit_end = digit_start;
+                    while digit_end < chars.len() && chars[digit_end].is_ascii_digit() {
+                        digit_end += 1;
+                    }
+                    if digit_end > digit_start {
+                        let ticket: String = chars[s..digit_end].iter().collect();
+                        return Some(ticket);
+                    }
+                }
+            }
+            start = None;
+        } else {
+            start = None;
+        }
+    }
+
+    // Match GitHub-style issue refs: #123
+    if let Some(pos) = branch.find('#') {
+        let rest = &branch[pos + 1..];
+        let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if !digits.is_empty() {
+            return Some(format!("#{digits}"));
+        }
+    }
+
+    None
+}
+
 pub fn commit(message: &str, extra_args: &[String]) -> Result<GitOutput> {
     let root = repo_root()?;
     let mut args = vec!["commit".to_owned(), "-m".to_owned(), message.to_owned()];
@@ -494,7 +562,7 @@ pub fn write_hook(binary_path: &Path) -> Result<PathBuf> {
     }
 
     let script = format!(
-        "#!/bin/sh\nexec \"{}\" __hook-run \"$@\"\n",
+        "#!/bin/sh\nexec \"{}\" hookrun \"$@\"\n",
         binary_path.display()
     );
     fs::write(&hook_path, script)?;
@@ -517,7 +585,7 @@ pub fn remove_hook_if_owned(binary_path: &Path) -> Result<Option<PathBuf>> {
     }
 
     let content = fs::read_to_string(&hook_path)?;
-    if !content.contains(&binary_path.display().to_string()) || !content.contains("__hook-run") {
+    if !content.contains(&binary_path.display().to_string()) || !content.contains("hookrun") {
         bail!("prepare-commit-msg already exists and is not managed by aic");
     }
 
@@ -647,6 +715,33 @@ mod tests {
                 provider: GitProvider::unknown(),
             }
         );
+    }
+
+    #[test]
+    fn extracts_jira_ticket_from_branch() {
+        assert_eq!(
+            extract_ticket("feature/PROJ-123-add-auth"),
+            Some("PROJ-123".to_owned())
+        );
+    }
+
+    #[test]
+    fn extracts_ticket_at_start_of_branch() {
+        assert_eq!(
+            extract_ticket("FEAT-42-new-button"),
+            Some("FEAT-42".to_owned())
+        );
+    }
+
+    #[test]
+    fn extracts_github_issue_ref_from_branch() {
+        assert_eq!(extract_ticket("fix-#456-typo"), Some("#456".to_owned()));
+    }
+
+    #[test]
+    fn returns_none_when_no_ticket_in_branch() {
+        assert_eq!(extract_ticket("main"), None);
+        assert_eq!(extract_ticket("feature/add-auth"), None);
     }
 
     #[test]

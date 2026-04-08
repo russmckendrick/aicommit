@@ -74,7 +74,7 @@ fn hook_run_writes_commented_message() {
     let mut cmd = Command::cargo_bin("aic").unwrap();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
-        .arg("__hook-run")
+        .arg("hookrun")
         .arg(&message_file)
         .assert()
         .success();

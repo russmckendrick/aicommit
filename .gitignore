@@ -19,5 +19,8 @@
 commit-*.txt
 count.txt
 rebase-exec.sh
+
+# Claude
 CLAUDE.md
 **/CLAUDE.md
+.claude

@@ -7,6 +7,8 @@ pub async fn run(
     context: String,
     full_gitmoji_spec: bool,
     skip_confirmation: bool,
+    dry_run: bool,
+    amend: bool,
 ) -> Result<()> {
     git::assert_git_repo()?;
     let config = Config::load()?;
@@ -15,31 +17,66 @@ pub async fn run(
         bail!(AicError::MissingApiKey(config.ai_provider));
     }
 
-    ensure_staged_files().await?;
-    let staged = git::staged_files()?;
-    if staged.is_empty() {
-        bail!(AicError::NoChanges);
-    }
+    let (files, diff) = if amend {
+        let files = git::last_commit_files()?;
+        if files.is_empty() {
+            bail!("no files in the last commit to amend");
+        }
+        let diff = git::last_commit_diff()?;
+        (files, diff)
+    } else {
+        ensure_staged_files().await?;
+        let staged = git::staged_files()?;
+        if staged.is_empty() {
+            bail!(AicError::NoChanges);
+        }
+        let diff = git::staged_diff(&staged)?;
+        (staged, diff)
+    };
 
-    ui::section(format!("Staged files ({})", staged.len()));
-    for file in &staged {
+    let label = if amend {
+        "Last commit files"
+    } else {
+        "Staged files"
+    };
+    ui::section(format!("{label} ({})", files.len()));
+    for file in &files {
         ui::bullet(file);
     }
 
-    let diff = git::staged_diff(&staged)?;
     if diff.trim().is_empty() {
         bail!("no diff content available after applying ignore and binary filters");
     }
 
+    let mut effective_args = extra_args;
+    if amend && !effective_args.iter().any(|a| a == "--amend") {
+        effective_args.push("--amend".to_owned());
+    }
+
+    let context = enrich_context_with_branch(&context);
+
     generate_confirm_and_commit(
         &config,
         &diff,
-        &extra_args,
+        &effective_args,
         &context,
         full_gitmoji_spec,
         skip_confirmation,
+        dry_run,
     )
     .await
+}
+
+fn enrich_context_with_branch(context: &str) -> String {
+    if let Some(ticket) = git::ticket_from_branch() {
+        if context.is_empty() {
+            format!("Branch references ticket {ticket}.")
+        } else {
+            format!("Branch references ticket {ticket}. {context}")
+        }
+    } else {
+        context.to_owned()
+    }
 }
 
 pub async fn ensure_staged_files() -> Result<()> {
@@ -74,6 +111,7 @@ async fn generate_confirm_and_commit(
     context: &str,
     full_gitmoji_spec: bool,
     skip_confirmation: bool,
+    dry_run: bool,
 ) -> Result<()> {
     loop {
         let spinner = ui::spinner("Generating commit message");
@@ -87,6 +125,10 @@ async fn generate_confirm_and_commit(
         ui::blank_line();
         ui::section("Generated commit message");
         ui::commit_message(&commit_message);
+
+        if dry_run {
+            return Ok(());
+        }
 
         let action = if skip_confirmation {
             "Yes".to_owned()
