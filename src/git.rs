@@ -80,12 +80,12 @@ pub struct GitRemoteMetadata {
 
 impl GitRemoteMetadata {
     fn from_urls(name: String, fetch_url: Option<String>, push_url: Option<String>) -> Self {
-        let info = fetch_url
+        let info = push_url
             .as_deref()
-            .or(push_url.as_deref())
+            .or(fetch_url.as_deref())
             .and_then(remote_url_info);
         let (web_url, provider) = info
-            .map(|info| (Some(info.web_url), info.provider))
+            .map(|info| (info.web_url, info.provider))
             .unwrap_or((None, GitProvider::unknown()));
 
         Self {
@@ -100,7 +100,7 @@ impl GitRemoteMetadata {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct RemoteUrlInfo {
-    web_url: String,
+    web_url: Option<String>,
     provider: GitProvider,
 }
 
@@ -388,12 +388,16 @@ fn provider_for_host(host: &str) -> Option<&'static GitHostProvider> {
         .find(|provider| provider.matches_host(host))
 }
 
-fn web_url_for_remote(host: &str, path: &str, provider: Option<&GitHostProvider>) -> String {
+fn web_url_for_remote(
+    host: &str,
+    path: &str,
+    provider: Option<&GitHostProvider>,
+) -> Option<String> {
     if let Some(url) = provider.and_then(|provider| provider.rewrite_web_url(host, path)) {
-        return url;
+        return Some(url);
     }
 
-    format!("https://{host}/{path}")
+    provider.map(|_| format!("https://{host}/{path}"))
 }
 
 fn host_provider_config() -> &'static GitHostConfig {
@@ -538,7 +542,7 @@ mod tests {
         assert_eq!(
             remote_url_info("https://github.com/russmckendrick/aicommit.git"),
             Some(RemoteUrlInfo {
-                web_url: "https://github.com/russmckendrick/aicommit".to_owned(),
+                web_url: Some("https://github.com/russmckendrick/aicommit".to_owned()),
                 provider: known_provider("GitHub", "", "🐙"),
             })
         );
@@ -549,7 +553,7 @@ mod tests {
         assert_eq!(
             remote_url_info("git@bitbucket.org:workspace/project.git"),
             Some(RemoteUrlInfo {
-                web_url: "https://bitbucket.org/workspace/project".to_owned(),
+                web_url: Some("https://bitbucket.org/workspace/project".to_owned()),
                 provider: known_provider("Bitbucket", "", "🪣"),
             })
         );
@@ -560,7 +564,7 @@ mod tests {
         assert_eq!(
             remote_url_info("git@gitlab.com:group/project.git"),
             Some(RemoteUrlInfo {
-                web_url: "https://gitlab.com/group/project".to_owned(),
+                web_url: Some("https://gitlab.com/group/project".to_owned()),
                 provider: known_provider("GitLab", "", "🦊"),
             })
         );
@@ -571,7 +575,7 @@ mod tests {
         assert_eq!(
             remote_url_info("https://organization@dev.azure.com/organization/project/_git/repo"),
             Some(RemoteUrlInfo {
-                web_url: "https://dev.azure.com/organization/project/_git/repo".to_owned(),
+                web_url: Some("https://dev.azure.com/organization/project/_git/repo".to_owned()),
                 provider: known_provider("Azure DevOps", "", "☁"),
             })
         );
@@ -582,18 +586,18 @@ mod tests {
         assert_eq!(
             remote_url_info("git@ssh.dev.azure.com:v3/organization/project/repo"),
             Some(RemoteUrlInfo {
-                web_url: "https://dev.azure.com/organization/project/_git/repo".to_owned(),
+                web_url: Some("https://dev.azure.com/organization/project/_git/repo".to_owned()),
                 provider: known_provider("Azure DevOps", "", "☁"),
             })
         );
     }
 
     #[test]
-    fn parses_scp_style_remote() {
+    fn does_not_guess_web_url_for_unknown_scp_style_host() {
         assert_eq!(
             remote_url_info("git@example.com:team/repo.git"),
             Some(RemoteUrlInfo {
-                web_url: "https://example.com/team/repo".to_owned(),
+                web_url: None,
                 provider: GitProvider::unknown(),
             })
         );
@@ -604,20 +608,44 @@ mod tests {
         assert_eq!(
             remote_url_info("ssh://git@github.com:22/team/repo.git"),
             Some(RemoteUrlInfo {
-                web_url: "https://github.com/team/repo".to_owned(),
+                web_url: Some("https://github.com/team/repo".to_owned()),
                 provider: known_provider("GitHub", "", "🐙"),
             })
         );
     }
 
     #[test]
-    fn keeps_unknown_hosts_unknown() {
+    fn does_not_guess_web_url_for_unknown_https_host() {
         assert_eq!(
             remote_url_info("https://git.example.test/team/repo.git"),
             Some(RemoteUrlInfo {
-                web_url: "https://git.example.test/team/repo".to_owned(),
+                web_url: None,
                 provider: GitProvider::unknown(),
             })
+        );
+    }
+
+    #[test]
+    fn prefers_push_url_over_fetch_url_for_remote_metadata() {
+        assert_eq!(
+            GitRemoteMetadata::from_urls(
+                "origin".to_owned(),
+                Some("git@github.com:team/repo.git".to_owned()),
+                Some(
+                    "git@azure-devops-node4:v3/node4ltd/OCTO-FinOps/cloudmore-excel-overview"
+                        .to_owned()
+                ),
+            ),
+            GitRemoteMetadata {
+                name: "origin".to_owned(),
+                fetch_url: Some("git@github.com:team/repo.git".to_owned()),
+                push_url: Some(
+                    "git@azure-devops-node4:v3/node4ltd/OCTO-FinOps/cloudmore-excel-overview"
+                        .to_owned(),
+                ),
+                web_url: None,
+                provider: GitProvider::unknown(),
+            }
         );
     }
 
