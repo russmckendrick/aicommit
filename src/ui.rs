@@ -72,6 +72,11 @@ pub fn multiselect(message: &str, options: Vec<String>) -> Result<Vec<String>> {
     Ok(MultiSelect::new(message, options).prompt()?)
 }
 
+pub fn markdown(text: &str) {
+    let skin = termimad::MadSkin::default_dark();
+    skin.print_text(text);
+}
+
 pub fn text(message: &str, initial: Option<&str>) -> Result<String> {
     let prompt = Text::new(message);
     let prompt = if let Some(initial) = initial {

@@ -43,7 +43,7 @@ pub async fn run(context: String) -> Result<()> {
     let review = review?;
     ui::blank_line();
     ui::section("Review");
-    println!("{review}");
+    ui::markdown(&review);
 
     Ok(())
 }
