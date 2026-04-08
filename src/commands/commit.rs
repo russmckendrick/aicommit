@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 
-use crate::{config::Config, errors::AicError, generator, git, ui};
+use crate::{config::Config, errors::AicError, generator, git, history, ui};
 
 pub async fn run(
     extra_args: Vec<String>,
@@ -149,10 +149,12 @@ async fn generate_confirm_and_commit(
         };
 
         match action.as_str() {
-            "Yes" => return commit_and_maybe_push(config, &commit_message, extra_args),
+            "Yes" => {
+                return commit_and_maybe_push(config, &commit_message, extra_args, staged_files);
+            }
             "Edit" => {
                 let edited = ui::text("Edit commit message", Some(&commit_message))?;
-                return commit_and_maybe_push(config, &edited, extra_args);
+                return commit_and_maybe_push(config, &edited, extra_args, staged_files);
             }
             "No" if ui::confirm("Regenerate the message?", true)? => continue,
             _ => bail!("commit aborted"),
@@ -176,7 +178,12 @@ fn filtered_extra_args(config: &Config, extra_args: &[String]) -> Vec<String> {
         .collect()
 }
 
-fn commit_and_maybe_push(config: &Config, message: &str, extra_args: &[String]) -> Result<()> {
+fn commit_and_maybe_push(
+    config: &Config,
+    message: &str,
+    extra_args: &[String],
+    staged_files: &[String],
+) -> Result<()> {
     let output = git::commit(message, &filtered_extra_args(config, extra_args))?;
     ui::success("committed changes");
     if !output.stdout.is_empty() {
@@ -184,6 +191,20 @@ fn commit_and_maybe_push(config: &Config, message: &str, extra_args: &[String]) 
     }
     if !output.stderr.is_empty() {
         ui::secondary(output.stderr);
+    }
+
+    if let Err(e) = history::append_entry(&history::HistoryEntry {
+        timestamp: history::now_iso8601(),
+        kind: "commit".to_owned(),
+        message: message.to_owned(),
+        repo_path: git::repo_root()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default(),
+        files: staged_files.to_vec(),
+        provider: config.ai_provider.clone(),
+        model: config.model.clone(),
+    }) {
+        ui::warn(format!("failed to save history: {e}"));
     }
 
     if !config.gitpush {

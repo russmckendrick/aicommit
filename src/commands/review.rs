@@ -4,7 +4,7 @@ use crate::{
     ai::engine_from_config,
     config::Config,
     errors::AicError,
-    git,
+    git, history,
     prompt::{build_review_messages, review_system_prompt},
     token::{count_messages, count_tokens, split_diff},
     ui,
@@ -44,6 +44,20 @@ pub async fn run(context: String) -> Result<()> {
     ui::blank_line();
     ui::section("Review");
     ui::markdown(&review);
+
+    if let Err(e) = history::append_entry(&history::HistoryEntry {
+        timestamp: history::now_iso8601(),
+        kind: "review".to_owned(),
+        message: review,
+        repo_path: git::repo_root()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default(),
+        files: staged.clone(),
+        provider: config.ai_provider.clone(),
+        model: config.model.clone(),
+    }) {
+        ui::warn(format!("failed to save history: {e}"));
+    }
 
     Ok(())
 }

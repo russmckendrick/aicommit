@@ -10,6 +10,7 @@ src/git.rs              Git command wrapper and repository helpers
 src/prompt.rs           Prompt-template interpolation and response cleanup
 src/token.rs            Token counting and diff splitting
 src/generator.rs        Prompt, chunking, and AI engine orchestration
+src/history.rs          Commit and review history persistence
 src/ai/                 Provider trait and provider implementations
 ```
 

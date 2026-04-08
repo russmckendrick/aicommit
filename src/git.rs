@@ -202,6 +202,156 @@ pub fn last_commit_diff() -> Result<String> {
     Ok(run_git_in(&root, ["diff", "HEAD~1", "HEAD"])?.stdout)
 }
 
+#[derive(Debug, Clone)]
+pub struct CommitInfo {
+    pub hash: String,
+    pub subject: String,
+    pub body: String,
+}
+
+/// Get the last N commits from HEAD, returned oldest-to-newest.
+pub fn last_n_commits(n: usize) -> Result<Vec<CommitInfo>> {
+    let root = repo_root()?;
+    let output = run_git_in(
+        &root,
+        [
+            "log",
+            &format!("-{n}"),
+            "--format=%H%x00%s%x00%b%x00--AIC-END--",
+        ],
+    )?;
+
+    let mut commits = Vec::new();
+    for block in output.stdout.split("--AIC-END--") {
+        let block = block.trim();
+        if block.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = block.splitn(3, '\0').collect();
+        if parts.len() >= 2 {
+            commits.push(CommitInfo {
+                hash: parts[0].trim().to_owned(),
+                subject: parts[1].trim().to_owned(),
+                body: parts.get(2).unwrap_or(&"").trim().to_owned(),
+            });
+        }
+    }
+
+    commits.reverse();
+    Ok(commits)
+}
+
+/// Get the diff for a specific commit by hash.
+pub fn commit_diff(hash: &str) -> Result<String> {
+    let root = repo_root()?;
+    let output = run_git_in(&root, ["diff", &format!("{hash}^"), hash]);
+    match output {
+        Ok(o) => Ok(o.stdout),
+        Err(_) => {
+            // First commit in repo has no parent — use --root
+            Ok(run_git_in(&root, ["show", "--format=", hash])?.stdout)
+        }
+    }
+}
+
+/// Get the list of files changed in a specific commit.
+pub fn commit_files(hash: &str) -> Result<Vec<String>> {
+    let root = repo_root()?;
+    let output = run_git_in(
+        &root,
+        ["diff-tree", "--no-commit-id", "--name-only", "-r", hash],
+    )?;
+    Ok(parse_lines(&output.stdout))
+}
+
+/// Check that the working tree is clean (no uncommitted changes).
+pub fn assert_clean_worktree() -> Result<()> {
+    let root = repo_root()?;
+    let output = run_git_in(&root, ["status", "--porcelain"])?;
+    if !output.stdout.trim().is_empty() {
+        bail!("working tree has uncommitted changes; commit or stash them first");
+    }
+    Ok(())
+}
+
+/// Check that the last N commits contain no merge commits.
+pub fn assert_no_merges(n: usize) -> Result<()> {
+    let root = repo_root()?;
+    let output = run_git_in(&root, ["log", "--merges", "-1", &format!("HEAD~{n}..HEAD")])?;
+    if !output.stdout.trim().is_empty() {
+        bail!("merge commits found in the last {n} commits; aic log cannot rewrite across merges");
+    }
+    Ok(())
+}
+
+/// Programmatically rebase to reword the last N commits.
+/// `new_messages` must be ordered oldest-to-newest.
+pub fn reword_commits(n: usize, new_messages: &[String]) -> Result<()> {
+    let root = repo_root()?;
+    let tmp_dir = std::env::temp_dir().join("aic-reword");
+    fs::create_dir_all(&tmp_dir)?;
+
+    let _cleanup = RewordCleanup(tmp_dir.clone());
+
+    // Write each new message to a numbered file
+    for (i, msg) in new_messages.iter().enumerate() {
+        fs::write(tmp_dir.join(format!("{i}.txt")), msg)?;
+    }
+
+    // Write counter file
+    fs::write(tmp_dir.join("counter"), "0")?;
+
+    let tmp_dir_str = tmp_dir.display().to_string();
+
+    // Sequence editor: replace all "pick" with "reword"
+    let seq_editor = r#"awk '{sub(/^pick /, "reword ")} 1' "$1" > "$1.tmp" && mv "$1.tmp" "$1""#;
+
+    // Message editor: read the next message file by counter
+    let msg_editor = format!(
+        r#"#!/bin/sh
+N=$(cat "{tmp_dir_str}/counter")
+cat "{tmp_dir_str}/$N.txt" > "$1"
+echo $((N + 1)) > "{tmp_dir_str}/counter"
+"#
+    );
+
+    let editor_script = tmp_dir.join("editor.sh");
+    fs::write(&editor_script, &msg_editor)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&editor_script, fs::Permissions::from_mode(0o755))?;
+    }
+
+    let output = Command::new("git")
+        .args(["rebase", "-i", &format!("HEAD~{n}")])
+        .env("GIT_SEQUENCE_EDITOR", seq_editor)
+        .env("GIT_EDITOR", editor_script.display().to_string())
+        .current_dir(&root)
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Abort any in-progress rebase before returning error
+        let _ = Command::new("git")
+            .args(["rebase", "--abort"])
+            .current_dir(&root)
+            .output();
+        bail!("rebase failed: {stderr}");
+    }
+
+    Ok(())
+}
+
+/// Guard to clean up reword temp files on drop.
+struct RewordCleanup(PathBuf);
+
+impl Drop for RewordCleanup {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
 pub fn current_branch() -> Option<String> {
     run_git(["rev-parse", "--abbrev-ref", "HEAD"])
         .ok()

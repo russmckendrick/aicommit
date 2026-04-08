@@ -45,6 +45,24 @@ aic review
 aic review -c "focus on security"
 ```
 
+### Rewrite commit messages
+
+Clean up the last N commit messages on your branch before opening a PR:
+
+```sh
+aic log
+aic log -n 3
+```
+
+### Browse history
+
+View recent AI-generated commit messages and reviews:
+
+```sh
+aic history
+aic history --kind review
+```
+
 ### More commands
 
 ```sh
@@ -61,6 +79,8 @@ aic completions zsh        # Generate shell completions
 - **Scope hints** — detects likely scopes from changed file paths
 - **Branch context** — extracts ticket/issue references from branch names
 - **Diff review** — AI-powered code review with severity grouping
+- **Message rewriting** — clean up commit history with `aic log`
+- **History** — browse past generated messages and reviews
 - **Large diff handling** — automatic chunking and synthesis
 - **Custom prompts** — swap the system prompt without recompiling
 - **OpenAI and Azure OpenAI** providers, plus any OpenAI-compatible endpoint

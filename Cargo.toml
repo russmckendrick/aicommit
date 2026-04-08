@@ -1,6 +1,6 @@
 [package]
 name = "aicommit"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2024"
 description = "Generate AI-assisted Git commit messages"
 license = "MIT"
@@ -12,6 +12,7 @@ path = "src/bin/aic.rs"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
+chrono = { version = "0.4.44", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 clap_complete = "4.5"
 console = "0.16"

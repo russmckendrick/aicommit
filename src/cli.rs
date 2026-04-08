@@ -48,6 +48,8 @@ enum Command {
     HookRun(HookRunCommand),
     Completions(CompletionsCommand),
     Review(ReviewCommand),
+    History(HistoryCommand),
+    Log(LogCommand),
 }
 
 #[derive(Debug, Args)]
@@ -116,6 +118,47 @@ struct ReviewCommand {
     context: String,
 }
 
+#[derive(Debug, Args)]
+#[command(about = "Show recent AI-generated commit messages and reviews")]
+struct HistoryCommand {
+    #[arg(
+        short = 'n',
+        long,
+        default_value = "10",
+        help = "Number of entries to show"
+    )]
+    count: usize,
+
+    #[arg(short = 'k', long, help = "Filter by kind: commit or review")]
+    kind: Option<String>,
+}
+
+#[derive(Debug, Args)]
+#[command(
+    about = "Rewrite recent commit messages using AI",
+    long_about = "Rewrite recent commit messages using AI.\n\n\
+        Generates new commit messages for the last N commits on the current branch \
+        using the same AI provider as normal commits. Shows a before/after comparison \
+        and rewrites via git rebase on confirmation.\n\n\
+        Requires a clean working tree and no merge commits in the range.\n\n\
+        Examples:\n  \
+        aic log\n  \
+        aic log -n 3\n  \
+        aic log -n 5 --yes"
+)]
+struct LogCommand {
+    #[arg(
+        short = 'n',
+        long,
+        default_value = "5",
+        help = "Number of commits to rewrite"
+    )]
+    count: usize,
+
+    #[arg(short = 'y', long, help = "Skip confirmation")]
+    yes: bool,
+}
+
 pub async fn run() -> Result<()> {
     let cli = Cli::parse();
 
@@ -141,6 +184,8 @@ pub async fn run() -> Result<()> {
             Ok(())
         }
         Some(Command::Review(command)) => commands::review::run(command.context).await,
+        Some(Command::History(command)) => commands::history::run(command.count, command.kind),
+        Some(Command::Log(command)) => commands::log::run(command.count, command.yes).await,
         None => {
             commands::commit::run(
                 cli.git_args,

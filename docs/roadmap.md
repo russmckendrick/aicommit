@@ -5,7 +5,7 @@ The v1 priority is a reliable Rust CLI for local commit generation through `aic`
 ## High Impact
 
 - **Additional AI providers** — Anthropic (Claude), Ollama / local models, Google Gemini, and a first-class "generic OpenAI-compatible" provider name for endpoints like Groq, Together, and Mistral.
-- **`aic log` — rewrite past commit messages** — clean up the last N commit messages on a branch using AI before opening a PR. Subsumes the earlier GitHub Action idea for rewriting pushed commit messages.
+- ~~**`aic log` — rewrite past commit messages**~~ — ✅ clean up the last N commit messages on a branch using AI before opening a PR.
 - ~~**`aic review` — AI-powered diff review**~~ — ✅ get feedback on the staged diff (bugs, style, security) using a review-focused prompt and the existing provider infrastructure.
 - ~~**Shell completion generation**~~ — ✅ `aic completions <shell>` subcommand added via `clap_complete`.
 
@@ -15,7 +15,7 @@ The v1 priority is a reliable Rust CLI for local commit generation through `aic`
 - ~~**`--amend` flag**~~ — ✅ regenerate and amend the last commit message.
 - ~~**Branch name as context**~~ — ✅ ticket/issue numbers extracted from branch names and fed into the prompt.
 - ~~**Conventional commit scope hints**~~ — ✅ detect likely scopes from changed file paths and feed them into the prompt to improve scope consistency.
-- **Commit message history** — keep a local log of generated messages (`~/.aicommit-history.json`) and add `aic history` to browse them.
+- ~~**Commit message history**~~ — ✅ local log of generated messages and reviews (`~/.aicommit-history.json`) with `aic history` to browse them.
 
 ## Medium Impact, Moderate Effort
 

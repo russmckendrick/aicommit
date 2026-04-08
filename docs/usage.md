@@ -71,6 +71,39 @@ aic review --context "focus on security"
 
 Findings are grouped by severity (Critical, Warning, Suggestion) and cover bugs, security, performance, correctness, and readability. Large diffs are automatically chunked and synthesized into a single review.
 
+## Commit History
+
+Every generated commit message and review is saved to `~/.aicommit-history.json`. Browse recent entries:
+
+```sh
+aic history
+aic history -n 5
+```
+
+Filter by kind:
+
+```sh
+aic history --kind commit
+aic history --kind review
+```
+
+## Rewrite Commit Messages
+
+Clean up the last N commit messages on your branch using AI before opening a PR:
+
+```sh
+aic log
+aic log -n 3
+aic log -n 5 --yes
+```
+
+This generates new messages for each commit, shows a before/after comparison, and rewrites them via `git rebase` on confirmation.
+
+Requirements:
+- The working tree must be clean (no uncommitted changes).
+- The range must not contain merge commits.
+- This rewrites git history — do not use on commits that have been pushed to a shared branch.
+
 ## Scope Hints
 
 When conventional commit scopes are enabled (the default), `aic` detects likely scopes from the staged file paths and suggests them to the AI. For example, changes to `src/ai/` hint at the scope `ai`, while `Cargo.toml` hints at `deps`. This improves scope consistency without requiring manual input. Disable scopes entirely with `AIC_OMIT_SCOPE=true`.

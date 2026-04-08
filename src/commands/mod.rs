@@ -1,7 +1,9 @@
 pub mod commit;
 pub mod completions;
 pub mod config;
+pub mod history;
 pub mod hook;
+pub mod log;
 pub mod models;
 pub mod review;
 pub mod setup;
