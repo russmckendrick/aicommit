@@ -32,7 +32,12 @@ Provider implementations use an `AiEngine` trait that accepts normalized chat me
 
 Git behavior is isolated behind `src/git.rs` so commit, push, hooks, staged-file discovery, and ignore-file filtering are testable without mixing Git process logic into UI commands.
 
-The default system prompt template lives in `prompts/commit-system.md`; use `AIC_PROMPT_FILE` to point at a custom template.
+Prompt templates live in `prompts/`:
+
+- `commit-system.md` — system prompt for commit message generation. Supports scope hints derived from staged file paths.
+- `review-system.md` — system prompt for `aic review` diff analysis.
+
+Use `AIC_PROMPT_FILE` to point at a custom commit prompt template.
 
 ## Commit Generation Flow
 

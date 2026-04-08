@@ -47,6 +47,7 @@ enum Command {
     #[command(name = "hookrun", hide = true)]
     HookRun(HookRunCommand),
     Completions(CompletionsCommand),
+    Review(ReviewCommand),
 }
 
 #[derive(Debug, Args)]
@@ -95,6 +96,26 @@ struct CompletionsCommand {
     shell: Shell,
 }
 
+#[derive(Debug, Args)]
+#[command(
+    about = "Review staged changes for bugs, security, and style issues",
+    long_about = "Review staged changes for bugs, security, and style issues.\n\n\
+        Only the staged diff (git diff --staged) is reviewed. Unstaged changes are ignored.\n\n\
+        Examples:\n  \
+        aic review\n  \
+        aic review -c 'focus on security'\n  \
+        aic review --context 'this is a database migration'"
+)]
+struct ReviewCommand {
+    #[arg(
+        short = 'c',
+        long,
+        default_value = "",
+        help = "Focus the review on a specific concern (e.g., 'focus on security')"
+    )]
+    context: String,
+}
+
 pub async fn run() -> Result<()> {
     let cli = Cli::parse();
 
@@ -119,6 +140,7 @@ pub async fn run() -> Result<()> {
             commands::completions::run(command.shell);
             Ok(())
         }
+        Some(Command::Review(command)) => commands::review::run(command.context).await,
         None => {
             commands::commit::run(
                 cli.git_args,

@@ -55,6 +55,26 @@ The placeholder defaults to `$msg` and can be changed with `AIC_MESSAGE_TEMPLATE
 
 Tune the system prompt without recompiling by setting `AIC_PROMPT_FILE` to a custom prompt-template path.
 
+## Diff Review
+
+Get AI-powered feedback on staged changes before committing:
+
+```sh
+aic review
+```
+
+Optionally focus the review on a particular concern:
+
+```sh
+aic review --context "focus on security"
+```
+
+Findings are grouped by severity (Critical, Warning, Suggestion) and cover bugs, security, performance, correctness, and readability. Large diffs are automatically chunked and synthesized into a single review.
+
+## Scope Hints
+
+When conventional commit scopes are enabled (the default), `aic` detects likely scopes from the staged file paths and suggests them to the AI. For example, changes to `src/ai/` hint at the scope `ai`, while `Cargo.toml` hints at `deps`. This improves scope consistency without requiring manual input. Disable scopes entirely with `AIC_OMIT_SCOPE=true`.
+
 ## Branch Name Context
 
 `aic` automatically detects ticket or issue references in the current branch name and feeds them into the prompt. For example, on a branch named `feature/PROJ-123-add-auth`, the generated message may reference `PROJ-123`. Both JIRA-style (`PROJ-123`) and GitHub-style (`#456`) patterns are recognised.

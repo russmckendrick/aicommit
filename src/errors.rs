@@ -32,7 +32,7 @@ pub enum AicError {
     #[error("service unavailable for provider '{0}'")]
     ServiceUnavailable(String),
 
-    #[error("AI provider returned an empty commit message")]
+    #[error("AI provider returned an empty response")]
     EmptyMessage,
 
     #[error("diff is too large for the configured token limits")]

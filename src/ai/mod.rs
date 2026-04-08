@@ -37,6 +37,8 @@ impl ChatMessage {
 
 #[async_trait]
 pub trait AiEngine: Send + Sync {
+    /// Send chat messages and return the model's text response.
+    /// Used for commit generation, review, and any other text completion task.
     async fn generate_commit_message(&self, messages: &[ChatMessage]) -> Result<String>;
 }
 

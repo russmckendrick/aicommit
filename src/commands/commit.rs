@@ -63,6 +63,7 @@ pub async fn run(
         full_gitmoji_spec,
         skip_confirmation,
         dry_run,
+        &files,
     )
     .await
 }
@@ -104,6 +105,7 @@ pub async fn ensure_staged_files() -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn generate_confirm_and_commit(
     config: &Config,
     diff: &str,
@@ -112,11 +114,18 @@ async fn generate_confirm_and_commit(
     full_gitmoji_spec: bool,
     skip_confirmation: bool,
     dry_run: bool,
+    staged_files: &[String],
 ) -> Result<()> {
     loop {
         let spinner = ui::spinner("Generating commit message");
-        let commit_message =
-            generator::generate_commit_message(config, diff, full_gitmoji_spec, context).await;
+        let commit_message = generator::generate_commit_message(
+            config,
+            diff,
+            full_gitmoji_spec,
+            context,
+            staged_files,
+        )
+        .await;
         spinner.finish_and_clear();
 
         let mut commit_message = commit_message?;

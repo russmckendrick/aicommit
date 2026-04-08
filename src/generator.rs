@@ -14,8 +14,14 @@ pub async fn generate_commit_message(
     diff: &str,
     full_gitmoji_spec: bool,
     context: &str,
+    staged_files: &[String],
 ) -> Result<String> {
-    let prompt_tokens = count_messages(&initial_messages(config, full_gitmoji_spec, context)?);
+    let prompt_tokens = count_messages(&initial_messages(
+        config,
+        full_gitmoji_spec,
+        context,
+        staged_files,
+    )?);
     let max_request_tokens = config
         .tokens_max_input
         .saturating_sub(config.tokens_max_output)
@@ -26,7 +32,8 @@ pub async fn generate_commit_message(
     let engine = engine_from_config(config)?;
 
     if chunks.len() == 1 {
-        let chat_messages = build_messages(config, &chunks[0], full_gitmoji_spec, context)?;
+        let chat_messages =
+            build_messages(config, &chunks[0], full_gitmoji_spec, context, staged_files)?;
         return engine.generate_commit_message(&chat_messages).await;
     }
 
@@ -37,7 +44,13 @@ pub async fn generate_commit_message(
             index + 1,
             chunks.len()
         );
-        let chat_messages = build_messages(config, chunk, full_gitmoji_spec, &chunk_context)?;
+        let chat_messages = build_messages(
+            config,
+            chunk,
+            full_gitmoji_spec,
+            &chunk_context,
+            staged_files,
+        )?;
         summaries.push(engine.generate_commit_message(&chat_messages).await?);
     }
 
@@ -58,6 +71,7 @@ pub async fn generate_commit_message(
         &synthesis_input,
         full_gitmoji_spec,
         &synthesis_context,
+        staged_files,
     )?;
     engine.generate_commit_message(&chat_messages).await
 }

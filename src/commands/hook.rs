@@ -42,7 +42,7 @@ pub async fn run_hook(message_file: String, commit_source: Option<String>) -> Re
         return Ok(());
     }
 
-    let message = generator::generate_commit_message(&config, &diff, false, "").await?;
+    let message = generator::generate_commit_message(&config, &diff, false, "", &staged).await?;
     let existing = fs::read_to_string(&message_file)?;
     let content = if config.hook_auto_uncomment {
         format!("{message}\n\n{existing}")
