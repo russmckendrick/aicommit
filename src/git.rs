@@ -303,8 +303,10 @@ pub fn reword_commits(n: usize, new_messages: &[String]) -> Result<()> {
 
     let tmp_dir_str = tmp_dir.display().to_string();
 
-    // Sequence editor: replace all "pick" with "reword"
-    let seq_editor = r#"awk '{sub(/^pick /, "reword ")} 1' "$1" > "$1.tmp" && mv "$1.tmp" "$1""#;
+    let seq_editor = r#"#!/bin/sh
+TODO_FILE="$1"
+awk '{sub(/^pick /, "reword ")} 1' "$TODO_FILE" > "$TODO_FILE.tmp" && mv "$TODO_FILE.tmp" "$TODO_FILE"
+"#;
 
     // Message editor: read the next message file by counter
     let msg_editor = format!(
@@ -315,17 +317,23 @@ echo $((N + 1)) > "{tmp_dir_str}/counter"
 "#
     );
 
+    let sequence_editor_script = tmp_dir.join("sequence-editor.sh");
+    fs::write(&sequence_editor_script, seq_editor)?;
     let editor_script = tmp_dir.join("editor.sh");
     fs::write(&editor_script, &msg_editor)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&sequence_editor_script, fs::Permissions::from_mode(0o755))?;
         fs::set_permissions(&editor_script, fs::Permissions::from_mode(0o755))?;
     }
 
     let output = Command::new("git")
         .args(["rebase", "-i", &format!("HEAD~{n}")])
-        .env("GIT_SEQUENCE_EDITOR", seq_editor)
+        .env(
+            "GIT_SEQUENCE_EDITOR",
+            sequence_editor_script.display().to_string(),
+        )
         .env("GIT_EDITOR", editor_script.display().to_string())
         .current_dir(&root)
         .output()?;
