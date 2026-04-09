@@ -297,17 +297,19 @@ fn history_hides_temp_entries_by_default_and_shows_compact_view() {
 
     history_command(repo.path(), home.path())
         .arg("history")
+        .arg("--non-interactive")
         .assert()
         .success()
         .stdout(predicate::str::contains(
-            "Recent history entries (1 shown, 1 hidden)",
+            "Recent history entries (1 main, 1 hidden)",
         ))
+        .stdout(predicate::str::contains("Recent entries"))
         .stdout(predicate::str::contains("feat(history): improve timeline"))
         .stdout(predicate::str::contains(
-            "openai/gpt-5.4-mini  aicommit  3 files",
+            "commit | 2024-01-15 14:30 | openai/gpt-5.4-mini | aicommit",
         ))
         .stdout(predicate::str::contains(
-            "files: src/cli.rs, src/history.rs +1 more",
+            "src/cli.rs, src/history.rs +1 more (3 files)",
         ))
         .stdout(predicate::str::contains("hidden temp entry").not())
         .stdout(predicate::str::contains(".tmpaic-history-noise").not());
@@ -344,12 +346,14 @@ fn history_all_includes_hidden_entries() {
 
     history_command(repo.path(), home.path())
         .arg("history")
+        .arg("--non-interactive")
         .arg("--all")
         .assert()
         .success()
         .stdout(predicate::str::contains(
-            "Recent history entries (2 shown, 0 hidden)",
+            "Recent history entries (1 main, 1 hidden)",
         ))
+        .stdout(predicate::str::contains("Hidden test/temp entries (1)"))
         .stdout(predicate::str::contains("feat: hidden temp entry"));
 }
 
@@ -372,6 +376,7 @@ fn history_verbose_shows_full_message_and_repo_path() {
 
     history_command(repo.path(), home.path())
         .arg("history")
+        .arg("--non-interactive")
         .arg("--verbose")
         .assert()
         .success()
@@ -413,17 +418,96 @@ fn history_kind_review_uses_compact_excerpt() {
 
     history_command(repo.path(), home.path())
         .arg("history")
+        .arg("--non-interactive")
         .arg("--kind")
         .arg("review")
         .assert()
         .success()
         .stdout(predicate::str::contains(
-            "Recent review entries (1 shown, 0 hidden)",
+            "Recent review entries (1 main, 0 hidden)",
         ))
         .stdout(predicate::str::contains(
             "Critical Avoid panic in src/lib.rs while loading history Keep compact output readable",
         ))
         .stdout(predicate::str::contains("feat(history): improve timeline").not());
+}
+
+#[test]
+fn history_hides_test_provider_entries_even_when_path_is_not_temp() {
+    let repo = init_repo();
+    let home = TempDir::new().unwrap();
+    write_history(
+        home.path(),
+        &[
+            json!({
+                "timestamp": "2024-01-15T14:30:00Z",
+                "kind": "commit",
+                "message": "feat: real entry",
+                "repo_path": "/Users/example/Code/aicommit",
+                "files": ["src/history.rs"],
+                "provider": "openai",
+                "model": "gpt-5.4-mini"
+            }),
+            json!({
+                "timestamp": "2024-01-15T14:35:00Z",
+                "kind": "commit",
+                "message": "feat: hidden provider entry",
+                "repo_path": "/Users/example/Code/not-a-temp-path",
+                "files": ["src.txt"],
+                "provider": "test",
+                "model": "default"
+            }),
+        ],
+    );
+
+    history_command(repo.path(), home.path())
+        .arg("history")
+        .arg("--non-interactive")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "Recent history entries (1 main, 1 hidden)",
+        ))
+        .stdout(predicate::str::contains("feat: hidden provider entry").not());
+}
+
+#[test]
+fn history_hides_tmp_basename_entries_even_outside_temp_dir() {
+    let repo = init_repo();
+    let home = TempDir::new().unwrap();
+    write_history(
+        home.path(),
+        &[
+            json!({
+                "timestamp": "2024-01-15T14:30:00Z",
+                "kind": "commit",
+                "message": "feat: visible entry",
+                "repo_path": "/Users/example/Code/aicommit",
+                "files": ["src/history.rs"],
+                "provider": "openai",
+                "model": "gpt-5.4-mini"
+            }),
+            json!({
+                "timestamp": "2024-01-15T14:35:00Z",
+                "kind": "review",
+                "message": "P1: hidden tmp basename",
+                "repo_path": "/Users/example/.tmpBROWSER123",
+                "files": ["src.txt"],
+                "provider": "codex",
+                "model": "default"
+            }),
+        ],
+    );
+
+    history_command(repo.path(), home.path())
+        .arg("history")
+        .arg("--non-interactive")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "Recent history entries (1 main, 1 hidden)",
+        ))
+        .stdout(predicate::str::contains("P1: hidden tmp basename").not());
 }
 
 #[test]
@@ -445,6 +529,7 @@ fn history_invalid_timestamp_falls_back_to_raw_value() {
 
     history_command(repo.path(), home.path())
         .arg("history")
+        .arg("--non-interactive")
         .assert()
         .success()
         .stdout(predicate::str::contains("yesterday-ish"));

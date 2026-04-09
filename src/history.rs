@@ -23,7 +23,9 @@ pub struct HistoryEntry {
 
 #[derive(Debug, Clone)]
 pub struct RecentEntries {
-    pub entries: Vec<HistoryEntry>,
+    pub primary_entries: Vec<HistoryEntry>,
+    pub hidden_entries: Vec<HistoryEntry>,
+    pub primary_count: usize,
     pub hidden_count: usize,
 }
 
@@ -55,25 +57,22 @@ pub fn load_entries() -> Result<Vec<HistoryEntry>> {
     Ok(entries)
 }
 
-pub fn recent_entries(n: usize, kind: Option<&str>, include_all: bool) -> Result<RecentEntries> {
+pub fn recent_entries(n: usize, kind: Option<&str>) -> Result<RecentEntries> {
     let entries = load_entries()?;
     let filtered: Vec<_> = match kind {
         Some(k) => entries.into_iter().filter(|e| e.kind == k).collect(),
         None => entries,
     };
-    let hidden_count = filtered.iter().filter(|entry| is_temp_entry(entry)).count();
-    let visible: Vec<_> = if include_all {
-        filtered
-    } else {
-        filtered
-            .into_iter()
-            .filter(|entry| !is_temp_entry(entry))
-            .collect()
-    };
-    let start = visible.len().saturating_sub(n);
+
+    let (primary, hidden): (Vec<_>, Vec<_>) = filtered
+        .into_iter()
+        .partition(|entry| !is_hidden_entry(entry));
+
     Ok(RecentEntries {
-        entries: visible[start..].iter().rev().cloned().collect(),
-        hidden_count: if include_all { 0 } else { hidden_count },
+        primary_count: primary.len(),
+        hidden_count: hidden.len(),
+        primary_entries: recent_slice(primary, n),
+        hidden_entries: recent_slice(hidden, n),
     })
 }
 
@@ -81,8 +80,17 @@ pub fn now_iso8601() -> String {
     Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }
 
-fn is_temp_entry(entry: &HistoryEntry) -> bool {
-    path_is_in_temp_dir(&entry.repo_path)
+fn recent_slice(entries: Vec<HistoryEntry>, n: usize) -> Vec<HistoryEntry> {
+    let start = entries.len().saturating_sub(n);
+    entries[start..].iter().rev().cloned().collect()
+}
+
+fn is_hidden_entry(entry: &HistoryEntry) -> bool {
+    entry.provider == "test"
+        || path_is_in_temp_dir(&entry.repo_path)
+        || repo_basename(&entry.repo_path)
+            .map(|name| name.starts_with(".tmp"))
+            .unwrap_or(false)
 }
 
 fn path_is_in_temp_dir(path: &str) -> bool {
@@ -103,5 +111,54 @@ fn normalize_private_prefix(path: &Path) -> PathBuf {
     #[cfg(not(windows))]
     {
         stripped
+    }
+}
+
+fn repo_basename(path: &str) -> Option<String> {
+    Path::new(path)
+        .file_name()
+        .map(|name| name.to_string_lossy().trim().to_string())
+        .filter(|name| !name.is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(repo_path: &str, provider: &str) -> HistoryEntry {
+        HistoryEntry {
+            timestamp: "2026-04-09T18:57:00Z".to_string(),
+            kind: "commit".to_string(),
+            message: "feat: test".to_string(),
+            repo_path: repo_path.to_string(),
+            files: vec!["src.txt".to_string()],
+            provider: provider.to_string(),
+            model: "default".to_string(),
+        }
+    }
+
+    #[test]
+    fn hides_temp_dir_paths() {
+        let path = env::temp_dir().join(".tmpaic-history");
+        assert!(is_hidden_entry(&entry(
+            path.to_string_lossy().as_ref(),
+            "openai"
+        )));
+    }
+
+    #[test]
+    fn hides_tmp_basename_even_outside_temp_dir() {
+        assert!(is_hidden_entry(&entry(
+            "/Users/example/.tmpabc123",
+            "openai"
+        )));
+    }
+
+    #[test]
+    fn hides_test_provider_even_without_temp_path() {
+        assert!(is_hidden_entry(&entry(
+            "/Users/example/Code/aicommit",
+            "test"
+        )));
     }
 }

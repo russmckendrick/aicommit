@@ -59,10 +59,11 @@ aic log -n 3
 View recent AI-generated commit messages and reviews:
 
 ```sh
-aic history
-aic history --kind review
+aic history                  # interactive by default in a terminal
+aic history --non-interactive
 aic history --all
 aic history --verbose
+aic history --kind review
 ```
 
 ### More commands

@@ -143,6 +143,21 @@ struct HistoryCommand {
 
     #[arg(long, help = "Show full message bodies and full repo paths")]
     verbose: bool,
+
+    #[arg(
+        short = 'i',
+        long = "interactive",
+        conflicts_with = "non_interactive",
+        help = "Force interactive history browsing"
+    )]
+    interactive: bool,
+
+    #[arg(
+        long = "non-interactive",
+        conflicts_with = "interactive",
+        help = "Print history as plain text instead of launching the picker"
+    )]
+    non_interactive: bool,
 }
 
 #[derive(Debug, Args)]
@@ -198,9 +213,14 @@ pub async fn run() -> Result<()> {
         Some(Command::Review(command)) => {
             commands::review::run(command.context, cli.provider).await
         }
-        Some(Command::History(command)) => {
-            commands::history::run(command.count, command.kind, command.all, command.verbose)
-        }
+        Some(Command::History(command)) => commands::history::run(
+            command.count,
+            command.kind,
+            command.all,
+            command.verbose,
+            command.interactive,
+            command.non_interactive,
+        ),
         Some(Command::Log(command)) => {
             commands::log::run(command.count, command.yes, cli.provider).await
         }

@@ -1,7 +1,9 @@
-use anyhow::Result;
+use std::fmt::Display;
+
+use anyhow::{Error, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
-use inquire::{Confirm, MultiSelect, Select, Text};
+use inquire::{Confirm, InquireError, MultiSelect, Select, Text};
 
 pub fn info(message: impl AsRef<str>) {
     println!("{}", message.as_ref());
@@ -68,7 +70,10 @@ pub fn confirm(message: &str, default: bool) -> Result<bool> {
     Ok(Confirm::new(message).with_default(default).prompt()?)
 }
 
-pub fn select(message: &str, options: Vec<String>) -> Result<String> {
+pub fn select<T>(message: &str, options: Vec<T>) -> Result<T>
+where
+    T: Clone + Display,
+{
     Ok(Select::new(message, options).prompt()?)
 }
 
@@ -89,4 +94,11 @@ pub fn text(message: &str, initial: Option<&str>) -> Result<String> {
         prompt
     };
     Ok(prompt.prompt()?)
+}
+
+pub fn is_prompt_cancelled(error: &Error) -> bool {
+    matches!(
+        error.downcast_ref::<InquireError>(),
+        Some(InquireError::OperationCanceled | InquireError::OperationInterrupted)
+    )
 }

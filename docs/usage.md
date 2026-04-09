@@ -77,10 +77,13 @@ Every generated commit message and review is saved to `~/.aicommit-history.json`
 
 ```sh
 aic history
+aic history --non-interactive
 aic history -n 5
 aic history --all
 aic history --verbose
 ```
+
+When `aic history` is run in a terminal, it opens the interactive picker by default. Use `--non-interactive` for the plain text summary view.
 
 Filter by kind:
 
