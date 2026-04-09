@@ -288,7 +288,10 @@ mod tests {
             script
         };
 
-        std::fs::write(&path, script).unwrap();
+        let mut file = std::fs::File::create(&path).unwrap();
+        file.write_all(script.as_bytes()).unwrap();
+        file.sync_all().unwrap();
+        drop(file);
 
         #[cfg(unix)]
         {
