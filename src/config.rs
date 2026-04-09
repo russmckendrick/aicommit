@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::BTreeMap,
     env, fs,
     path::{Path, PathBuf},
 };
@@ -229,45 +229,8 @@ pub fn provider_needs_api_key(provider: &str) -> bool {
     !matches!(provider, "test") && !is_local_cli_provider(provider)
 }
 
-pub fn config_descriptions() -> HashMap<&'static str, &'static str> {
-    HashMap::from([
-        (
-            "AIC_AI_PROVIDER",
-            "AI provider to use for commit generation",
-        ),
-        ("AIC_API_KEY", "API key for the selected provider"),
-        (
-            "AIC_API_URL",
-            "Custom provider API URL; required for Azure OpenAI",
-        ),
-        (
-            "AIC_API_CUSTOM_HEADERS",
-            "JSON object of custom HTTP headers",
-        ),
-        ("AIC_PROXY", "HTTP or HTTPS proxy URL"),
-        ("AIC_TOKENS_MAX_INPUT", "Maximum input token budget"),
-        ("AIC_TOKENS_MAX_OUTPUT", "Maximum generated output tokens"),
-        ("AIC_DESCRIPTION", "Include a short body after the subject"),
-        ("AIC_EMOJI", "Prefix generated messages with GitMoji"),
-        ("AIC_MODEL", "AI model to use"),
-        ("AIC_LANGUAGE", "Language for generated commit messages"),
-        (
-            "AIC_MESSAGE_TEMPLATE_PLACEHOLDER",
-            "Placeholder used in message templates",
-        ),
-        ("AIC_PROMPT_FILE", "Path to a custom system prompt template"),
-        ("AIC_ONE_LINE_COMMIT", "Generate a single-line message"),
-        ("AIC_OMIT_SCOPE", "Avoid conventional commit scopes"),
-        ("AIC_GITPUSH", "Ask whether to push after committing"),
-        (
-            "AIC_REMOTE_ICON_STYLE",
-            "Remote host icon style for push prompts: auto, nerd-font, emoji, or label",
-        ),
-        (
-            "AIC_HOOK_AUTO_UNCOMMENT",
-            "Write hook-generated messages uncommented",
-        ),
-    ])
+pub fn config_description(key: &str) -> Option<&'static str> {
+    crate::cli_text::config_description(key)
 }
 
 pub fn set_global_config(key_values: &[(String, String)], global_path: &Path) -> Result<Config> {

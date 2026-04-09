@@ -1,0 +1,173 @@
+[root]
+about = "AI-assisted Git commit messages"
+
+[root.args.provider]
+help = "Override the configured AI provider for this run"
+
+[root.args.full_gitmoji_spec]
+help = "Use the full GitMoji prompt"
+
+[root.args.context]
+help = "Additional commit context"
+
+[root.args.yes]
+help = "Skip commit confirmation"
+
+[root.args.dry_run]
+help = "Generate and print the message without committing"
+
+[root.args.amend]
+help = "Regenerate and amend the last commit message"
+
+[root.args.git_args]
+help = "Arguments passed through to git commit"
+long_help = """
+Arguments passed through to git commit in the default commit flow, such as
+--no-verify or a commit-message template containing $msg.
+"""
+
+[root.commands.config]
+about = "Read and update global aic configuration"
+long_about = """
+Read and update global aic configuration stored in ~/.aicommit.
+
+Examples:
+  aic config set AIC_MODEL=gpt-5.4-mini
+  aic config get AIC_MODEL AIC_AI_PROVIDER
+  aic config describe
+"""
+
+[root.commands.config.commands.set]
+about = "Set one or more global config values"
+
+[root.commands.config.commands.set.args.key_values]
+help = "Config assignments in KEY=value form"
+
+[root.commands.config.commands.get]
+about = "Print one or more resolved config values"
+
+[root.commands.config.commands.get.args.keys]
+help = "Config keys to read"
+
+[root.commands.config.commands.describe]
+about = "Explain supported config keys"
+
+[root.commands.config.commands.describe.args.keys]
+help = "Config keys to describe; omit to describe all supported keys"
+
+[root.commands.setup]
+about = "Run interactive provider and model setup"
+
+[root.commands.models]
+about = "List available models for the configured provider"
+
+[root.commands.models.args.refresh]
+help = "Refresh the cached remote model list"
+
+[root.commands.hook]
+about = "Manage the Git commit-msg hook"
+long_about = """
+Install or remove the aic commit-msg hook for the current repository.
+
+Examples:
+  aic hook set
+  aic hook unset
+"""
+
+[root.commands.hook.commands.set]
+about = "Install the commit-msg hook in the current repository"
+
+[root.commands.hook.commands.unset]
+about = "Remove the aic-managed commit-msg hook"
+
+[root.commands.hook.commands.hookrun.args.message_file]
+help = "Path to the commit message file provided by Git"
+
+[root.commands.hook.commands.hookrun.args.commit_source]
+help = "Optional Git commit source passed to the hook"
+
+[root.commands.completions]
+about = "Generate shell completions"
+
+[root.commands.completions.args.shell]
+help = "Shell to generate completions for"
+
+[root.commands.review]
+about = "Review staged changes for bugs, security, and style issues"
+long_about = """
+Review staged changes for bugs, security, and style issues.
+
+Only the staged diff (git diff --staged) is reviewed. Unstaged changes are ignored.
+
+Examples:
+  aic review
+  aic review -c 'focus on security'
+  aic review --context 'this is a database migration'
+"""
+
+[root.commands.review.args.context]
+help = "Focus the review on a specific concern (for example, 'focus on security')"
+
+[root.commands.history]
+about = "Show recent AI-generated commit messages and reviews"
+
+[root.commands.history.args.count]
+help = "Number of entries to show"
+
+[root.commands.history.args.kind]
+help = "Filter by kind: commit or review"
+
+[root.commands.history.args.all]
+help = "Include temp and test history entries"
+
+[root.commands.history.args.verbose]
+help = "Show full message bodies and full repo paths"
+
+[root.commands.history.args.interactive]
+help = "Force interactive history browsing"
+
+[root.commands.history.args.non_interactive]
+help = "Print history as plain text instead of launching the picker"
+
+[root.commands.log]
+about = "Rewrite recent commit messages using AI"
+long_about = """
+Rewrite recent commit messages using AI.
+
+Generates new commit messages for the last N commits on the current branch using
+the same AI provider as normal commits. Shows a before/after comparison and
+rewrites via git rebase on confirmation.
+
+Requires a clean working tree and no merge commits in the range.
+
+Examples:
+  aic log
+  aic log -n 3
+  aic log -n 5 --yes
+"""
+
+[root.commands.log.args.count]
+help = "Number of commits to rewrite"
+
+[root.commands.log.args.yes]
+help = "Skip confirmation"
+
+[config_keys]
+AIC_AI_PROVIDER = "AI provider to use for commit generation"
+AIC_API_KEY = "API key for the selected provider"
+AIC_API_URL = "Custom provider API URL; required for Azure OpenAI"
+AIC_API_CUSTOM_HEADERS = "JSON object of custom HTTP headers"
+AIC_PROXY = "HTTP or HTTPS proxy URL"
+AIC_TOKENS_MAX_INPUT = "Maximum input token budget"
+AIC_TOKENS_MAX_OUTPUT = "Maximum generated output tokens"
+AIC_DESCRIPTION = "Include a short body after the subject"
+AIC_EMOJI = "Prefix generated messages with GitMoji"
+AIC_MODEL = "AI model to use"
+AIC_LANGUAGE = "Language for generated commit messages"
+AIC_MESSAGE_TEMPLATE_PLACEHOLDER = "Placeholder used in message templates"
+AIC_PROMPT_FILE = "Path to a custom system prompt template"
+AIC_ONE_LINE_COMMIT = "Generate a single-line message"
+AIC_OMIT_SCOPE = "Avoid conventional commit scopes"
+AIC_GITPUSH = "Ask whether to push after committing"
+AIC_REMOTE_ICON_STYLE = "Remote host icon style for push prompts: auto, nerd-font, emoji, or label"
+AIC_HOOK_AUTO_UNCOMMENT = "Write hook-generated messages uncommented"

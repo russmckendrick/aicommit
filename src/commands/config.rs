@@ -1,7 +1,7 @@
 use anyhow::{Result, bail};
 
 use crate::{
-    config::{CONFIG_KEYS, Config, ConfigPaths, config_descriptions, set_global_config},
+    config::{CONFIG_KEYS, Config, ConfigPaths, config_description, set_global_config},
     ui,
 };
 
@@ -42,7 +42,6 @@ pub fn get(keys: Vec<String>) -> Result<()> {
 }
 
 pub fn describe(keys: Vec<String>) -> Result<()> {
-    let descriptions = config_descriptions();
     let keys = if keys.is_empty() {
         CONFIG_KEYS.iter().map(|key| key.to_string()).collect()
     } else {
@@ -50,8 +49,7 @@ pub fn describe(keys: Vec<String>) -> Result<()> {
     };
 
     for key in keys {
-        let description = descriptions
-            .get(key.as_str())
+        let description = config_description(key.as_str())
             .ok_or_else(|| anyhow::anyhow!("unknown config key: {key}"))?;
         println!("{key}: {description}");
     }

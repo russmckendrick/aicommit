@@ -1,45 +1,31 @@
 use anyhow::Result;
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand};
 use clap_complete::Shell;
 
 use crate::commands;
 
 #[derive(Debug, Parser)]
-#[command(name = "aic", version, about = "AI-assisted Git commit messages")]
+#[command(name = "aic", version)]
 pub struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
 
-    #[arg(
-        short = 'p',
-        long,
-        global = true,
-        help = "Override the configured AI provider for this run"
-    )]
+    #[arg(short = 'p', long, global = true)]
     provider: Option<String>,
 
-    #[arg(long = "fgm", help = "Use the full GitMoji prompt")]
+    #[arg(long = "fgm")]
     full_gitmoji_spec: bool,
 
-    #[arg(
-        short = 'c',
-        long,
-        default_value = "",
-        help = "Additional commit context"
-    )]
+    #[arg(short = 'c', long, default_value = "")]
     context: String,
 
-    #[arg(short = 'y', long, help = "Skip commit confirmation")]
+    #[arg(short = 'y', long)]
     yes: bool,
 
-    #[arg(
-        short = 'd',
-        long,
-        help = "Generate and print the message without committing"
-    )]
+    #[arg(short = 'd', long)]
     dry_run: bool,
 
-    #[arg(long, help = "Regenerate and amend the last commit message")]
+    #[arg(long)]
     amend: bool,
 
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
@@ -98,96 +84,53 @@ struct HookRunCommand {
 }
 
 #[derive(Debug, Args)]
-#[command(about = "Generate shell completions")]
 struct CompletionsCommand {
-    #[arg(help = "Shell to generate completions for")]
     shell: Shell,
 }
 
 #[derive(Debug, Args)]
-#[command(
-    about = "Review staged changes for bugs, security, and style issues",
-    long_about = "Review staged changes for bugs, security, and style issues.\n\n\
-        Only the staged diff (git diff --staged) is reviewed. Unstaged changes are ignored.\n\n\
-        Examples:\n  \
-        aic review\n  \
-        aic review -c 'focus on security'\n  \
-        aic review --context 'this is a database migration'"
-)]
 struct ReviewCommand {
-    #[arg(
-        short = 'c',
-        long,
-        default_value = "",
-        help = "Focus the review on a specific concern (e.g., 'focus on security')"
-    )]
+    #[arg(short = 'c', long, default_value = "")]
     context: String,
 }
 
 #[derive(Debug, Args)]
-#[command(about = "Show recent AI-generated commit messages and reviews")]
 struct HistoryCommand {
-    #[arg(
-        short = 'n',
-        long,
-        default_value = "10",
-        help = "Number of entries to show"
-    )]
+    #[arg(short = 'n', long, default_value = "10")]
     count: usize,
 
-    #[arg(short = 'k', long, help = "Filter by kind: commit or review")]
+    #[arg(short = 'k', long)]
     kind: Option<String>,
 
-    #[arg(long, help = "Include temp and test history entries")]
+    #[arg(long)]
     all: bool,
 
-    #[arg(long, help = "Show full message bodies and full repo paths")]
+    #[arg(long)]
     verbose: bool,
 
-    #[arg(
-        short = 'i',
-        long = "interactive",
-        conflicts_with = "non_interactive",
-        help = "Force interactive history browsing"
-    )]
+    #[arg(short = 'i', long = "interactive", conflicts_with = "non_interactive")]
     interactive: bool,
 
-    #[arg(
-        long = "non-interactive",
-        conflicts_with = "interactive",
-        help = "Print history as plain text instead of launching the picker"
-    )]
+    #[arg(long = "non-interactive", conflicts_with = "interactive")]
     non_interactive: bool,
 }
 
 #[derive(Debug, Args)]
-#[command(
-    about = "Rewrite recent commit messages using AI",
-    long_about = "Rewrite recent commit messages using AI.\n\n\
-        Generates new commit messages for the last N commits on the current branch \
-        using the same AI provider as normal commits. Shows a before/after comparison \
-        and rewrites via git rebase on confirmation.\n\n\
-        Requires a clean working tree and no merge commits in the range.\n\n\
-        Examples:\n  \
-        aic log\n  \
-        aic log -n 3\n  \
-        aic log -n 5 --yes"
-)]
 struct LogCommand {
-    #[arg(
-        short = 'n',
-        long,
-        default_value = "5",
-        help = "Number of commits to rewrite"
-    )]
+    #[arg(short = 'n', long, default_value = "5")]
     count: usize,
 
-    #[arg(short = 'y', long, help = "Skip confirmation")]
+    #[arg(short = 'y', long)]
     yes: bool,
 }
 
+pub fn command() -> clap::Command {
+    crate::cli_text::command(Cli::command())
+}
+
 pub async fn run() -> Result<()> {
-    let cli = Cli::parse();
+    let mut matches = command().get_matches();
+    let cli = Cli::from_arg_matches_mut(&mut matches)?;
 
     match cli.command {
         Some(Command::Config(command)) => match command.mode {

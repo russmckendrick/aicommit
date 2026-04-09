@@ -4,6 +4,7 @@ The Rust crate is organized around small modules:
 
 ```text
 src/cli.rs              CLI parser and dispatch
+src/cli_help.toml       Bundled help text and config-key descriptions
 src/commands/           User-facing command flows
 src/config.rs           Defaults, global config, and environment overrides
 src/git.rs              Git command wrapper and repository helpers

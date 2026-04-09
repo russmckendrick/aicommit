@@ -1,10 +1,9 @@
-use clap::CommandFactory;
 use clap_complete::{Shell, generate};
 
-use crate::cli::Cli;
+use crate::cli;
 
 pub fn run(shell: Shell) {
-    let mut cmd = Cli::command();
+    let mut cmd = cli::command();
     cmd.build();
     generate(shell, &mut cmd, "aic", &mut std::io::stdout());
 }

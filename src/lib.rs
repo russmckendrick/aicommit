@@ -1,5 +1,6 @@
 pub mod ai;
 pub mod cli;
+pub mod cli_text;
 pub mod commands;
 pub mod config;
 pub mod errors;

@@ -109,6 +109,52 @@ fn reports_no_changes() {
 }
 
 #[test]
+fn top_level_help_describes_all_visible_commands() {
+    let repo = init_repo();
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "config       Read and update global aic configuration",
+        ))
+        .stdout(predicate::str::contains(
+            "setup        Run interactive provider and model setup",
+        ))
+        .stdout(predicate::str::contains(
+            "models       List available models for the configured provider",
+        ))
+        .stdout(predicate::str::contains(
+            "hook         Manage the Git commit-msg hook",
+        ))
+        .stdout(predicate::str::contains(
+            "Arguments passed through to git commit",
+        ));
+}
+
+#[test]
+fn config_help_describes_nested_subcommands() {
+    let repo = init_repo();
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .args(["config", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "set       Set one or more global config values",
+        ))
+        .stdout(predicate::str::contains(
+            "get       Print one or more resolved config values",
+        ))
+        .stdout(predicate::str::contains(
+            "describe  Explain supported config keys",
+        ));
+}
+
+#[test]
 fn commits_staged_file_with_test_provider() {
     let repo = init_repo();
     fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
