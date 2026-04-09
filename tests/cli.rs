@@ -1,4 +1,4 @@
-use std::{fs, path::Path, process::Command};
+use std::{env, ffi::OsString, fs, path::Path, process::Command};
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -29,8 +29,27 @@ where
 }
 
 fn install_fake_binary(dir: &Path, name: &str, output: &str) {
+    #[cfg(unix)]
     let path = dir.join(name);
+    #[cfg(windows)]
+    let path = dir.join(format!("{name}.cmd"));
+
+    #[cfg(unix)]
     let script = format!("#!/bin/sh\ncat >/dev/null\ncat <<'EOF'\n{output}\nEOF\n");
+    #[cfg(windows)]
+    let script = {
+        let mut script = String::from("@echo off\r\nmore >NUL\r\n");
+        for line in output.lines() {
+            script.push_str("echo(");
+            script.push_str(&escape_cmd_echo(line));
+            script.push_str("\r\n");
+        }
+        if output.ends_with('\n') {
+            script.push_str("echo(\r\n");
+        }
+        script
+    };
+
     fs::write(&path, script).unwrap();
     #[cfg(unix)]
     {
@@ -40,9 +59,24 @@ fn install_fake_binary(dir: &Path, name: &str, output: &str) {
     }
 }
 
-fn path_with_fake_bin(dir: &Path) -> String {
-    let current = std::env::var("PATH").unwrap_or_default();
-    format!("{}:{current}", dir.display())
+#[cfg(windows)]
+fn escape_cmd_echo(line: &str) -> String {
+    line.replace('^', "^^")
+        .replace('%', "%%")
+        .replace('&', "^&")
+        .replace('|', "^|")
+        .replace('<', "^<")
+        .replace('>', "^>")
+        .replace('(', "^(")
+        .replace(')', "^)")
+}
+
+fn path_with_fake_bin(dir: &Path) -> OsString {
+    let mut paths = vec![dir.to_path_buf()];
+    if let Some(current) = env::var_os("PATH") {
+        paths.extend(env::split_paths(&current));
+    }
+    env::join_paths(paths).unwrap()
 }
 
 #[test]

@@ -156,24 +156,115 @@ impl AiEngine for CommandEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::{Path, PathBuf};
+
+    use tempfile::TempDir;
 
     fn test_messages() -> Vec<ChatMessage> {
         vec![ChatMessage::user("diff --git a/src/lib.rs b/src/lib.rs")]
     }
 
+    #[cfg(windows)]
+    fn escape_cmd_echo(line: &str) -> String {
+        line.replace('^', "^^")
+            .replace('%', "%%")
+            .replace('&', "^&")
+            .replace('|', "^|")
+            .replace('<', "^<")
+            .replace('>', "^>")
+            .replace('(', "^(")
+            .replace(')', "^)")
+    }
+
+    fn install_test_binary(
+        dir: &Path,
+        name: &str,
+        stdout: &str,
+        stderr: &str,
+        exit_code: i32,
+    ) -> PathBuf {
+        #[cfg(unix)]
+        let path = dir.join(name);
+        #[cfg(windows)]
+        let path = dir.join(format!("{name}.cmd"));
+
+        #[cfg(unix)]
+        let script = {
+            let mut script = String::from("#!/bin/sh\ncat >/dev/null\n");
+            if !stdout.is_empty() {
+                script.push_str("cat <<'AIC_STDOUT'\n");
+                script.push_str(stdout);
+                if !stdout.ends_with('\n') {
+                    script.push('\n');
+                }
+                script.push_str("AIC_STDOUT\n");
+            }
+            if !stderr.is_empty() {
+                script.push_str("cat <<'AIC_STDERR' >&2\n");
+                script.push_str(stderr);
+                if !stderr.ends_with('\n') {
+                    script.push('\n');
+                }
+                script.push_str("AIC_STDERR\n");
+            }
+            script.push_str(&format!("exit {exit_code}\n"));
+            script
+        };
+
+        #[cfg(windows)]
+        let script = {
+            let mut script = String::from("@echo off\r\nmore >NUL\r\n");
+            for line in stdout.lines() {
+                script.push_str("echo(");
+                script.push_str(&escape_cmd_echo(line));
+                script.push_str("\r\n");
+            }
+            if stdout.ends_with('\n') {
+                script.push_str("echo(\r\n");
+            }
+            for line in stderr.lines() {
+                script.push_str(">&2 echo(");
+                script.push_str(&escape_cmd_echo(line));
+                script.push_str("\r\n");
+            }
+            if stderr.ends_with('\n') {
+                script.push_str(">&2 echo(\r\n");
+            }
+            script.push_str(&format!("exit /b {exit_code}\r\n"));
+            script
+        };
+
+        std::fs::write(&path, script).unwrap();
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut permissions = std::fs::metadata(&path).unwrap().permissions();
+            permissions.set_mode(0o755);
+            std::fs::set_permissions(&path, permissions).unwrap();
+        }
+
+        path
+    }
+
     #[tokio::test]
     async fn command_engine_strips_reasoning_tags() {
+        let temp = TempDir::new().unwrap();
+        let program = install_test_binary(
+            temp.path(),
+            "claude-test",
+            "<think>hidden</think>\nfeat: add cli\n",
+            "",
+            0,
+        );
         let engine = CommandEngine::with_command(
             Config {
                 ai_provider: "claude-code".to_owned(),
                 model: "default".to_owned(),
                 ..Config::default()
             },
-            "/bin/sh",
-            [
-                "-c",
-                "cat >/dev/null\nprintf '<think>hidden</think>\\nfeat: add cli\\n'",
-            ],
+            program.to_string_lossy().to_string(),
+            std::iter::empty::<&str>(),
             std::env::temp_dir(),
         );
 
@@ -209,14 +300,16 @@ mod tests {
 
     #[tokio::test]
     async fn command_engine_reports_non_zero_exit() {
+        let temp = TempDir::new().unwrap();
+        let program = install_test_binary(temp.path(), "claude-fail", "", "boom", 9);
         let engine = CommandEngine::with_command(
             Config {
                 ai_provider: "claude-code".to_owned(),
                 model: "default".to_owned(),
                 ..Config::default()
             },
-            "/bin/sh",
-            ["-c", "cat >/dev/null\necho boom >&2\nexit 9"],
+            program.to_string_lossy().to_string(),
+            std::iter::empty::<&str>(),
             std::env::temp_dir(),
         );
 
