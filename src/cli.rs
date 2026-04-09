@@ -137,6 +137,12 @@ struct HistoryCommand {
 
     #[arg(short = 'k', long, help = "Filter by kind: commit or review")]
     kind: Option<String>,
+
+    #[arg(long, help = "Include temp and test history entries")]
+    all: bool,
+
+    #[arg(long, help = "Show full message bodies and full repo paths")]
+    verbose: bool,
 }
 
 #[derive(Debug, Args)]
@@ -192,7 +198,9 @@ pub async fn run() -> Result<()> {
         Some(Command::Review(command)) => {
             commands::review::run(command.context, cli.provider).await
         }
-        Some(Command::History(command)) => commands::history::run(command.count, command.kind),
+        Some(Command::History(command)) => {
+            commands::history::run(command.count, command.kind, command.all, command.verbose)
+        }
         Some(Command::Log(command)) => {
             commands::log::run(command.count, command.yes, cli.provider).await
         }

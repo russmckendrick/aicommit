@@ -78,6 +78,8 @@ Every generated commit message and review is saved to `~/.aicommit-history.json`
 ```sh
 aic history
 aic history -n 5
+aic history --all
+aic history --verbose
 ```
 
 Filter by kind:

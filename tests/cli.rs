@@ -5,6 +5,7 @@ use std::os::unix::fs::PermissionsExt;
 
 use assert_cmd::prelude::*;
 use predicates::prelude::*;
+use serde_json::json;
 use tempfile::TempDir;
 
 fn init_repo() -> TempDir {
@@ -77,6 +78,22 @@ fn path_with_fake_bin(dir: &Path) -> OsString {
         paths.extend(env::split_paths(&current));
     }
     env::join_paths(paths).unwrap()
+}
+
+fn write_history(home: &Path, entries: &[serde_json::Value]) {
+    fs::write(
+        home.join(".aicommit-history.json"),
+        serde_json::to_string_pretty(entries).unwrap(),
+    )
+    .unwrap();
+}
+
+fn history_command(repo: &Path, home: &Path) -> Command {
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo)
+        .env("HOME", home)
+        .env("USERPROFILE", home);
+    cmd
 }
 
 #[test]
@@ -247,4 +264,188 @@ fn models_command_shows_local_provider_note_for_override() {
         ))
         .stdout(predicate::str::contains("* default"))
         .stdout(predicate::str::contains("installed `claude` CLI"));
+}
+
+#[test]
+fn history_hides_temp_entries_by_default_and_shows_compact_view() {
+    let repo = init_repo();
+    let home = TempDir::new().unwrap();
+    let temp_repo = env::temp_dir().join(".tmpaic-history-noise");
+    write_history(
+        home.path(),
+        &[
+            json!({
+                "timestamp": "2024-01-15T14:30:00Z",
+                "kind": "commit",
+                "message": "feat(history): improve timeline\n\n- add friendlier rendering",
+                "repo_path": "/Users/example/Code/aicommit",
+                "files": ["src/cli.rs", "src/history.rs", "README.md"],
+                "provider": "openai",
+                "model": "gpt-5.4-mini"
+            }),
+            json!({
+                "timestamp": "2024-01-15T14:35:00Z",
+                "kind": "commit",
+                "message": "feat: hidden temp entry",
+                "repo_path": temp_repo,
+                "files": ["src.txt"],
+                "provider": "test",
+                "model": "default"
+            }),
+        ],
+    );
+
+    history_command(repo.path(), home.path())
+        .arg("history")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "Recent history entries (1 shown, 1 hidden)",
+        ))
+        .stdout(predicate::str::contains("feat(history): improve timeline"))
+        .stdout(predicate::str::contains(
+            "openai/gpt-5.4-mini  aicommit  3 files",
+        ))
+        .stdout(predicate::str::contains(
+            "files: src/cli.rs, src/history.rs +1 more",
+        ))
+        .stdout(predicate::str::contains("hidden temp entry").not())
+        .stdout(predicate::str::contains(".tmpaic-history-noise").not());
+}
+
+#[test]
+fn history_all_includes_hidden_entries() {
+    let repo = init_repo();
+    let home = TempDir::new().unwrap();
+    let temp_repo = env::temp_dir().join(".tmpaic-history-noise");
+    write_history(
+        home.path(),
+        &[
+            json!({
+                "timestamp": "2024-01-15T14:30:00Z",
+                "kind": "commit",
+                "message": "feat(history): improve timeline",
+                "repo_path": "/Users/example/Code/aicommit",
+                "files": ["src/cli.rs"],
+                "provider": "openai",
+                "model": "gpt-5.4-mini"
+            }),
+            json!({
+                "timestamp": "2024-01-15T14:35:00Z",
+                "kind": "commit",
+                "message": "feat: hidden temp entry",
+                "repo_path": temp_repo,
+                "files": ["src.txt"],
+                "provider": "test",
+                "model": "default"
+            }),
+        ],
+    );
+
+    history_command(repo.path(), home.path())
+        .arg("history")
+        .arg("--all")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "Recent history entries (2 shown, 0 hidden)",
+        ))
+        .stdout(predicate::str::contains("feat: hidden temp entry"));
+}
+
+#[test]
+fn history_verbose_shows_full_message_and_repo_path() {
+    let repo = init_repo();
+    let home = TempDir::new().unwrap();
+    write_history(
+        home.path(),
+        &[json!({
+            "timestamp": "2024-01-15T14:30:00Z",
+            "kind": "commit",
+            "message": "feat(history): improve timeline\n\n- add friendlier rendering\n- keep full detail in verbose mode",
+            "repo_path": "/Users/example/Code/aicommit",
+            "files": ["src/commands/history.rs", "src/history.rs"],
+            "provider": "openai",
+            "model": "gpt-5.4-mini"
+        })],
+    );
+
+    history_command(repo.path(), home.path())
+        .arg("history")
+        .arg("--verbose")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("- add friendlier rendering"))
+        .stdout(predicate::str::contains(
+            "repo: /Users/example/Code/aicommit",
+        ))
+        .stdout(predicate::str::contains("src/commands/history.rs"))
+        .stdout(predicate::str::contains("src/history.rs"));
+}
+
+#[test]
+fn history_kind_review_uses_compact_excerpt() {
+    let repo = init_repo();
+    let home = TempDir::new().unwrap();
+    write_history(
+        home.path(),
+        &[
+            json!({
+                "timestamp": "2024-01-15T14:30:00Z",
+                "kind": "commit",
+                "message": "feat(history): improve timeline",
+                "repo_path": "/Users/example/Code/aicommit",
+                "files": ["src/history.rs"],
+                "provider": "openai",
+                "model": "gpt-5.4-mini"
+            }),
+            json!({
+                "timestamp": "2024-01-15T14:35:00Z",
+                "kind": "review",
+                "message": "# Critical\n- Avoid panic in `src/lib.rs` while loading history\n- Keep compact output readable",
+                "repo_path": "/Users/example/Code/aicommit",
+                "files": ["src/lib.rs"],
+                "provider": "codex",
+                "model": "default"
+            }),
+        ],
+    );
+
+    history_command(repo.path(), home.path())
+        .arg("history")
+        .arg("--kind")
+        .arg("review")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "Recent review entries (1 shown, 0 hidden)",
+        ))
+        .stdout(predicate::str::contains(
+            "Critical Avoid panic in src/lib.rs while loading history Keep compact output readable",
+        ))
+        .stdout(predicate::str::contains("feat(history): improve timeline").not());
+}
+
+#[test]
+fn history_invalid_timestamp_falls_back_to_raw_value() {
+    let repo = init_repo();
+    let home = TempDir::new().unwrap();
+    write_history(
+        home.path(),
+        &[json!({
+            "timestamp": "yesterday-ish",
+            "kind": "commit",
+            "message": "feat(history): keep raw timestamps",
+            "repo_path": "/Users/example/Code/aicommit",
+            "files": ["src/history.rs"],
+            "provider": "openai",
+            "model": "gpt-5.4-mini"
+        })],
+    );
+
+    history_command(repo.path(), home.path())
+        .arg("history")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("yesterday-ish"));
 }

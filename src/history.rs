@@ -1,4 +1,7 @@
-use std::{env, fs, path::PathBuf};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -16,6 +19,12 @@ pub struct HistoryEntry {
     pub files: Vec<String>,
     pub provider: String,
     pub model: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct RecentEntries {
+    pub entries: Vec<HistoryEntry>,
+    pub hidden_count: usize,
 }
 
 pub fn history_path() -> Result<PathBuf> {
@@ -46,16 +55,53 @@ pub fn load_entries() -> Result<Vec<HistoryEntry>> {
     Ok(entries)
 }
 
-pub fn recent_entries(n: usize, kind: Option<&str>) -> Result<Vec<HistoryEntry>> {
+pub fn recent_entries(n: usize, kind: Option<&str>, include_all: bool) -> Result<RecentEntries> {
     let entries = load_entries()?;
     let filtered: Vec<_> = match kind {
         Some(k) => entries.into_iter().filter(|e| e.kind == k).collect(),
         None => entries,
     };
-    let start = filtered.len().saturating_sub(n);
-    Ok(filtered[start..].iter().rev().cloned().collect())
+    let hidden_count = filtered.iter().filter(|entry| is_temp_entry(entry)).count();
+    let visible: Vec<_> = if include_all {
+        filtered
+    } else {
+        filtered
+            .into_iter()
+            .filter(|entry| !is_temp_entry(entry))
+            .collect()
+    };
+    let start = visible.len().saturating_sub(n);
+    Ok(RecentEntries {
+        entries: visible[start..].iter().rev().cloned().collect(),
+        hidden_count: if include_all { 0 } else { hidden_count },
+    })
 }
 
 pub fn now_iso8601() -> String {
     Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+}
+
+fn is_temp_entry(entry: &HistoryEntry) -> bool {
+    path_is_in_temp_dir(&entry.repo_path)
+}
+
+fn path_is_in_temp_dir(path: &str) -> bool {
+    let candidate = Path::new(path);
+    candidate.starts_with(env::temp_dir())
+        || normalize_private_prefix(candidate)
+            .starts_with(normalize_private_prefix(&env::temp_dir()))
+}
+
+fn normalize_private_prefix(path: &Path) -> PathBuf {
+    let stripped = path.strip_prefix("/private").unwrap_or(path).to_path_buf();
+
+    #[cfg(windows)]
+    {
+        PathBuf::from(stripped.to_string_lossy().to_lowercase())
+    }
+
+    #[cfg(not(windows))]
+    {
+        stripped
+    }
 }

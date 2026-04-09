@@ -37,6 +37,10 @@ pub fn secondary(message: impl AsRef<str>) {
     }
 }
 
+pub fn headline(message: impl AsRef<str>) {
+    println!("  {}", style(message.as_ref()).bold());
+}
+
 pub fn commit_message(message: impl AsRef<str>) {
     for (index, line) in message.as_ref().lines().enumerate() {
         if index == 0 {

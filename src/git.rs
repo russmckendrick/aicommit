@@ -332,9 +332,9 @@ echo $((N + 1)) > "{tmp_dir_str}/counter"
         .args(["rebase", "-i", &format!("HEAD~{n}")])
         .env(
             "GIT_SEQUENCE_EDITOR",
-            sequence_editor_script.display().to_string(),
+            git_shell_command(&sequence_editor_script),
         )
-        .env("GIT_EDITOR", editor_script.display().to_string())
+        .env("GIT_EDITOR", git_shell_command(&editor_script))
         .current_dir(&root)
         .output()?;
 
@@ -358,6 +358,24 @@ impl Drop for RewordCleanup {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
     }
+}
+
+fn git_shell_command(script: &Path) -> String {
+    #[cfg(windows)]
+    {
+        let path = script.display().to_string().replace('\\', "/");
+        format!("sh \"{path}\"")
+    }
+
+    #[cfg(not(windows))]
+    {
+        shell_quote(&script.display().to_string())
+    }
+}
+
+#[cfg(not(windows))]
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', r"'\''"))
 }
 
 pub fn current_branch() -> Option<String> {

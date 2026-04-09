@@ -61,6 +61,8 @@ View recent AI-generated commit messages and reviews:
 ```sh
 aic history
 aic history --kind review
+aic history --all
+aic history --verbose
 ```
 
 ### More commands
