@@ -69,6 +69,19 @@ AIC_MODEL=gpt-5.4-mini aic
 
 For Azure OpenAI, set `AIC_AI_PROVIDER=azure-openai`, set `AIC_API_URL` to your Azure OpenAI v1 endpoint, and use your deployment name as `AIC_MODEL`.
 
+For local CLI providers, set `AIC_AI_PROVIDER=claude-code` or `AIC_AI_PROVIDER=codex` and leave `AIC_MODEL=default`. These providers use the installed `claude` or `codex` binary from `PATH` and rely on that CLI's existing login state instead of `AIC_API_KEY`.
+
+Use `--provider <name>` to override the configured provider for a single run:
+
+```sh
+aic --provider claude-code
+aic review --provider codex
+aic log --provider codex --yes
+aic models --provider claude-code
+```
+
+The alias `claudecode` is accepted and normalized to `claude-code`.
+
 `AIC_REMOTE_ICON_STYLE` controls Git host icons in push prompts. Use `auto` or `nerd-font` for Nerd Font icons with emoji and label fallback, `emoji` for emoji with label fallback, or `label` for plain provider labels only.
 
 ## Prompt Template

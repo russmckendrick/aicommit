@@ -2,8 +2,12 @@ use anyhow::{Result, bail};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::{ai::openai_compat::OpenAiCompatEngine, config::Config};
+use crate::{
+    ai::{command::CommandEngine, openai_compat::OpenAiCompatEngine},
+    config::Config,
+};
 
+pub mod command;
 pub mod openai_compat;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -45,9 +49,12 @@ pub trait AiEngine: Send + Sync {
 pub fn engine_from_config(config: &Config) -> Result<Box<dyn AiEngine>> {
     match config.ai_provider.as_str() {
         "openai" | "azure-openai" => Ok(Box::new(OpenAiCompatEngine::new(config.clone())?)),
+        "claude-code" | "codex" => Ok(Box::new(CommandEngine::new(config.clone())?)),
         "test" => Ok(Box::new(TestEngine)),
         unsupported => {
-            bail!("provider '{unsupported}' is not supported; use openai or azure-openai")
+            bail!(
+                "provider '{unsupported}' is not supported; use openai, azure-openai, claude-code, or codex"
+            )
         }
     }
 }

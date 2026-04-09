@@ -12,9 +12,9 @@ use crate::{
 
 const TOKEN_ADJUSTMENT: usize = 20;
 
-pub async fn run(context: String) -> Result<()> {
+pub async fn run(context: String, provider_override: Option<String>) -> Result<()> {
     git::assert_git_repo()?;
-    let config = Config::load()?;
+    let config = Config::load_with_provider_override(provider_override.as_deref())?;
 
     if config.provider_needs_api_key() && config.api_key.is_none() {
         bail!(AicError::MissingApiKey(config.ai_provider));

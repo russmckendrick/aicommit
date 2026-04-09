@@ -1,0 +1,232 @@
+use std::{
+    env,
+    io::Write,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
+
+use anyhow::{Context, Result, bail};
+use async_trait::async_trait;
+
+use crate::{
+    ai::{AiEngine, ChatMessage},
+    config::Config,
+    git,
+    prompt::sanitize_model_output,
+};
+
+#[derive(Debug, Clone)]
+pub struct CommandEngine {
+    config: Config,
+    program: String,
+    args: Vec<String>,
+    cwd: PathBuf,
+}
+
+impl CommandEngine {
+    pub fn new(config: Config) -> Result<Self> {
+        let cwd = git::repo_root().or_else(|_| env::current_dir())?;
+        match config.ai_provider.as_str() {
+            "claude-code" => Ok(Self::with_command(config, "claude", ["-p"], cwd)),
+            "codex" => Ok(Self::with_command(config, "codex", ["exec"], cwd)),
+            unsupported => bail!("provider '{unsupported}' is not supported by the command engine"),
+        }
+    }
+
+    pub(crate) fn with_command<S, I>(config: Config, program: S, args: I, cwd: PathBuf) -> Self
+    where
+        S: Into<String>,
+        I: IntoIterator,
+        I::Item: AsRef<str>,
+    {
+        Self {
+            config,
+            program: program.into(),
+            args: args
+                .into_iter()
+                .map(|arg| arg.as_ref().to_owned())
+                .collect(),
+            cwd,
+        }
+    }
+
+    fn render_prompt(messages: &[ChatMessage]) -> String {
+        let mut prompt = String::from(
+            "Return only the assistant reply for the final user message. Do not add commentary about your process.\n",
+        );
+
+        for message in messages {
+            prompt.push_str("\n<message role=\"");
+            prompt.push_str(&message.role);
+            prompt.push_str("\">\n");
+            prompt.push_str(&message.content);
+            if !message.content.ends_with('\n') {
+                prompt.push('\n');
+            }
+            prompt.push_str("</message>\n");
+        }
+
+        prompt
+    }
+
+    fn provider_label(&self) -> &'static str {
+        match self.config.ai_provider.as_str() {
+            "claude-code" => "claude-code",
+            "codex" => "codex",
+            _ => "command provider",
+        }
+    }
+
+    fn binary_hint(&self) -> String {
+        if self.args.is_empty() {
+            self.program.clone()
+        } else {
+            format!("{} {}", self.program, self.args.join(" "))
+        }
+    }
+}
+
+#[async_trait]
+impl AiEngine for CommandEngine {
+    async fn generate_commit_message(&self, messages: &[ChatMessage]) -> Result<String> {
+        let prompt = Self::render_prompt(messages);
+        let mut child = Command::new(&self.program)
+            .args(&self.args)
+            .current_dir(&self.cwd)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|error| match error.kind() {
+                std::io::ErrorKind::NotFound => anyhow::anyhow!(
+                    "{} provider requires `{}` on PATH",
+                    self.provider_label(),
+                    self.program
+                ),
+                _ => anyhow::anyhow!(
+                    "failed to start {} provider via `{}`: {error}",
+                    self.provider_label(),
+                    self.binary_hint()
+                ),
+            })?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(prompt.as_bytes())
+                .with_context(|| format!("failed to write prompt to `{}`", self.binary_hint()))?;
+        }
+
+        let output = child.wait_with_output().with_context(|| {
+            format!(
+                "failed to read output from {} provider via `{}`",
+                self.provider_label(),
+                self.binary_hint()
+            )
+        })?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+            let detail = if stderr.is_empty() {
+                format!("exit status {}", output.status)
+            } else {
+                stderr
+            };
+            bail!(
+                "{} provider failed via `{}`: {}",
+                self.provider_label(),
+                self.binary_hint(),
+                detail
+            );
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let content = sanitize_model_output(&stdout);
+        if content.is_empty() {
+            bail!(
+                "{} provider returned an empty response via `{}`",
+                self.provider_label(),
+                self.binary_hint()
+            );
+        }
+
+        Ok(content)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_messages() -> Vec<ChatMessage> {
+        vec![ChatMessage::user("diff --git a/src/lib.rs b/src/lib.rs")]
+    }
+
+    #[tokio::test]
+    async fn command_engine_strips_reasoning_tags() {
+        let engine = CommandEngine::with_command(
+            Config {
+                ai_provider: "claude-code".to_owned(),
+                model: "default".to_owned(),
+                ..Config::default()
+            },
+            "/bin/sh",
+            [
+                "-c",
+                "cat >/dev/null\nprintf '<think>hidden</think>\\nfeat: add cli\\n'",
+            ],
+            std::env::temp_dir(),
+        );
+
+        let response = engine
+            .generate_commit_message(&test_messages())
+            .await
+            .unwrap();
+
+        assert_eq!(response, "feat: add cli");
+    }
+
+    #[tokio::test]
+    async fn command_engine_reports_missing_binary() {
+        let engine = CommandEngine::with_command(
+            Config {
+                ai_provider: "codex".to_owned(),
+                model: "default".to_owned(),
+                ..Config::default()
+            },
+            "__missing_binary__",
+            ["exec"],
+            std::env::temp_dir(),
+        );
+
+        let error = engine
+            .generate_commit_message(&test_messages())
+            .await
+            .unwrap_err()
+            .to_string();
+
+        assert!(error.contains("codex provider requires `__missing_binary__` on PATH"));
+    }
+
+    #[tokio::test]
+    async fn command_engine_reports_non_zero_exit() {
+        let engine = CommandEngine::with_command(
+            Config {
+                ai_provider: "claude-code".to_owned(),
+                model: "default".to_owned(),
+                ..Config::default()
+            },
+            "/bin/sh",
+            ["-c", "cat >/dev/null\necho boom >&2\nexit 9"],
+            std::env::temp_dir(),
+        );
+
+        let error = engine
+            .generate_commit_message(&test_messages())
+            .await
+            .unwrap_err()
+            .to_string();
+
+        assert!(error.contains("claude-code provider failed"));
+        assert!(error.contains("boom"));
+    }
+}

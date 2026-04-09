@@ -2,7 +2,8 @@ use anyhow::Result;
 
 use crate::{
     config::{
-        Config, ConfigPaths, default_model_for_provider, enabled_providers, set_global_config,
+        Config, ConfigPaths, default_model_for_provider, enabled_providers, is_local_cli_provider,
+        set_global_config,
     },
     ui,
 };
@@ -22,8 +23,10 @@ pub async fn run() -> Result<()> {
         ),
     ];
 
-    let api_key = ui::text("Enter your API key", None)?;
-    key_values.push(("AIC_API_KEY".to_owned(), api_key));
+    if !is_local_cli_provider(&provider) {
+        let api_key = ui::text("Enter your API key", None)?;
+        key_values.push(("AIC_API_KEY".to_owned(), api_key));
+    }
 
     if provider == "azure-openai" {
         let api_url = ui::text(

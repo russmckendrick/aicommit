@@ -9,7 +9,9 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::{Config, global_model_cache_path, model_list, supported_providers},
+    config::{
+        Config, global_model_cache_path, is_local_cli_provider, model_list, supported_providers,
+    },
     ui,
 };
 
@@ -21,14 +23,28 @@ struct ModelCache {
     models: BTreeMap<String, Vec<String>>,
 }
 
-pub async fn run(provider: Option<String>, refresh: bool) -> Result<()> {
-    let config = Config::load()?;
-    let provider = provider.unwrap_or_else(|| config.ai_provider.clone());
+pub async fn run(provider_override: Option<String>, refresh: bool) -> Result<()> {
+    let config = Config::load_with_provider_override(provider_override.as_deref())?;
+    let provider = config.ai_provider.clone();
     if !supported_providers().contains(&provider.as_str()) {
         bail!(
             "unsupported provider '{provider}'; supported values: {}",
             supported_providers().join(", ")
         );
+    }
+
+    if is_local_cli_provider(&provider) {
+        ui::info(format!("Available models for {provider}:"));
+        println!("* {}", config.model);
+        let binary = if provider == "claude-code" {
+            "`claude`"
+        } else {
+            "`codex exec`"
+        };
+        ui::secondary(format!(
+            "Uses the installed {binary} CLI from PATH with its existing authentication."
+        ));
+        return Ok(());
     }
 
     let cache_path = global_model_cache_path()?;

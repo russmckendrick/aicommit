@@ -7,7 +7,7 @@ use crate::{
     ai::{AiEngine, ChatMessage},
     config::Config,
     errors::normalize_provider_error,
-    prompt::remove_content_tags,
+    prompt::sanitize_model_output,
     token::count_messages,
 };
 
@@ -138,7 +138,7 @@ impl AiEngine for OpenAiCompatEngine {
             .choices
             .first()
             .and_then(|choice| choice.message.content.as_deref())
-            .map(|content| remove_content_tags(content, "think"))
+            .map(sanitize_model_output)
             .filter(|content| !content.is_empty())
             .ok_or(crate::errors::AicError::EmptyMessage)?;
 

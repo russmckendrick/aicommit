@@ -10,6 +10,14 @@ pub struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
 
+    #[arg(
+        short = 'p',
+        long,
+        global = true,
+        help = "Override the configured AI provider for this run"
+    )]
+    provider: Option<String>,
+
     #[arg(long = "fgm", help = "Use the full GitMoji prompt")]
     full_gitmoji_spec: bool,
 
@@ -69,8 +77,6 @@ enum ConfigMode {
 struct ModelsCommand {
     #[arg(short, long)]
     refresh: bool,
-    #[arg(short, long)]
-    provider: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -170,7 +176,7 @@ pub async fn run() -> Result<()> {
         },
         Some(Command::Setup) => commands::setup::run().await,
         Some(Command::Models(command)) => {
-            commands::models::run(command.provider, command.refresh).await
+            commands::models::run(cli.provider, command.refresh).await
         }
         Some(Command::Hook(command)) => match command.mode {
             HookMode::Set => commands::hook::set(),
@@ -183,9 +189,13 @@ pub async fn run() -> Result<()> {
             commands::completions::run(command.shell);
             Ok(())
         }
-        Some(Command::Review(command)) => commands::review::run(command.context).await,
+        Some(Command::Review(command)) => {
+            commands::review::run(command.context, cli.provider).await
+        }
         Some(Command::History(command)) => commands::history::run(command.count, command.kind),
-        Some(Command::Log(command)) => commands::log::run(command.count, command.yes).await,
+        Some(Command::Log(command)) => {
+            commands::log::run(command.count, command.yes, cli.provider).await
+        }
         None => {
             commands::commit::run(
                 cli.git_args,
@@ -194,6 +204,7 @@ pub async fn run() -> Result<()> {
                 cli.yes,
                 cli.dry_run,
                 cli.amend,
+                cli.provider,
             )
             .await
         }

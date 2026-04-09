@@ -26,10 +26,15 @@ flowchart LR
     Generator --> Prompt["src/prompt.rs"]
     Generator --> Token["src/token.rs"]
     Generator --> Ai["src/ai"]
-    Ai --> Provider["OpenAI or Azure OpenAI"]
+    Ai --> Provider["HTTP or local CLI provider"]
 ```
 
-Provider implementations use an `AiEngine` trait that accepts normalized chat messages and returns a commit message string. This keeps the commit flow independent of provider-specific HTTP payloads.
+Provider implementations use an `AiEngine` trait that accepts normalized chat messages and returns a commit message string. This keeps the commit flow independent of transport details such as HTTP payloads or local subprocess execution.
+
+Current provider families:
+
+- OpenAI-compatible HTTP engines for `openai` and `azure-openai`
+- Command-backed engines for `claude-code` and `codex`
 
 Git behavior is isolated behind `src/git.rs` so commit, push, hooks, staged-file discovery, and ignore-file filtering are testable without mixing Git process logic into UI commands.
 

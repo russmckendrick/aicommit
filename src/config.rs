@@ -16,6 +16,8 @@ pub const MODEL_CACHE_FILE: &str = ".aicommit-models.json";
 pub const REPO_IGNORE_FILE: &str = ".aicommitignore";
 pub const DEFAULT_MAX_TOKENS_INPUT: usize = 128_000;
 pub const DEFAULT_MAX_TOKENS_OUTPUT: usize = 500;
+const SUPPORTED_PROVIDERS: &[&str] = &["openai", "azure-openai", "claude-code", "codex"];
+const LOCAL_CLI_PROVIDERS: &[&str] = &["claude-code", "codex"];
 
 pub const CONFIG_KEYS: &[&str] = &[
     "AIC_AI_PROVIDER",
@@ -105,13 +107,31 @@ impl ConfigPaths {
 
 impl Config {
     pub fn load() -> Result<Self> {
-        Self::load_from(&ConfigPaths::discover()?)
+        Self::load_from_with_provider_override(&ConfigPaths::discover()?, None)
+    }
+
+    pub fn load_with_provider_override(provider_override: Option<&str>) -> Result<Self> {
+        Self::load_from_with_provider_override(&ConfigPaths::discover()?, provider_override)
     }
 
     pub fn load_from(paths: &ConfigPaths) -> Result<Self> {
+        Self::load_from_with_provider_override(paths, None)
+    }
+
+    pub fn load_from_with_provider_override(
+        paths: &ConfigPaths,
+        provider_override: Option<&str>,
+    ) -> Result<Self> {
         let mut config = Self::default();
         apply_file(&mut config, &paths.global)?;
         apply_process_env(&mut config)?;
+
+        if let Some(provider) = provider_override {
+            apply_value(&mut config, "AIC_AI_PROVIDER", provider)?;
+            if is_local_cli_provider(&config.ai_provider) {
+                config.model = default_model_for_provider(&config.ai_provider).to_owned();
+            }
+        }
 
         if config.proxy.is_none() {
             config.proxy = env::var("HTTPS_PROXY")
@@ -165,7 +185,7 @@ impl Config {
     }
 
     pub fn provider_needs_api_key(&self) -> bool {
-        !matches!(self.ai_provider.as_str(), "test")
+        provider_needs_api_key(&self.ai_provider)
     }
 }
 
@@ -179,13 +199,14 @@ pub fn global_model_cache_path() -> Result<PathBuf> {
 
 pub fn default_model_for_provider(provider: &str) -> &'static str {
     match provider {
+        "claude-code" | "codex" => "default",
         "azure-openai" => "gpt-5.4-mini",
         _ => "gpt-5.4-mini",
     }
 }
 
 pub fn supported_providers() -> &'static [&'static str] {
-    &["openai", "azure-openai"]
+    SUPPORTED_PROVIDERS
 }
 
 pub fn enabled_providers() -> &'static [&'static str] {
@@ -194,9 +215,18 @@ pub fn enabled_providers() -> &'static [&'static str] {
 
 pub fn model_list(provider: &str) -> &'static [&'static str] {
     match provider {
+        "claude-code" | "codex" => &["default"],
         "azure-openai" => &["gpt-5.4-mini", "gpt-5.4", "gpt-5.4-nano"],
         _ => &["gpt-5.4-mini", "gpt-5.4", "gpt-5.4-nano"],
     }
+}
+
+pub fn is_local_cli_provider(provider: &str) -> bool {
+    LOCAL_CLI_PROVIDERS.contains(&provider)
+}
+
+pub fn provider_needs_api_key(provider: &str) -> bool {
+    !matches!(provider, "test") && !is_local_cli_provider(provider)
 }
 
 pub fn config_descriptions() -> HashMap<&'static str, &'static str> {
@@ -246,6 +276,12 @@ pub fn set_global_config(key_values: &[(String, String)], global_path: &Path) ->
 
     for (key, value) in key_values {
         apply_value(&mut config, key, value)?;
+    }
+
+    let provider_was_set = key_values.iter().any(|(key, _)| key == "AIC_AI_PROVIDER");
+    let model_was_set = key_values.iter().any(|(key, _)| key == "AIC_MODEL");
+    if provider_was_set && !model_was_set && is_local_cli_provider(&config.ai_provider) {
+        config.model = default_model_for_provider(&config.ai_provider).to_owned();
     }
 
     validate_config(&config)?;
@@ -336,12 +372,7 @@ fn apply_value(config: &mut Config, key: &str, value: &str) -> Result<()> {
     }
 
     match key {
-        "AIC_AI_PROVIDER" => {
-            config.ai_provider = match value.to_lowercase().as_str() {
-                "azure" => "azure-openai".to_owned(),
-                provider => provider.to_owned(),
-            }
-        }
+        "AIC_AI_PROVIDER" => config.ai_provider = normalize_provider(value),
         "AIC_API_KEY" => config.api_key = optional_string(value),
         "AIC_API_URL" => config.api_url = optional_string(value),
         "AIC_API_CUSTOM_HEADERS" => {
@@ -374,6 +405,14 @@ fn optional_string(value: &str) -> Option<String> {
         None
     } else {
         Some(trimmed.to_owned())
+    }
+}
+
+fn normalize_provider(value: &str) -> String {
+    match value.trim().to_lowercase().as_str() {
+        "azure" => "azure-openai".to_owned(),
+        "claudecode" => "claude-code".to_owned(),
+        provider => provider.to_owned(),
     }
 }
 
@@ -513,5 +552,74 @@ mod tests {
         let content = fs::read_to_string(global).unwrap();
         assert!(content.contains("AIC_API_KEY"));
         assert!(content.contains("AIC_EMOJI"));
+    }
+
+    #[test]
+    fn normalizes_claudecode_provider_alias() {
+        let temp = TempDir::new().unwrap();
+        let global = temp.path().join(".aicommit");
+        fs::write(&global, "AIC_AI_PROVIDER = \"claudecode\"\n").unwrap();
+
+        let config = Config::load_from(&ConfigPaths { global }).unwrap();
+
+        assert_eq!(config.ai_provider, "claude-code");
+    }
+
+    #[test]
+    fn accepts_local_cli_providers() {
+        let temp = TempDir::new().unwrap();
+        let global = temp.path().join(".aicommit");
+        fs::write(
+            &global,
+            "AIC_AI_PROVIDER = \"codex\"\nAIC_MODEL = \"default\"\n",
+        )
+        .unwrap();
+
+        let config = Config::load_from(&ConfigPaths { global }).unwrap();
+
+        assert_eq!(config.ai_provider, "codex");
+    }
+
+    #[test]
+    fn local_cli_providers_do_not_need_api_keys() {
+        let config = Config {
+            ai_provider: "claude-code".to_owned(),
+            ..Config::default()
+        };
+
+        assert!(!config.provider_needs_api_key());
+    }
+
+    #[test]
+    fn setting_local_provider_without_model_uses_default_model() {
+        let temp = TempDir::new().unwrap();
+        let global = temp.path().join(".aicommit");
+
+        let config = set_global_config(
+            &[("AIC_AI_PROVIDER".to_owned(), "claudecode".to_owned())],
+            &global,
+        )
+        .unwrap();
+
+        assert_eq!(config.ai_provider, "claude-code");
+        assert_eq!(config.model, "default");
+    }
+
+    #[test]
+    fn provider_override_switches_local_cli_model_to_default() {
+        let temp = TempDir::new().unwrap();
+        let global = temp.path().join(".aicommit");
+        fs::write(
+            &global,
+            "AIC_AI_PROVIDER = \"openai\"\nAIC_MODEL = \"gpt-5.4\"\n",
+        )
+        .unwrap();
+
+        let config =
+            Config::load_from_with_provider_override(&ConfigPaths { global }, Some("codex"))
+                .unwrap();
+
+        assert_eq!(config.ai_provider, "codex");
+        assert_eq!(config.model, "default");
     }
 }

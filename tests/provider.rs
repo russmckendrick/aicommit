@@ -1,5 +1,5 @@
 use aicommit::{
-    ai::{AiEngine, ChatMessage, openai_compat::OpenAiCompatEngine},
+    ai::{AiEngine, ChatMessage, engine_from_config, openai_compat::OpenAiCompatEngine},
     config::Config,
 };
 use wiremock::{
@@ -62,4 +62,21 @@ async fn azure_openai_engine_uses_api_key_header() {
         .unwrap();
 
     assert_eq!(response, "feat: add azure openai");
+}
+
+#[test]
+fn engine_from_config_accepts_local_cli_providers() {
+    let claude = Config {
+        ai_provider: "claude-code".to_owned(),
+        model: "default".to_owned(),
+        ..Config::default()
+    };
+    let codex = Config {
+        ai_provider: "codex".to_owned(),
+        model: "default".to_owned(),
+        ..Config::default()
+    };
+
+    assert!(engine_from_config(&claude).is_ok());
+    assert!(engine_from_config(&codex).is_ok());
 }
