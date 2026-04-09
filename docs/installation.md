@@ -82,3 +82,5 @@ After installation, run setup:
 ```sh
 aic setup
 ```
+
+If you plan to use `claude-code` or `codex`, install the matching CLI first and sign in there before running `aic setup`. Those providers reuse the external tool's existing authentication instead of `AIC_API_KEY`.

@@ -11,7 +11,7 @@ brew install russmckendrick/tap/aicommit
 # Or download a binary from GitHub Releases
 # https://github.com/russmckendrick/aicommit/releases
 
-# Run setup to configure your provider and API key
+# Run setup to configure your provider and credentials
 aic setup
 ```
 
@@ -86,7 +86,7 @@ aic completions zsh        # Generate shell completions
 - **History** — browse past generated messages and reviews
 - **Large diff handling** — automatic chunking and synthesis
 - **Custom prompts** — swap the system prompt without recompiling
-- **OpenAI and Azure OpenAI** providers, plus any OpenAI-compatible endpoint
+- **Provider choice** — OpenAI, Azure OpenAI, Claude Code, Codex, and compatible OpenAI-style endpoints
 
 ## Configuration
 
@@ -106,7 +106,7 @@ Detailed docs live in [`docs/`](docs/):
 - [Installation](docs/installation.md) — Homebrew, GitHub Releases, from source
 - [Usage](docs/usage.md) — commit workflow, review, flags, hooks
 - [Configuration](docs/configuration.md) — keys, prompt templates, ignore files
-- [Providers](docs/providers.md) — OpenAI, Azure OpenAI, custom endpoints
+- [Providers](docs/providers.md) — OpenAI, Azure OpenAI, Claude Code, Codex, custom endpoints
 - [Architecture](docs/architecture.md) — module layout and data flow
 - [Roadmap](docs/roadmap.md) — planned and completed features
 
