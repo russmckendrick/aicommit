@@ -1,7 +1,6 @@
 use std::{
-    env,
     io::Write,
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::{Command, Stdio},
 };
 
@@ -11,45 +10,20 @@ use async_trait::async_trait;
 use crate::{
     ai::{AiEngine, ChatMessage},
     config::Config,
-    git,
     prompt::sanitize_model_output,
 };
 
+use super::path::resolve_program_path;
+
 #[derive(Debug, Clone)]
 pub struct CommandEngine {
-    config: Config,
-    program: String,
-    args: Vec<String>,
-    cwd: PathBuf,
+    pub(super) config: Config,
+    pub(super) program: String,
+    pub(super) args: Vec<String>,
+    pub(super) cwd: PathBuf,
 }
 
 impl CommandEngine {
-    pub fn new(config: Config) -> Result<Self> {
-        let cwd = git::repo_root().or_else(|_| env::current_dir())?;
-        match config.ai_provider.as_str() {
-            "claude-code" => Ok(Self::with_command(config, "claude", ["-p"], cwd)),
-            "codex" => Ok(Self::with_command(config, "codex", ["exec"], cwd)),
-            unsupported => bail!("provider '{unsupported}' is not supported by the command engine"),
-        }
-    }
-
-    pub(crate) fn with_command<S, I>(config: Config, program: S, args: I, cwd: PathBuf) -> Self
-    where
-        S: Into<String>,
-        I: IntoIterator,
-        I::Item: AsRef<str>,
-    {
-        Self {
-            config,
-            program: program.into(),
-            args: args
-                .into_iter()
-                .map(|arg| arg.as_ref().to_owned())
-                .collect(),
-            cwd,
-        }
-    }
-
     fn render_prompt(messages: &[ChatMessage]) -> String {
         let mut prompt = String::from(
             "Return only the assistant reply for the final user message. Do not add commentary about your process.\n",
@@ -67,22 +41,6 @@ impl CommandEngine {
         }
 
         prompt
-    }
-
-    fn provider_label(&self) -> &'static str {
-        match self.config.ai_provider.as_str() {
-            "claude-code" => "claude-code",
-            "codex" => "codex",
-            _ => "command provider",
-        }
-    }
-
-    fn binary_hint(&self) -> String {
-        if self.args.is_empty() {
-            self.program.clone()
-        } else {
-            format!("{} {}", self.program, self.args.join(" "))
-        }
     }
 
     fn resolved_program(&self) -> Option<PathBuf> {
@@ -160,59 +118,13 @@ impl AiEngine for CommandEngine {
     }
 }
 
-fn resolve_program_path(program: &str) -> Option<PathBuf> {
-    let path = Path::new(program);
-    if path.components().count() > 1 || path.is_absolute() {
-        return path.exists().then(|| path.to_path_buf());
-    }
-
-    let path_var = env::var_os("PATH")?;
-    for base in env::split_paths(&path_var) {
-        for candidate in executable_candidates(&base, program) {
-            if candidate.is_file() {
-                return Some(candidate);
-            }
-        }
-    }
-
-    None
-}
-
-fn executable_candidates(base: &Path, program: &str) -> Vec<PathBuf> {
-    let mut candidates = Vec::new();
-    let raw = base.join(program);
-    candidates.push(raw.clone());
-
-    #[cfg(windows)]
-    {
-        if Path::new(program).extension().is_none() {
-            let pathext = env::var_os("PATHEXT")
-                .unwrap_or_else(|| std::ffi::OsString::from(".COM;.EXE;.BAT;.CMD"));
-            for ext in pathext
-                .to_string_lossy()
-                .split(';')
-                .filter(|ext| !ext.is_empty())
-            {
-                let trimmed = ext.trim();
-                let suffix = if trimmed.starts_with('.') {
-                    trimmed.to_owned()
-                } else {
-                    format!(".{trimmed}")
-                };
-                candidates.push(base.join(format!("{program}{suffix}")));
-            }
-        }
-    }
-
-    candidates
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::path::Path;
+    use std::{io::Write, path::Path};
 
     use tempfile::TempDir;
+
+    use super::*;
 
     struct TestCommand {
         program: String,
