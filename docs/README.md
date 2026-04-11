@@ -23,9 +23,12 @@ This folder is the detailed documentation entry point for `aic`, the Rust CLI fo
 ```mermaid
 flowchart TD
     A["Install aic"] --> B["Run aic setup"]
-    B --> C["Stage files with git add"]
+    B --> C["Stage files with git add (optional)"]
     C --> D["Run aic"]
-    D --> E["Review generated message"]
+    D --> STAGE{"Anything staged?"}
+    STAGE -->|No| PICK["Stage all, choose files, or cancel"]
+    STAGE -->|Yes| E["Review generated message"]
+    PICK --> E
     E --> DRY{"--dry-run?"}
     DRY -->|Yes| PRINT["Print message and exit"]
     DRY -->|No| F{"Accept message?"}

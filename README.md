@@ -24,7 +24,7 @@ git add -p
 aic
 ```
 
-If nothing is staged, `aic` offers to stage files for you.
+If nothing is staged, `aic` lets you stage all changed files, choose files interactively, or cancel.
 
 ### Flags
 

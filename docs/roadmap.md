@@ -16,6 +16,7 @@ The v1 priority is a reliable Rust CLI for local commit generation through `aic`
 - ~~**Branch name as context**~~ — ✅ ticket/issue numbers extracted from branch names and fed into the prompt.
 - ~~**Conventional commit scope hints**~~ — ✅ detect likely scopes from changed file paths and feed them into the prompt to improve scope consistency.
 - ~~**Commit message history**~~ — ✅ local log of generated messages and reviews (`~/.aicommit-history.json`) with `aic history` to browse them.
+- ~~**CLI help coverage**~~ — ✅ richer top-level and nested `--help` output, with shared metadata for help text, shell completions, and `aic config describe`.
 
 ## Medium Impact, Moderate Effort
 
