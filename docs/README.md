@@ -7,7 +7,7 @@ This folder is the detailed documentation entry point for `aic`, the Rust CLI fo
 - [Installation](installation.md): install `aic` with Homebrew, WinGet, direct binaries, or from source.
 - [Usage](usage.md): run the commit-message workflow and pass Git flags through.
 - [Configuration](configuration.md): set provider, model, prompt, token, hook, and output behavior.
-- [Providers](providers.md): choose between OpenAI, Azure OpenAI, Anthropic, Groq, Claude Code, and Codex.
+- [Providers](providers.md): choose between OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, and Codex.
 - [Hooks](hooks.md): install or remove the Git `prepare-commit-msg` hook.
 - [Architecture](architecture.md): understand the Rust modules and data flow.
 - [Testing](testing.md): run the verification suite.
@@ -28,8 +28,11 @@ flowchart TD
     C --> D["Run aic"]
     D --> STAGE{"Anything staged?"}
     STAGE -->|No| PICK["Stage all, choose files, or cancel"]
-    STAGE -->|Yes| E["Review generated message"]
-    PICK --> E
+    STAGE -->|Yes| SPLIT{"Split into multiple commits?"}
+    PICK --> SPLIT
+    SPLIT -->|No| E["Review generated message"]
+    SPLIT -->|Yes| SG["Preview split groups + messages"]
+    SG --> GC["Create grouped commits"]
     E --> DRY{"--dry-run?"}
     DRY -->|Yes| PRINT["Print message and exit"]
     DRY -->|No| F{"Accept message?"}
@@ -40,5 +43,6 @@ flowchart TD
     I -->|No| K["Done"]
     G --> PR["Run aic pr"]
     PR --> PRD["Draft PR title + description"]
+    GC --> I
     AMEND["Run aic --amend"] --> E
 ```

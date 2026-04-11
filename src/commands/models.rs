@@ -90,12 +90,15 @@ pub async fn run(provider_override: Option<String>, refresh: bool) -> Result<()>
 
 async fn fetch_models(provider: &str, config: &Config) -> Result<Vec<String>> {
     match provider {
-        "openai" | "groq" => {
-            let fallback = if provider == "groq" {
-                default_api_url_for_provider("groq").unwrap_or("https://api.groq.com/openai/v1")
-            } else {
-                "https://api.openai.com/v1"
-            };
+        "openai" | "groq" | "ollama" => {
+            let fallback =
+                match provider {
+                    "groq" => default_api_url_for_provider("groq")
+                        .unwrap_or("https://api.groq.com/openai/v1"),
+                    "ollama" => default_api_url_for_provider("ollama")
+                        .unwrap_or("http://localhost:11434/v1"),
+                    _ => "https://api.openai.com/v1",
+                };
             let base = config.api_url.as_deref().unwrap_or(fallback);
             fetch_openai_models(
                 provider,
@@ -164,7 +167,7 @@ async fn fetch_openai_models(provider: &str, url: &str, config: &Config) -> Resu
         .into_iter()
         .map(|model| model.id)
         .filter(|model| match provider {
-            "groq" => true,
+            "groq" | "ollama" => true,
             _ => {
                 model.starts_with("gpt-")
                     || model.starts_with("o1")
@@ -276,6 +279,35 @@ mod tests {
                 "llama-3.1-8b-instant".to_owned(),
                 "llama-3.3-70b-versatile".to_owned(),
             ]
+        );
+    }
+
+    #[tokio::test]
+    async fn fetches_ollama_models_via_openai_compatible_endpoint_without_api_key() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/v1/models"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "data": [
+                    { "id": "llama3.2" },
+                    { "id": "qwen3-coder" }
+                ]
+            })))
+            .mount(&server)
+            .await;
+
+        let config = Config {
+            ai_provider: "ollama".to_owned(),
+            api_url: Some(format!("{}/v1", server.uri())),
+            model: "llama3.2".to_owned(),
+            ..Config::default()
+        };
+
+        let models = fetch_models("ollama", &config).await.unwrap();
+
+        assert_eq!(
+            models,
+            vec!["llama3.2".to_owned(), "qwen3-coder".to_owned()]
         );
     }
 

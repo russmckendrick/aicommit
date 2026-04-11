@@ -7,11 +7,12 @@ openai
 azure-openai
 anthropic
 groq
+ollama
 claude-code
 codex
 ```
 
-`openai`, `azure-openai`, and `groq` use the OpenAI chat-completions wire format.
+`openai`, `azure-openai`, `groq`, and `ollama` use the OpenAI chat-completions wire format.
 
 `anthropic` uses Anthropic's Messages API directly.
 
@@ -24,11 +25,13 @@ flowchart TD
     Provider -->|azure-openai| Azure["Azure OpenAI v1 API"]
     Provider -->|anthropic| Anthropic["Anthropic Messages API"]
     Provider -->|groq| Groq["Groq OpenAI-compatible API"]
+    Provider -->|ollama| Ollama["Local Ollama OpenAI-compatible API"]
     Provider -->|claude-code| Claude["Local claude CLI"]
     Provider -->|codex| Codex["Local codex exec CLI"]
     OpenAI --> Chat["Chat completions request"]
     Azure --> Chat
     Groq --> Chat
+    Ollama --> Chat
     Anthropic --> Messages["Messages request"]
     Claude --> Prompt["Flattened prompt over stdin"]
     Codex --> Prompt
@@ -51,7 +54,7 @@ Use a custom compatible endpoint:
 aic config set AIC_AI_PROVIDER=openai AIC_API_URL=https://example.com/v1
 ```
 
-This existing `openai` + `AIC_API_URL` path is how `aic` supports OpenAI-compatible providers today. A future roadmap item may still add first-class provider names for specific compatible services, but a separate provider identifier is not required to use custom endpoints now.
+This existing `openai` + `AIC_API_URL` path remains the catch-all way to use other compatible endpoints when you do not want a dedicated provider preset.
 
 Configure Azure OpenAI:
 
@@ -77,6 +80,14 @@ aic config set AIC_AI_PROVIDER=groq AIC_API_KEY=<key> AIC_MODEL=llama-3.1-8b-ins
 
 Groq defaults to `https://api.groq.com/openai/v1` and uses the same chat-completions flow as other OpenAI-compatible providers.
 
+Configure Ollama:
+
+```sh
+aic config set AIC_AI_PROVIDER=ollama AIC_MODEL=llama3.2
+```
+
+Ollama defaults to `http://localhost:11434/v1` and does not require `AIC_API_KEY`. Override `AIC_API_URL` if your Ollama server is running on another host or port.
+
 Configure Claude Code:
 
 ```sh
@@ -96,10 +107,11 @@ Use `--provider` to override the configured provider for a single run:
 ```sh
 aic --provider anthropic
 aic review --provider groq
+aic --provider ollama
 aic --provider claude-code
 aic review --provider codex
 aic log --provider codex --yes
-aic models --provider anthropic
+aic models --provider ollama
 ```
 
 The alias `claudecode` is accepted and normalized to `claude-code`.
@@ -111,6 +123,7 @@ aic models
 aic models --refresh
 aic models --provider anthropic
 aic models --provider groq
+aic models --provider ollama
 aic models --provider azure-openai
 aic models --provider claude-code
 ```

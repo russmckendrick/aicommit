@@ -21,6 +21,7 @@ const SUPPORTED_PROVIDERS: &[&str] = &[
     "azure-openai",
     "anthropic",
     "groq",
+    "ollama",
     "claude-code",
     "codex",
 ];
@@ -213,6 +214,7 @@ pub fn default_model_for_provider(provider: &str) -> &'static str {
         "claude-code" | "codex" => "default",
         "anthropic" => "claude-sonnet-4-20250514",
         "groq" => "llama-3.1-8b-instant",
+        "ollama" => "llama3.2",
         "azure-openai" => "gpt-5.4-mini",
         _ => "gpt-5.4-mini",
     }
@@ -222,6 +224,7 @@ pub fn default_api_url_for_provider(provider: &str) -> Option<&'static str> {
     match provider {
         "anthropic" => Some("https://api.anthropic.com/v1"),
         "groq" => Some("https://api.groq.com/openai/v1"),
+        "ollama" => Some("http://localhost:11434/v1"),
         _ => None,
     }
 }
@@ -248,6 +251,7 @@ pub fn model_list(provider: &str) -> &'static [&'static str] {
             "llama-3.3-70b-versatile",
             "openai/gpt-oss-120b",
         ],
+        "ollama" => &["llama3.2", "qwen3-coder", "gpt-oss:20b"],
         "azure-openai" => &["gpt-5.4-mini", "gpt-5.4", "gpt-5.4-nano"],
         _ => &["gpt-5.4-mini", "gpt-5.4", "gpt-5.4-nano"],
     }
@@ -258,7 +262,7 @@ pub fn is_local_cli_provider(provider: &str) -> bool {
 }
 
 pub fn provider_needs_api_key(provider: &str) -> bool {
-    !matches!(provider, "test") && !is_local_cli_provider(provider)
+    !matches!(provider, "test" | "ollama") && !is_local_cli_provider(provider)
 }
 
 pub fn config_description(key: &str) -> Option<&'static str> {
@@ -591,6 +595,11 @@ mod tests {
     }
 
     #[test]
+    fn ollama_does_not_need_api_key() {
+        assert!(!provider_needs_api_key("ollama"));
+    }
+
+    #[test]
     fn local_cli_providers_do_not_need_api_keys() {
         let config = Config {
             ai_provider: "claude-code".to_owned(),
@@ -628,6 +637,24 @@ mod tests {
 
         assert_eq!(config.ai_provider, "groq");
         assert_eq!(config.model, "llama-3.1-8b-instant");
+    }
+
+    #[test]
+    fn provider_override_switches_ollama_to_provider_default() {
+        let temp = TempDir::new().unwrap();
+        let global = temp.path().join(".aicommit");
+        fs::write(
+            &global,
+            "AIC_AI_PROVIDER = \"openai\"\nAIC_MODEL = \"gpt-5.4-mini\"\n",
+        )
+        .unwrap();
+
+        let config =
+            Config::load_from_with_provider_override(&ConfigPaths { global }, Some("ollama"))
+                .unwrap();
+
+        assert_eq!(config.ai_provider, "ollama");
+        assert_eq!(config.model, "llama3.2");
     }
 
     #[test]

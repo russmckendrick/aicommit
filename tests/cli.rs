@@ -592,6 +592,24 @@ fn models_command_supports_groq_provider_override() {
 }
 
 #[test]
+fn models_command_supports_ollama_provider_override() {
+    let repo = init_repo();
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "openai")
+        .env("AIC_MODEL", "gpt-5.4-mini")
+        .arg("models")
+        .arg("--provider")
+        .arg("ollama")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Available models for ollama:"))
+        .stdout(predicate::str::contains("* llama3.2"))
+        .stdout(predicate::str::contains("qwen3-coder"));
+}
+
+#[test]
 fn history_hides_temp_entries_by_default_and_shows_compact_view() {
     let repo = init_repo();
     let home = TempDir::new().unwrap();

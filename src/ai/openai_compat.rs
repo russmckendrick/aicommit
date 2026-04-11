@@ -59,11 +59,17 @@ impl OpenAiCompatEngine {
             "azure-openai" => config.api_url.clone().context(
                 "AIC_API_URL is required for Azure OpenAI; use https://<resource>.openai.azure.com/openai/v1",
             )?,
-            "groq" => config
+            "groq" | "ollama" => config
                 .api_url
                 .clone()
-                .or_else(|| default_api_url_for_provider("groq").map(str::to_owned))
-                .unwrap_or_else(|| "https://api.groq.com/openai/v1".to_owned()),
+                .or_else(|| default_api_url_for_provider(&config.ai_provider).map(str::to_owned))
+                .unwrap_or_else(|| {
+                    if config.ai_provider == "ollama" {
+                        "http://localhost:11434/v1".to_owned()
+                    } else {
+                        "https://api.groq.com/openai/v1".to_owned()
+                    }
+                }),
             _ => config
                 .api_url
                 .clone()

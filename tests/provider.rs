@@ -83,6 +83,11 @@ fn engine_from_config_accepts_supported_providers() {
         model: "llama-3.1-8b-instant".to_owned(),
         ..Config::default()
     };
+    let ollama = Config {
+        ai_provider: "ollama".to_owned(),
+        model: "llama3.2".to_owned(),
+        ..Config::default()
+    };
     let claude = Config {
         ai_provider: "claude-code".to_owned(),
         model: "default".to_owned(),
@@ -96,6 +101,7 @@ fn engine_from_config_accepts_supported_providers() {
 
     assert!(engine_from_config(&anthropic).is_ok());
     assert!(engine_from_config(&groq).is_ok());
+    assert!(engine_from_config(&ollama).is_ok());
     assert!(engine_from_config(&claude).is_ok());
     assert!(engine_from_config(&codex).is_ok());
 }
@@ -128,6 +134,34 @@ async fn groq_engine_uses_openai_compatible_base_url_and_bearer_auth() {
         .unwrap();
 
     assert_eq!(response, "feat: add groq support");
+}
+
+#[tokio::test]
+async fn ollama_engine_uses_openai_compatible_base_url_without_api_key() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/chat/completions"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "choices": [
+                { "message": { "content": "feat: add ollama support" } }
+            ]
+        })))
+        .mount(&server)
+        .await;
+
+    let config = Config {
+        ai_provider: "ollama".to_owned(),
+        api_url: Some(format!("{}/v1", server.uri())),
+        model: "llama3.2".to_owned(),
+        ..Config::default()
+    };
+    let engine = OpenAiCompatEngine::new(config).unwrap();
+    let response = engine
+        .generate_commit_message(&[ChatMessage::user("diff")])
+        .await
+        .unwrap();
+
+    assert_eq!(response, "feat: add ollama support");
 }
 
 #[tokio::test]

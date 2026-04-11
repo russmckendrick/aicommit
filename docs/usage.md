@@ -9,6 +9,8 @@ aic
 
 If no files are staged, `aic` shows a menu that lets you stage all changed files, choose files interactively, or cancel.
 
+When at least two files are staged in the normal interactive flow, `aic` can also split the change set into multiple file-group commits. It first suggests commit groups with AI, then lets you accept the groups, rebuild them manually, or fall back to one commit.
+
 Skip the commit prompts and auto-stage all changed files. If push-after-commit is enabled and exactly one remote exists, `aic --yes` also pushes automatically:
 
 ```sh
@@ -56,6 +58,29 @@ aic "issue-123: $msg"
 The placeholder defaults to `$msg` and can be changed with `AIC_MESSAGE_TEMPLATE_PLACEHOLDER`.
 
 Tune the system prompt without recompiling by setting `AIC_PROMPT_FILE` to a custom prompt-template path.
+
+## Interactive Diff Splitting
+
+Use the normal commit flow and choose `Split into multiple commits` when prompted:
+
+```sh
+git add <files>
+aic
+```
+
+`aic` will:
+
+- analyze the staged change set and suggest 2-4 commit groups
+- let you keep the suggested groups or build them manually
+- generate one commit message per group
+- preview the whole commit sequence before creating anything
+
+Limitations in v1:
+
+- splitting is file-based, not hunk-based
+- split flow is only offered in the normal interactive `aic` path
+- split flow is skipped when a staged file also has unstaged changes
+- `--yes`, `--dry-run`, and `--amend` stay single-commit
 
 ## Command Help
 

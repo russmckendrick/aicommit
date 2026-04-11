@@ -6,7 +6,9 @@
 - Changed the default answer for the interactive single-remote push prompt from `No` to `Yes`.
 - Added first-class `anthropic` provider support using Anthropic's Messages API, including setup guidance, model listing, and provider overrides.
 - Added first-class `groq` provider support as a named OpenAI-compatible preset with Groq defaults, model listing, and provider overrides.
-- Updated provider, configuration, installation, architecture, and roadmap docs to cover the new Anthropic and Groq paths.
+- Added first-class `ollama` provider support as a named local OpenAI-compatible preset with local defaults and model listing.
+- Added interactive file-group diff splitting to the normal `aic` commit flow, including AI-suggested groups, manual regrouping, and sequential split commits.
+- Updated provider, configuration, installation, usage, architecture, and roadmap docs to cover Ollama and interactive diff splitting.
 - Added a dedicated GitHub Actions workflow at `.github/workflows/update-winget.yml`
   to submit Windows package updates to the WinGet community repository after a
   GitHub release is published.

@@ -49,7 +49,7 @@ pub trait AiEngine: Send + Sync {
 
 pub fn engine_from_config(config: &Config) -> Result<Box<dyn AiEngine>> {
     match config.ai_provider.as_str() {
-        "openai" | "azure-openai" | "groq" => {
+        "openai" | "azure-openai" | "groq" | "ollama" => {
             Ok(Box::new(OpenAiCompatEngine::new(config.clone())?))
         }
         "anthropic" => Ok(Box::new(AnthropicEngine::new(config.clone())?)),
@@ -57,7 +57,7 @@ pub fn engine_from_config(config: &Config) -> Result<Box<dyn AiEngine>> {
         "test" => Ok(Box::new(TestEngine)),
         unsupported => {
             bail!(
-                "provider '{unsupported}' is not supported; use openai, azure-openai, anthropic, groq, claude-code, or codex"
+                "provider '{unsupported}' is not supported; use openai, azure-openai, anthropic, groq, ollama, claude-code, or codex"
             )
         }
     }
@@ -67,7 +67,69 @@ struct TestEngine;
 
 #[async_trait]
 impl AiEngine for TestEngine {
-    async fn generate_commit_message(&self, _messages: &[ChatMessage]) -> Result<String> {
+    async fn generate_commit_message(&self, messages: &[ChatMessage]) -> Result<String> {
+        let system = messages
+            .iter()
+            .find(|message| message.role == "system")
+            .map(|message| message.content.as_str())
+            .unwrap_or_default();
+        let user = messages
+            .iter()
+            .rev()
+            .find(|message| message.role == "user")
+            .map(|message| message.content.as_str())
+            .unwrap_or_default();
+
+        if system.contains("Return valid JSON only.") {
+            let files = extract_split_files(user);
+            return Ok(test_split_plan_response(&files));
+        }
+
+        if user.contains("README.md") {
+            return Ok("docs: update readme".to_owned());
+        }
+        if user.contains("src/lib.rs") {
+            return Ok("feat: update library".to_owned());
+        }
+
         Ok("feat: add generated commit message".to_owned())
     }
+}
+
+fn extract_split_files(input: &str) -> Vec<String> {
+    let mut files = Vec::new();
+    let mut in_files = false;
+
+    for line in input.lines() {
+        if line.trim() == "Staged files:" {
+            in_files = true;
+            continue;
+        }
+
+        if !in_files {
+            continue;
+        }
+
+        if let Some(file) = line.trim().strip_prefix("- ") {
+            files.push(file.to_owned());
+        } else if !line.trim().is_empty() {
+            break;
+        }
+    }
+
+    files
+}
+
+fn test_split_plan_response(files: &[String]) -> String {
+    if files.len() < 2 {
+        return r#"{"groups":[{"title":"one","rationale":"single change","files":["src.txt"]}]}"#
+            .to_owned();
+    }
+
+    let midpoint = 1.min(files.len() - 1);
+    let first = serde_json::to_string(&files[..midpoint]).unwrap_or_else(|_| "[]".to_owned());
+    let second = serde_json::to_string(&files[midpoint..]).unwrap_or_else(|_| "[]".to_owned());
+    format!(
+        r#"{{"groups":[{{"title":"Primary change","rationale":"Keep the first concern separate","files":{first}}},{{"title":"Follow-up change","rationale":"Keep the remaining concern separate","files":{second}}}]}}"#
+    )
 }

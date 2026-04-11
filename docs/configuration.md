@@ -84,6 +84,8 @@ For Anthropic, set `AIC_AI_PROVIDER=anthropic` and `AIC_API_KEY`, then optionall
 
 For Groq, set `AIC_AI_PROVIDER=groq` and `AIC_API_KEY`, then optionally override the default `llama-3.1-8b-instant` model with `AIC_MODEL`.
 
+For Ollama, set `AIC_AI_PROVIDER=ollama` and optionally override the default `llama3.2` model with `AIC_MODEL`. `AIC_API_KEY` is not required for the default local Ollama server.
+
 For local CLI providers, set `AIC_AI_PROVIDER=claude-code` or `AIC_AI_PROVIDER=codex` and leave `AIC_MODEL=default`. These providers use the installed `claude` or `codex` binary from `PATH` and rely on that CLI's existing login state instead of `AIC_API_KEY`.
 
 Use `--provider <name>` to override the configured provider for a single run:
@@ -91,10 +93,11 @@ Use `--provider <name>` to override the configured provider for a single run:
 ```sh
 aic --provider anthropic
 aic review --provider groq
+aic --provider ollama
 aic --provider claude-code
 aic review --provider codex
 aic log --provider codex --yes
-aic models --provider groq
+aic models --provider ollama
 ```
 
 The alias `claudecode` is accepted and normalized to `claude-code`.

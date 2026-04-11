@@ -34,7 +34,7 @@ Provider implementations use an `AiEngine` trait that accepts normalized chat me
 
 Current provider families:
 
-- OpenAI-compatible HTTP engines for `openai`, `azure-openai`, and `groq`
+- OpenAI-compatible HTTP engines for `openai`, `azure-openai`, `groq`, and `ollama`
 - Anthropic Messages API engine for `anthropic`
 - Command-backed engines for `claude-code` and `codex`
 
@@ -43,6 +43,7 @@ Git behavior is isolated behind `src/git.rs` so commit, push, hooks, staged-file
 Prompt templates live in `prompts/`:
 
 - `commit-system.md` — system prompt for commit message generation. Supports scope hints derived from staged file paths.
+- `split-system.md` — system prompt for grouping one staged change set into multiple file-based commits.
 - `review-system.md` — system prompt for `aic review` diff analysis.
 
 Use `AIC_PROMPT_FILE` to point at a custom commit prompt template.

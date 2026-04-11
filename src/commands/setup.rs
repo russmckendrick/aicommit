@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::{
     config::{
-        Config, ConfigPaths, default_model_for_provider, enabled_providers, is_local_cli_provider,
+        Config, ConfigPaths, default_model_for_provider, enabled_providers, provider_needs_api_key,
         set_global_config,
     },
     ui,
@@ -23,7 +23,7 @@ pub async fn run() -> Result<()> {
         ),
     ];
 
-    if !is_local_cli_provider(&provider) {
+    if provider_needs_api_key(&provider) {
         let api_key = ui::text("Enter your API key", None)?;
         key_values.push(("AIC_API_KEY".to_owned(), api_key));
     }

@@ -29,6 +29,7 @@ aic
 
 If nothing is staged, `aic` lets you stage all changed files, choose files interactively, or cancel.
 With `--yes`, it stages all changed files automatically.
+In the normal interactive flow, `aic` can also split one staged change set into multiple file-group commits when the work clearly spans separate concerns.
 
 ### Flags
 
@@ -102,7 +103,8 @@ aic completions zsh        # Generate shell completions
 - **History** — browse past generated messages, PR drafts, and reviews
 - **Large diff handling** — automatic chunking and synthesis
 - **Custom prompts** — swap the system prompt without recompiling
-- **Provider choice** — OpenAI, Azure OpenAI, Anthropic, Groq, Claude Code, Codex, and custom OpenAI-compatible endpoints
+- **Split commits** — turn one staged change set into multiple file-group commits when concerns are separate
+- **Provider choice** — OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, and custom OpenAI-compatible endpoints
 
 ## Configuration
 
@@ -122,7 +124,7 @@ Detailed docs live in [`docs/`](docs/):
 - [Installation](docs/installation.md) — Homebrew, WinGet, GitHub Releases, from source
 - [Usage](docs/usage.md) — commit workflow, review, flags, hooks
 - [Configuration](docs/configuration.md) — keys, prompt templates, ignore files
-- [Providers](docs/providers.md) — OpenAI, Azure OpenAI, Anthropic, Groq, Claude Code, Codex, custom endpoints
+- [Providers](docs/providers.md) — OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, custom endpoints
 - [Architecture](docs/architecture.md) — module layout and data flow
 - [Roadmap](docs/roadmap.md) — planned and completed features
 
