@@ -302,15 +302,9 @@ echo $((N + 1)) > "{tmp_dir_str}/counter"
     );
 
     let sequence_editor_script = tmp_dir.join("sequence-editor.sh");
-    fs::write(&sequence_editor_script, seq_editor)?;
+    write_executable_script(&sequence_editor_script, seq_editor)?;
     let editor_script = tmp_dir.join("editor.sh");
-    fs::write(&editor_script, &msg_editor)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&sequence_editor_script, fs::Permissions::from_mode(0o755))?;
-        fs::set_permissions(&editor_script, fs::Permissions::from_mode(0o755))?;
-    }
+    write_executable_script(&editor_script, &msg_editor)?;
 
     let output = Command::new("git")
         .args(["rebase", "-i", &format!("HEAD~{n}")])
@@ -332,6 +326,22 @@ echo $((N + 1)) > "{tmp_dir_str}/counter"
         bail!("rebase failed: {stderr}");
     }
 
+    Ok(())
+}
+
+fn write_executable_script(path: &Path, content: &str) -> Result<()> {
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("aic-script");
+    let temp_path = path.with_file_name(format!(".{file_name}.tmp"));
+    fs::write(&temp_path, content)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&temp_path, fs::Permissions::from_mode(0o755))?;
+    }
+    fs::rename(&temp_path, path)?;
     Ok(())
 }
 

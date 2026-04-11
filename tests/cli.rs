@@ -71,13 +71,15 @@ fn install_fake_binary(dir: &Path, name: &str, output: &str) {
         script
     };
 
-    fs::write(&path, script).unwrap();
+    let temp_path = dir.join(format!(".{name}.tmp"));
+    fs::write(&temp_path, script).unwrap();
     #[cfg(unix)]
     {
-        let mut permissions = fs::metadata(&path).unwrap().permissions();
+        let mut permissions = fs::metadata(&temp_path).unwrap().permissions();
         permissions.set_mode(0o755);
-        fs::set_permissions(&path, permissions).unwrap();
+        fs::set_permissions(&temp_path, permissions).unwrap();
     }
+    fs::rename(&temp_path, &path).unwrap();
 }
 
 #[cfg(windows)]

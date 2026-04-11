@@ -288,7 +288,8 @@ mod tests {
             script
         };
 
-        let mut file = std::fs::File::create(&path).unwrap();
+        let temp_path = dir.join(format!(".{name}.tmp"));
+        let mut file = std::fs::File::create(&temp_path).unwrap();
         file.write_all(script.as_bytes()).unwrap();
         file.sync_all().unwrap();
         drop(file);
@@ -296,10 +297,12 @@ mod tests {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let mut permissions = std::fs::metadata(&path).unwrap().permissions();
+            let mut permissions = std::fs::metadata(&temp_path).unwrap().permissions();
             permissions.set_mode(0o755);
-            std::fs::set_permissions(&path, permissions).unwrap();
+            std::fs::set_permissions(&temp_path, permissions).unwrap();
         }
+
+        std::fs::rename(&temp_path, &path).unwrap();
 
         path
     }
