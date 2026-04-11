@@ -10,7 +10,7 @@ src/config/             Defaults, global config, loading, parsing, validation, a
 src/git/                Git command wrapper, repo helpers, branch logic, remotes, and hooks
 src/prompt/             Prompt builders, prompt-template interpolation, and response cleanup
 src/token.rs            Token counting and diff splitting
-src/generator.rs        Prompt, chunking, and AI engine orchestration
+src/generator/          Prompt, chunking, and AI engine orchestration
 src/history_store/      Commit and review history persistence
 src/ai/                 Provider trait and provider implementations
 ```
@@ -23,7 +23,7 @@ flowchart LR
     Cli --> Commands["src/commands"]
     Commands --> Config["src/config"]
     Commands --> Git["src/git"]
-    Commands --> Generator["src/generator.rs"]
+    Commands --> Generator["src/generator"]
     Generator --> Prompt["src/prompt"]
     Generator --> Token["src/token.rs"]
     Generator --> Ai["src/ai"]
@@ -45,8 +45,10 @@ The largest command and support modules are now folderized to keep responsibilit
 - `src/commands/commit/` separates staging, split-commit flow, push handling, and shared helpers behind `commands::commit::run`.
 - `src/commands/history/` separates formatting, rendering, and interactive browsing behind `commands::history::run`.
 - `src/config/` preserves `crate::config::*` while splitting model defaults, loading, parsing, validation, and writing.
+- `src/generator/` preserves `crate::generator::*` while separating commit, PR, and split-plan generation flows.
 - `src/prompt/` preserves `crate::prompt::*` while separating commit, review, split, PR, and sanitization helpers.
 - `src/history_store/` keeps history persistence separate from the `aic history` command module.
+- `src/ai/command/` keeps command-backed provider execution separate from command resolution and test helpers.
 
 As a maintenance rule, modules that start combining multiple distinct concerns should usually graduate from a single `*.rs` file into a folder with a `mod.rs` compatibility layer and focused submodules.
 
