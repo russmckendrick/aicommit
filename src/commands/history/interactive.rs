@@ -6,7 +6,7 @@ use std::{
 use anyhow::Result;
 
 use crate::{
-    history::{HistoryEntry, RecentEntries},
+    history_store::{HistoryEntry, RecentEntries},
     ui,
 };
 
@@ -233,7 +233,7 @@ fn menu_options(result: &RecentEntries, view: BrowserView, include_all: bool) ->
 
 #[cfg(test)]
 mod tests {
-    use crate::history::{HistoryEntry, RecentEntries};
+    use crate::history_store::{HistoryEntry, RecentEntries};
 
     use super::*;
 

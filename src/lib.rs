@@ -6,7 +6,7 @@ pub mod config;
 pub mod errors;
 pub mod generator;
 pub mod git;
-pub mod history;
+pub mod history_store;
 pub mod prompt;
 pub mod token;
 pub mod ui;

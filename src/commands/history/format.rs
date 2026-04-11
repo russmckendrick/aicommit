@@ -2,7 +2,7 @@ use std::path::Path;
 
 use chrono::{DateTime, Local};
 
-use crate::history::HistoryEntry;
+use crate::history_store::HistoryEntry;
 
 pub(crate) fn section_label(
     kind: Option<&str>,

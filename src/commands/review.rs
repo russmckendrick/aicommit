@@ -4,7 +4,7 @@ use crate::{
     ai::engine_from_config,
     config::Config,
     errors::AicError,
-    git, history,
+    git, history_store,
     prompt::{build_review_messages, review_system_prompt},
     token::{count_messages, count_tokens, split_diff},
     ui,
@@ -45,8 +45,8 @@ pub async fn run(context: String, provider_override: Option<String>) -> Result<(
     ui::section("Review");
     ui::markdown(&review);
 
-    if let Err(e) = history::append_entry(&history::HistoryEntry {
-        timestamp: history::now_iso8601(),
+    if let Err(e) = history_store::append_entry(&history_store::HistoryEntry {
+        timestamp: history_store::now_iso8601(),
         kind: "review".to_owned(),
         message: review,
         repo_path: git::repo_root()

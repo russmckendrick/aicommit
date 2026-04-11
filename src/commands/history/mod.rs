@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::history;
+use crate::history_store;
 
 mod format;
 mod interactive;
@@ -14,7 +14,7 @@ pub fn run(
     interactive: bool,
     non_interactive: bool,
 ) -> Result<()> {
-    let result = history::recent_entries(count, kind.as_deref())?;
+    let result = history_store::recent_entries(count, kind.as_deref())?;
     let interactive = interactive::should_use_interactive(interactive, non_interactive);
 
     if interactive {

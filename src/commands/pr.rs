@@ -4,7 +4,7 @@ use crate::{
     config::Config,
     errors::AicError,
     generator, git,
-    history::{self, HistoryEntry},
+    history_store::{self, HistoryEntry},
     ui,
 };
 
@@ -119,8 +119,8 @@ fn finish(config: &Config, title: &str, body: &str, changed_files: &[String]) ->
         ui::info(body.trim());
     }
 
-    if let Err(error) = history::append_entry(&HistoryEntry {
-        timestamp: history::now_iso8601(),
+    if let Err(error) = history_store::append_entry(&HistoryEntry {
+        timestamp: history_store::now_iso8601(),
         kind: "pr".to_owned(),
         message,
         repo_path: git::repo_root()

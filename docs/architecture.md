@@ -6,12 +6,12 @@ The Rust crate is organized around small modules:
 src/cli.rs              CLI parser and dispatch
 src/cli_help.toml       Bundled help text and config-key descriptions
 src/commands/           User-facing command flows
-src/config/             Defaults, global config, parsing, validation, and persistence
+src/config/             Defaults, global config, loading, parsing, validation, and persistence
 src/git/                Git command wrapper, repo helpers, branch logic, remotes, and hooks
 src/prompt/             Prompt builders, prompt-template interpolation, and response cleanup
 src/token.rs            Token counting and diff splitting
 src/generator.rs        Prompt, chunking, and AI engine orchestration
-src/history.rs          Commit and review history persistence
+src/history_store/      Commit and review history persistence
 src/ai/                 Provider trait and provider implementations
 ```
 
@@ -46,6 +46,9 @@ The largest command and support modules are now folderized to keep responsibilit
 - `src/commands/history/` separates formatting, rendering, and interactive browsing behind `commands::history::run`.
 - `src/config/` preserves `crate::config::*` while splitting model defaults, loading, parsing, validation, and writing.
 - `src/prompt/` preserves `crate::prompt::*` while separating commit, review, split, PR, and sanitization helpers.
+- `src/history_store/` keeps history persistence separate from the `aic history` command module.
+
+As a maintenance rule, modules that start combining multiple distinct concerns should usually graduate from a single `*.rs` file into a folder with a `mod.rs` compatibility layer and focused submodules.
 
 Prompt templates live in `prompts/`:
 

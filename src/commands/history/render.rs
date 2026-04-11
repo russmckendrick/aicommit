@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use crate::{
-    history::{HistoryEntry, RecentEntries},
+    history_store::{HistoryEntry, RecentEntries},
     ui,
 };
 

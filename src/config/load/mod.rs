@@ -3,11 +3,14 @@ use std::env;
 use anyhow::Result;
 
 use super::{
-    CONFIG_KEYS, Config, ConfigPaths,
+    Config, ConfigPaths,
     model::{default_model_for_provider, is_local_cli_provider},
-    parse::normalize_provider,
     validate::validate_config,
 };
+
+mod apply;
+
+pub use apply::{apply_file, apply_process_env, apply_toml_item, apply_value, optional_string};
 
 pub fn load_from_with_provider_override(
     paths: &ConfigPaths,
@@ -36,95 +39,6 @@ pub fn load_from_with_provider_override(
 
     validate_config(&config)?;
     Ok(config)
-}
-
-pub fn apply_file(config: &mut Config, path: &std::path::Path) -> Result<()> {
-    if !path.exists() {
-        return Ok(());
-    }
-
-    let content = std::fs::read_to_string(path)
-        .map_err(anyhow::Error::from)
-        .and_then(|content| {
-            content
-                .parse::<toml_edit::DocumentMut>()
-                .map_err(anyhow::Error::from)
-        })?;
-    let doc = content;
-
-    for key in CONFIG_KEYS {
-        if let Some(item) = doc.get(key)
-            && !item.is_none()
-        {
-            apply_toml_item(config, key, item)?;
-        }
-    }
-    Ok(())
-}
-
-pub fn apply_process_env(config: &mut Config) -> Result<()> {
-    for key in CONFIG_KEYS {
-        if let Ok(value) = env::var(key) {
-            apply_value(config, key, &value)?;
-        }
-    }
-    Ok(())
-}
-
-pub fn apply_toml_item(config: &mut Config, key: &str, item: &toml_edit::Item) -> Result<()> {
-    let value = item
-        .as_value()
-        .map(super::parse::toml_value_to_string)
-        .unwrap_or_else(|| item.to_string());
-    apply_value(config, key, &value)
-}
-
-pub fn apply_value(config: &mut Config, key: &str, value: &str) -> Result<()> {
-    if !CONFIG_KEYS.contains(&key) {
-        return Err(crate::errors::AicError::UnsupportedConfigKey(key.to_owned()).into());
-    }
-
-    match key {
-        "AIC_AI_PROVIDER" => config.ai_provider = normalize_provider(value),
-        "AIC_API_KEY" => config.api_key = optional_string(value),
-        "AIC_API_URL" => config.api_url = optional_string(value),
-        "AIC_API_CUSTOM_HEADERS" => {
-            config.api_custom_headers = super::parse::parse_headers(value)?;
-        }
-        "AIC_PROXY" => config.proxy = optional_string(value),
-        "AIC_TOKENS_MAX_INPUT" => config.tokens_max_input = super::parse::parse_usize(key, value)?,
-        "AIC_TOKENS_MAX_OUTPUT" => {
-            config.tokens_max_output = super::parse::parse_usize(key, value)?
-        }
-        "AIC_DESCRIPTION" => config.description = super::parse::parse_bool(key, value)?,
-        "AIC_EMOJI" => config.emoji = super::parse::parse_bool(key, value)?,
-        "AIC_MODEL" => config.model = value.to_owned(),
-        "AIC_LANGUAGE" => config.language = value.to_owned(),
-        "AIC_MESSAGE_TEMPLATE_PLACEHOLDER" => {
-            config.message_template_placeholder = value.to_owned()
-        }
-        "AIC_PROMPT_FILE" => config.prompt_file = optional_string(value),
-        "AIC_ONE_LINE_COMMIT" => config.one_line_commit = super::parse::parse_bool(key, value)?,
-        "AIC_OMIT_SCOPE" => config.omit_scope = super::parse::parse_bool(key, value)?,
-        "AIC_GITPUSH" => config.gitpush = super::parse::parse_bool(key, value)?,
-        "AIC_REMOTE_ICON_STYLE" => {
-            config.remote_icon_style = super::parse::normalize_remote_icon_style(value)?
-        }
-        "AIC_HOOK_AUTO_UNCOMMENT" => {
-            config.hook_auto_uncomment = super::parse::parse_bool(key, value)?
-        }
-        _ => unreachable!("all config keys are handled"),
-    }
-    Ok(())
-}
-
-pub fn optional_string(value: &str) -> Option<String> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() || trimmed == "null" || trimmed == "undefined" {
-        None
-    } else {
-        Some(trimmed.to_owned())
-    }
 }
 
 #[cfg(test)]
