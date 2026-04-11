@@ -210,9 +210,14 @@ fn executable_candidates(base: &Path, program: &str) -> Vec<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
 
     use tempfile::TempDir;
+
+    struct TestCommand {
+        program: String,
+        args: Vec<String>,
+    }
 
     fn test_messages() -> Vec<ChatMessage> {
         vec![ChatMessage::user("diff --git a/src/lib.rs b/src/lib.rs")]
@@ -230,13 +235,13 @@ mod tests {
             .replace(')', "^)")
     }
 
-    fn install_test_binary(
+    fn install_test_command(
         dir: &Path,
         name: &str,
         stdout: &str,
         stderr: &str,
         exit_code: i32,
-    ) -> PathBuf {
+    ) -> TestCommand {
         #[cfg(unix)]
         let path = dir.join(name);
         #[cfg(windows)]
@@ -304,13 +309,27 @@ mod tests {
 
         std::fs::rename(&temp_path, &path).unwrap();
 
-        path
+        #[cfg(unix)]
+        {
+            TestCommand {
+                program: "/bin/sh".to_owned(),
+                args: vec![path.to_string_lossy().to_string()],
+            }
+        }
+
+        #[cfg(windows)]
+        {
+            TestCommand {
+                program: path.to_string_lossy().to_string(),
+                args: Vec::new(),
+            }
+        }
     }
 
     #[tokio::test]
     async fn command_engine_strips_reasoning_tags() {
         let temp = TempDir::new().unwrap();
-        let program = install_test_binary(
+        let command = install_test_command(
             temp.path(),
             "claude-test",
             "<think>hidden</think>\nfeat: add cli\n",
@@ -323,8 +342,8 @@ mod tests {
                 model: "default".to_owned(),
                 ..Config::default()
             },
-            program.to_string_lossy().to_string(),
-            std::iter::empty::<&str>(),
+            command.program,
+            command.args,
             std::env::temp_dir(),
         );
 
@@ -361,15 +380,15 @@ mod tests {
     #[tokio::test]
     async fn command_engine_reports_non_zero_exit() {
         let temp = TempDir::new().unwrap();
-        let program = install_test_binary(temp.path(), "claude-fail", "", "boom", 9);
+        let command = install_test_command(temp.path(), "claude-fail", "", "boom", 9);
         let engine = CommandEngine::with_command(
             Config {
                 ai_provider: "claude-code".to_owned(),
                 model: "default".to_owned(),
                 ..Config::default()
             },
-            program.to_string_lossy().to_string(),
-            std::iter::empty::<&str>(),
+            command.program,
+            command.args,
             std::env::temp_dir(),
         );
 
