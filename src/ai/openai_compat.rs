@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ai::{AiEngine, ChatMessage},
-    config::Config,
+    config::{Config, default_api_url_for_provider},
     errors::normalize_provider_error,
     prompt::sanitize_model_output,
     token::count_messages,
@@ -59,6 +59,11 @@ impl OpenAiCompatEngine {
             "azure-openai" => config.api_url.clone().context(
                 "AIC_API_URL is required for Azure OpenAI; use https://<resource>.openai.azure.com/openai/v1",
             )?,
+            "groq" => config
+                .api_url
+                .clone()
+                .or_else(|| default_api_url_for_provider("groq").map(str::to_owned))
+                .unwrap_or_else(|| "https://api.groq.com/openai/v1".to_owned()),
             _ => config
                 .api_url
                 .clone()

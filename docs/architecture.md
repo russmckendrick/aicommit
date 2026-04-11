@@ -34,7 +34,8 @@ Provider implementations use an `AiEngine` trait that accepts normalized chat me
 
 Current provider families:
 
-- OpenAI-compatible HTTP engines for `openai` and `azure-openai`
+- OpenAI-compatible HTTP engines for `openai`, `azure-openai`, and `groq`
+- Anthropic Messages API engine for `anthropic`
 - Command-backed engines for `claude-code` and `codex`
 
 Git behavior is isolated behind `src/git.rs` so commit, push, hooks, staged-file discovery, and ignore-file filtering are testable without mixing Git process logic into UI commands.

@@ -2,6 +2,9 @@
 
 ## Changed
 
+- Added first-class `anthropic` provider support using Anthropic's Messages API, including setup guidance, model listing, and provider overrides.
+- Added first-class `groq` provider support as a named OpenAI-compatible preset with Groq defaults, model listing, and provider overrides.
+- Updated provider, configuration, installation, architecture, and roadmap docs to cover the new Anthropic and Groq paths.
 - Added a dedicated GitHub Actions workflow at `.github/workflows/update-winget.yml`
   to submit Windows package updates to the WinGet community repository after a
   GitHub release is published.

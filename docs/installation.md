@@ -103,4 +103,6 @@ After installation, run setup:
 aic setup
 ```
 
+For hosted providers such as OpenAI, Azure OpenAI, Anthropic, and Groq, have your API key ready before running setup.
+
 If you plan to use `claude-code` or `codex`, install the matching CLI first and sign in there before running `aic setup`. Those providers reuse the external tool's existing authentication instead of `AIC_API_KEY`.

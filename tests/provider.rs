@@ -1,5 +1,8 @@
 use aicommit::{
-    ai::{AiEngine, ChatMessage, engine_from_config, openai_compat::OpenAiCompatEngine},
+    ai::{
+        AiEngine, ChatMessage, anthropic::AnthropicEngine, engine_from_config,
+        openai_compat::OpenAiCompatEngine,
+    },
     config::Config,
     generator,
     git::CommitInfo,
@@ -69,7 +72,17 @@ async fn azure_openai_engine_uses_api_key_header() {
 }
 
 #[test]
-fn engine_from_config_accepts_local_cli_providers() {
+fn engine_from_config_accepts_supported_providers() {
+    let anthropic = Config {
+        ai_provider: "anthropic".to_owned(),
+        model: "claude-sonnet-4-20250514".to_owned(),
+        ..Config::default()
+    };
+    let groq = Config {
+        ai_provider: "groq".to_owned(),
+        model: "llama-3.1-8b-instant".to_owned(),
+        ..Config::default()
+    };
     let claude = Config {
         ai_provider: "claude-code".to_owned(),
         model: "default".to_owned(),
@@ -81,8 +94,86 @@ fn engine_from_config_accepts_local_cli_providers() {
         ..Config::default()
     };
 
+    assert!(engine_from_config(&anthropic).is_ok());
+    assert!(engine_from_config(&groq).is_ok());
     assert!(engine_from_config(&claude).is_ok());
     assert!(engine_from_config(&codex).is_ok());
+}
+
+#[tokio::test]
+async fn groq_engine_uses_openai_compatible_base_url_and_bearer_auth() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/openai/v1/chat/completions"))
+        .and(header("authorization", "Bearer key"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "choices": [
+                { "message": { "content": "feat: add groq support" } }
+            ]
+        })))
+        .mount(&server)
+        .await;
+
+    let config = Config {
+        ai_provider: "groq".to_owned(),
+        api_key: Some("key".to_owned()),
+        api_url: Some(format!("{}/openai/v1", server.uri())),
+        model: "llama-3.1-8b-instant".to_owned(),
+        ..Config::default()
+    };
+    let engine = OpenAiCompatEngine::new(config).unwrap();
+    let response = engine
+        .generate_commit_message(&[ChatMessage::user("diff")])
+        .await
+        .unwrap();
+
+    assert_eq!(response, "feat: add groq support");
+}
+
+#[tokio::test]
+async fn anthropic_engine_uses_messages_api_and_flattens_text_blocks() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/messages"))
+        .and(header("x-api-key", "key"))
+        .and(header("anthropic-version", "2023-06-01"))
+        .and(body_string_contains(
+            "\"system\":\"system rules\\n\\nreview context\"",
+        ))
+        .and(body_string_contains("\"role\":\"user\""))
+        .and(body_string_contains("\"role\":\"assistant\""))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "content": [
+                { "type": "thinking", "text": "hidden" },
+                { "type": "text", "text": "<think>hidden</think>\nfeat: add anthropic support" },
+                { "type": "text", "text": "- wire provider defaults" }
+            ]
+        })))
+        .mount(&server)
+        .await;
+
+    let config = Config {
+        ai_provider: "anthropic".to_owned(),
+        api_key: Some("key".to_owned()),
+        api_url: Some(format!("{}/v1", server.uri())),
+        model: "claude-sonnet-4-20250514".to_owned(),
+        ..Config::default()
+    };
+    let engine = AnthropicEngine::new(config).unwrap();
+    let response = engine
+        .generate_commit_message(&[
+            ChatMessage::system("system rules"),
+            ChatMessage::user("diff"),
+            ChatMessage::assistant("assistant example"),
+            ChatMessage::system("review context"),
+        ])
+        .await
+        .unwrap();
+
+    assert_eq!(
+        response,
+        "feat: add anthropic support\n- wire provider defaults"
+    );
 }
 
 #[tokio::test]

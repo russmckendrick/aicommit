@@ -4,7 +4,7 @@ The v1 priority is a reliable Rust CLI for local commit generation through `aic`
 
 ## High Impact
 
-- **Additional AI providers** — Anthropic (Claude), Ollama / local models, Google Gemini, and a first-class named provider for compatible endpoints like Groq, Together, and Mistral. Custom OpenAI-compatible URLs already work today via `AIC_AI_PROVIDER=openai` plus `AIC_API_URL`.
+- **Additional AI providers** — Anthropic and Groq are now first-class providers. Still planned: Ollama / local models, Google Gemini, and more named compatible endpoints like Together and Mistral. Custom OpenAI-compatible URLs already work today via `AIC_AI_PROVIDER=openai` plus `AIC_API_URL`.
 - ~~**`aic log` — rewrite past commit messages**~~ — ✅ clean up the last N commit messages on a branch using AI before opening a PR.
 - ~~**`aic review` — AI-powered diff review**~~ — ✅ get feedback on the staged diff (bugs, style, security) using a review-focused prompt and the existing provider infrastructure.
 - ~~**Shell completion generation**~~ — ✅ `aic completions <shell>` subcommand added via `clap_complete`.

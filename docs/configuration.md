@@ -80,15 +80,21 @@ AIC_MODEL=gpt-5.4-mini aic
 
 For Azure OpenAI, set `AIC_AI_PROVIDER=azure-openai`, set `AIC_API_URL` to your Azure OpenAI v1 endpoint, and use your deployment name as `AIC_MODEL`.
 
+For Anthropic, set `AIC_AI_PROVIDER=anthropic` and `AIC_API_KEY`, then optionally override the default `claude-sonnet-4-20250514` model with `AIC_MODEL`.
+
+For Groq, set `AIC_AI_PROVIDER=groq` and `AIC_API_KEY`, then optionally override the default `llama-3.1-8b-instant` model with `AIC_MODEL`.
+
 For local CLI providers, set `AIC_AI_PROVIDER=claude-code` or `AIC_AI_PROVIDER=codex` and leave `AIC_MODEL=default`. These providers use the installed `claude` or `codex` binary from `PATH` and rely on that CLI's existing login state instead of `AIC_API_KEY`.
 
 Use `--provider <name>` to override the configured provider for a single run:
 
 ```sh
+aic --provider anthropic
+aic review --provider groq
 aic --provider claude-code
 aic review --provider codex
 aic log --provider codex --yes
-aic models --provider claude-code
+aic models --provider groq
 ```
 
 The alias `claudecode` is accepted and normalized to `claude-code`.

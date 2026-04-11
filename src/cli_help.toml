@@ -175,7 +175,7 @@ help = "Number of commits to rewrite"
 help = "Skip confirmation"
 
 [config_keys]
-AIC_AI_PROVIDER = "AI provider to use for commit generation"
+AIC_AI_PROVIDER = "AI provider to use for commit generation: openai, azure-openai, anthropic, groq, claude-code, or codex"
 AIC_API_KEY = "API key for the selected provider"
 AIC_API_URL = "Custom provider API URL; required for Azure OpenAI"
 AIC_API_CUSTOM_HEADERS = "JSON object of custom HTTP headers"

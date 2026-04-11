@@ -16,7 +16,14 @@ pub const MODEL_CACHE_FILE: &str = ".aicommit-models.json";
 pub const REPO_IGNORE_FILE: &str = ".aicommitignore";
 pub const DEFAULT_MAX_TOKENS_INPUT: usize = 128_000;
 pub const DEFAULT_MAX_TOKENS_OUTPUT: usize = 500;
-const SUPPORTED_PROVIDERS: &[&str] = &["openai", "azure-openai", "claude-code", "codex"];
+const SUPPORTED_PROVIDERS: &[&str] = &[
+    "openai",
+    "azure-openai",
+    "anthropic",
+    "groq",
+    "claude-code",
+    "codex",
+];
 const LOCAL_CLI_PROVIDERS: &[&str] = &["claude-code", "codex"];
 
 pub const CONFIG_KEYS: &[&str] = &[
@@ -127,8 +134,12 @@ impl Config {
         apply_process_env(&mut config)?;
 
         if let Some(provider) = provider_override {
+            let previous_provider = config.ai_provider.clone();
+            let previous_model = config.model.clone();
             apply_value(&mut config, "AIC_AI_PROVIDER", provider)?;
-            if is_local_cli_provider(&config.ai_provider) {
+            if is_local_cli_provider(&config.ai_provider)
+                || previous_model == default_model_for_provider(&previous_provider)
+            {
                 config.model = default_model_for_provider(&config.ai_provider).to_owned();
             }
         }
@@ -200,8 +211,18 @@ pub fn global_model_cache_path() -> Result<PathBuf> {
 pub fn default_model_for_provider(provider: &str) -> &'static str {
     match provider {
         "claude-code" | "codex" => "default",
+        "anthropic" => "claude-sonnet-4-20250514",
+        "groq" => "llama-3.1-8b-instant",
         "azure-openai" => "gpt-5.4-mini",
         _ => "gpt-5.4-mini",
+    }
+}
+
+pub fn default_api_url_for_provider(provider: &str) -> Option<&'static str> {
+    match provider {
+        "anthropic" => Some("https://api.anthropic.com/v1"),
+        "groq" => Some("https://api.groq.com/openai/v1"),
+        _ => None,
     }
 }
 
@@ -216,6 +237,17 @@ pub fn enabled_providers() -> &'static [&'static str] {
 pub fn model_list(provider: &str) -> &'static [&'static str] {
     match provider {
         "claude-code" | "codex" => &["default"],
+        "anthropic" => &[
+            "claude-sonnet-4-20250514",
+            "claude-opus-4-20250514",
+            "claude-3-7-sonnet-latest",
+            "claude-3-5-haiku-latest",
+        ],
+        "groq" => &[
+            "llama-3.1-8b-instant",
+            "llama-3.3-70b-versatile",
+            "openai/gpt-oss-120b",
+        ],
         "azure-openai" => &["gpt-5.4-mini", "gpt-5.4", "gpt-5.4-nano"],
         _ => &["gpt-5.4-mini", "gpt-5.4", "gpt-5.4-nano"],
     }
@@ -243,7 +275,7 @@ pub fn set_global_config(key_values: &[(String, String)], global_path: &Path) ->
 
     let provider_was_set = key_values.iter().any(|(key, _)| key == "AIC_AI_PROVIDER");
     let model_was_set = key_values.iter().any(|(key, _)| key == "AIC_MODEL");
-    if provider_was_set && !model_was_set && is_local_cli_provider(&config.ai_provider) {
+    if provider_was_set && !model_was_set {
         config.model = default_model_for_provider(&config.ai_provider).to_owned();
     }
 
@@ -544,6 +576,21 @@ mod tests {
     }
 
     #[test]
+    fn accepts_new_remote_providers() {
+        let temp = TempDir::new().unwrap();
+        let global = temp.path().join(".aicommit");
+        fs::write(
+            &global,
+            "AIC_AI_PROVIDER = \"anthropic\"\nAIC_MODEL = \"claude-sonnet-4-20250514\"\n",
+        )
+        .unwrap();
+
+        let config = Config::load_from(&ConfigPaths { global }).unwrap();
+
+        assert_eq!(config.ai_provider, "anthropic");
+    }
+
+    #[test]
     fn local_cli_providers_do_not_need_api_keys() {
         let config = Config {
             ai_provider: "claude-code".to_owned(),
@@ -569,6 +616,21 @@ mod tests {
     }
 
     #[test]
+    fn setting_remote_provider_without_model_uses_provider_default_model() {
+        let temp = TempDir::new().unwrap();
+        let global = temp.path().join(".aicommit");
+
+        let config = set_global_config(
+            &[("AIC_AI_PROVIDER".to_owned(), "groq".to_owned())],
+            &global,
+        )
+        .unwrap();
+
+        assert_eq!(config.ai_provider, "groq");
+        assert_eq!(config.model, "llama-3.1-8b-instant");
+    }
+
+    #[test]
     fn provider_override_switches_local_cli_model_to_default() {
         let temp = TempDir::new().unwrap();
         let global = temp.path().join(".aicommit");
@@ -584,5 +646,41 @@ mod tests {
 
         assert_eq!(config.ai_provider, "codex");
         assert_eq!(config.model, "default");
+    }
+
+    #[test]
+    fn provider_override_switches_remote_default_model_to_provider_default() {
+        let temp = TempDir::new().unwrap();
+        let global = temp.path().join(".aicommit");
+        fs::write(
+            &global,
+            "AIC_AI_PROVIDER = \"openai\"\nAIC_MODEL = \"gpt-5.4-mini\"\n",
+        )
+        .unwrap();
+
+        let config =
+            Config::load_from_with_provider_override(&ConfigPaths { global }, Some("anthropic"))
+                .unwrap();
+
+        assert_eq!(config.ai_provider, "anthropic");
+        assert_eq!(config.model, "claude-sonnet-4-20250514");
+    }
+
+    #[test]
+    fn provider_override_preserves_explicit_remote_model() {
+        let temp = TempDir::new().unwrap();
+        let global = temp.path().join(".aicommit");
+        fs::write(
+            &global,
+            "AIC_AI_PROVIDER = \"openai\"\nAIC_MODEL = \"gpt-5.4\"\n",
+        )
+        .unwrap();
+
+        let config =
+            Config::load_from_with_provider_override(&ConfigPaths { global }, Some("groq"))
+                .unwrap();
+
+        assert_eq!(config.ai_provider, "groq");
+        assert_eq!(config.model, "gpt-5.4");
     }
 }

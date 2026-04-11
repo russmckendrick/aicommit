@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     config::{
-        Config, global_model_cache_path, is_local_cli_provider, model_list, supported_providers,
+        Config, default_api_url_for_provider, global_model_cache_path, is_local_cli_provider,
+        model_list, supported_providers,
     },
     ui,
 };
@@ -89,11 +90,13 @@ pub async fn run(provider_override: Option<String>, refresh: bool) -> Result<()>
 
 async fn fetch_models(provider: &str, config: &Config) -> Result<Vec<String>> {
     match provider {
-        "openai" => {
-            let base = config
-                .api_url
-                .as_deref()
-                .unwrap_or("https://api.openai.com/v1");
+        "openai" | "groq" => {
+            let fallback = if provider == "groq" {
+                default_api_url_for_provider("groq").unwrap_or("https://api.groq.com/openai/v1")
+            } else {
+                "https://api.openai.com/v1"
+            };
+            let base = config.api_url.as_deref().unwrap_or(fallback);
             fetch_openai_models(
                 provider,
                 &format!("{}/models", base.trim_end_matches('/')),
@@ -115,6 +118,14 @@ async fn fetch_models(provider: &str, config: &Config) -> Result<Vec<String>> {
                     .map(|model| model.to_string())
                     .collect())
             }
+        }
+        "anthropic" => {
+            let base = config
+                .api_url
+                .as_deref()
+                .or_else(|| default_api_url_for_provider("anthropic"))
+                .unwrap_or("https://api.anthropic.com/v1");
+            fetch_anthropic_models(&format!("{}/models", base.trim_end_matches('/')), config).await
         }
         _ => Ok(model_list(provider)
             .iter()
@@ -152,12 +163,51 @@ async fn fetch_openai_models(provider: &str, url: &str, config: &Config) -> Resu
         .data
         .into_iter()
         .map(|model| model.id)
-        .filter(|model| {
-            model.starts_with("gpt-")
-                || model.starts_with("o1")
-                || model.starts_with("o3")
-                || model.starts_with("o4")
+        .filter(|model| match provider {
+            "groq" => true,
+            _ => {
+                model.starts_with("gpt-")
+                    || model.starts_with("o1")
+                    || model.starts_with("o3")
+                    || model.starts_with("o4")
+            }
         })
+        .collect::<Vec<_>>();
+    models.sort();
+    Ok(models)
+}
+
+async fn fetch_anthropic_models(url: &str, config: &Config) -> Result<Vec<String>> {
+    #[derive(Debug, Deserialize)]
+    struct Response {
+        data: Vec<Model>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct Model {
+        id: String,
+    }
+
+    let mut request = Client::new()
+        .get(url)
+        .header("anthropic-version", "2023-06-01");
+    if let Some(api_key) = &config.api_key {
+        request = request.header("x-api-key", api_key);
+    }
+    for (key, value) in &config.api_custom_headers {
+        request = request.header(key, value);
+    }
+
+    let response = request
+        .send()
+        .await?
+        .error_for_status()?
+        .json::<Response>()
+        .await?;
+    let mut models = response
+        .data
+        .into_iter()
+        .map(|model| model.id)
         .collect::<Vec<_>>();
     models.sort();
     Ok(models)
@@ -185,4 +235,82 @@ fn current_timestamp() -> u64 {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wiremock::{
+        Mock, MockServer, ResponseTemplate,
+        matchers::{header, method, path},
+    };
+
+    #[tokio::test]
+    async fn fetches_groq_models_via_openai_compatible_endpoint() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/openai/v1/models"))
+            .and(header("authorization", "Bearer key"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "data": [
+                    { "id": "llama-3.3-70b-versatile" },
+                    { "id": "llama-3.1-8b-instant" }
+                ]
+            })))
+            .mount(&server)
+            .await;
+
+        let config = Config {
+            ai_provider: "groq".to_owned(),
+            api_key: Some("key".to_owned()),
+            api_url: Some(format!("{}/openai/v1", server.uri())),
+            model: "llama-3.1-8b-instant".to_owned(),
+            ..Config::default()
+        };
+
+        let models = fetch_models("groq", &config).await.unwrap();
+
+        assert_eq!(
+            models,
+            vec![
+                "llama-3.1-8b-instant".to_owned(),
+                "llama-3.3-70b-versatile".to_owned(),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn fetches_anthropic_models_via_models_endpoint() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/v1/models"))
+            .and(header("x-api-key", "key"))
+            .and(header("anthropic-version", "2023-06-01"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "data": [
+                    { "id": "claude-opus-4-20250514" },
+                    { "id": "claude-sonnet-4-20250514" }
+                ]
+            })))
+            .mount(&server)
+            .await;
+
+        let config = Config {
+            ai_provider: "anthropic".to_owned(),
+            api_key: Some("key".to_owned()),
+            api_url: Some(format!("{}/v1", server.uri())),
+            model: "claude-sonnet-4-20250514".to_owned(),
+            ..Config::default()
+        };
+
+        let models = fetch_models("anthropic", &config).await.unwrap();
+
+        assert_eq!(
+            models,
+            vec![
+                "claude-opus-4-20250514".to_owned(),
+                "claude-sonnet-4-20250514".to_owned(),
+            ]
+        );
+    }
 }

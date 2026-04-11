@@ -3,10 +3,11 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ai::{command::CommandEngine, openai_compat::OpenAiCompatEngine},
+    ai::{anthropic::AnthropicEngine, command::CommandEngine, openai_compat::OpenAiCompatEngine},
     config::Config,
 };
 
+pub mod anthropic;
 pub mod command;
 pub mod openai_compat;
 
@@ -48,12 +49,15 @@ pub trait AiEngine: Send + Sync {
 
 pub fn engine_from_config(config: &Config) -> Result<Box<dyn AiEngine>> {
     match config.ai_provider.as_str() {
-        "openai" | "azure-openai" => Ok(Box::new(OpenAiCompatEngine::new(config.clone())?)),
+        "openai" | "azure-openai" | "groq" => {
+            Ok(Box::new(OpenAiCompatEngine::new(config.clone())?))
+        }
+        "anthropic" => Ok(Box::new(AnthropicEngine::new(config.clone())?)),
         "claude-code" | "codex" => Ok(Box::new(CommandEngine::new(config.clone())?)),
         "test" => Ok(Box::new(TestEngine)),
         unsupported => {
             bail!(
-                "provider '{unsupported}' is not supported; use openai, azure-openai, claude-code, or codex"
+                "provider '{unsupported}' is not supported; use openai, azure-openai, anthropic, groq, claude-code, or codex"
             )
         }
     }

@@ -5,11 +5,15 @@ V1 ships with these provider paths:
 ```text
 openai
 azure-openai
+anthropic
+groq
 claude-code
 codex
 ```
 
-`openai` and `azure-openai` use the OpenAI chat-completions wire format.
+`openai`, `azure-openai`, and `groq` use the OpenAI chat-completions wire format.
+
+`anthropic` uses Anthropic's Messages API directly.
 
 `claude-code` and `codex` are experimental local-binary providers. They use the installed `claude` and `codex` CLIs from your `PATH`, so authentication is managed by those tools rather than `aic`.
 
@@ -18,13 +22,18 @@ flowchart TD
     Config["AIC_AI_PROVIDER"] --> Provider{"Provider"}
     Provider -->|openai| OpenAI["OpenAI API"]
     Provider -->|azure-openai| Azure["Azure OpenAI v1 API"]
+    Provider -->|anthropic| Anthropic["Anthropic Messages API"]
+    Provider -->|groq| Groq["Groq OpenAI-compatible API"]
     Provider -->|claude-code| Claude["Local claude CLI"]
     Provider -->|codex| Codex["Local codex exec CLI"]
     OpenAI --> Chat["Chat completions request"]
     Azure --> Chat
+    Groq --> Chat
+    Anthropic --> Messages["Messages request"]
     Claude --> Prompt["Flattened prompt over stdin"]
     Codex --> Prompt
     Chat --> Result["Generated commit message"]
+    Messages --> Result
     Prompt --> Result
 ```
 
@@ -52,6 +61,22 @@ aic config set AIC_AI_PROVIDER=azure-openai AIC_API_KEY=<key> AIC_API_URL=https:
 
 For Azure OpenAI, `AIC_MODEL` is the deployment name used by your Azure OpenAI resource. `AIC_API_URL` must point at the Azure OpenAI v1 base URL.
 
+Configure Anthropic:
+
+```sh
+aic config set AIC_AI_PROVIDER=anthropic AIC_API_KEY=<key> AIC_MODEL=claude-sonnet-4-20250514
+```
+
+Anthropic defaults to `https://api.anthropic.com/v1`. Override `AIC_API_URL` only if you need a proxy or gateway in front of the Anthropic API.
+
+Configure Groq:
+
+```sh
+aic config set AIC_AI_PROVIDER=groq AIC_API_KEY=<key> AIC_MODEL=llama-3.1-8b-instant
+```
+
+Groq defaults to `https://api.groq.com/openai/v1` and uses the same chat-completions flow as other OpenAI-compatible providers.
+
 Configure Claude Code:
 
 ```sh
@@ -69,10 +94,12 @@ For local CLI providers, `AIC_MODEL=default` means "use the CLI's own default mo
 Use `--provider` to override the configured provider for a single run:
 
 ```sh
+aic --provider anthropic
+aic review --provider groq
 aic --provider claude-code
 aic review --provider codex
 aic log --provider codex --yes
-aic models --provider claude-code
+aic models --provider anthropic
 ```
 
 The alias `claudecode` is accepted and normalized to `claude-code`.
@@ -82,6 +109,8 @@ List cached or fallback models:
 ```sh
 aic models
 aic models --refresh
+aic models --provider anthropic
+aic models --provider groq
 aic models --provider azure-openai
 aic models --provider claude-code
 ```

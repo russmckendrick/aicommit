@@ -415,6 +415,42 @@ fn models_command_shows_local_provider_note_for_override() {
 }
 
 #[test]
+fn models_command_supports_anthropic_provider_override() {
+    let repo = init_repo();
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "openai")
+        .env("AIC_MODEL", "gpt-5.4-mini")
+        .arg("models")
+        .arg("--provider")
+        .arg("anthropic")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Available models for anthropic:"))
+        .stdout(predicate::str::contains("* claude-sonnet-4-20250514"))
+        .stdout(predicate::str::contains("claude-opus-4-20250514"));
+}
+
+#[test]
+fn models_command_supports_groq_provider_override() {
+    let repo = init_repo();
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "openai")
+        .env("AIC_MODEL", "gpt-5.4-mini")
+        .arg("models")
+        .arg("--provider")
+        .arg("groq")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Available models for groq:"))
+        .stdout(predicate::str::contains("* llama-3.1-8b-instant"))
+        .stdout(predicate::str::contains("llama-3.3-70b-versatile"));
+}
+
+#[test]
 fn history_hides_temp_entries_by_default_and_shows_compact_view() {
     let repo = init_repo();
     let home = TempDir::new().unwrap();
