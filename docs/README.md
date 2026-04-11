@@ -4,7 +4,7 @@ This folder is the detailed documentation entry point for `aic`, the Rust CLI fo
 
 ## Start Here
 
-- [Installation](installation.md): build and install the `aic` binary.
+- [Installation](installation.md): install `aic` with Homebrew, WinGet, direct binaries, or from source.
 - [Usage](usage.md): run the commit-message workflow and pass Git flags through.
 - [Configuration](configuration.md): set provider, model, prompt, token, hook, and output behavior.
 - [Providers](providers.md): choose between OpenAI, Azure OpenAI, Claude Code, and Codex.
@@ -12,6 +12,7 @@ This folder is the detailed documentation entry point for `aic`, the Rust CLI fo
 - [Architecture](architecture.md): understand the Rust modules and data flow.
 - [Testing](testing.md): run the verification suite.
 - [Roadmap](roadmap.md): see deferred v1 items.
+- [Release Notes — Unreleased](releases/unreleased.md): upcoming changes not yet shipped in a tagged release.
 - [Release Notes — 0.0.5](releases/0.0.5.md): latest release notes.
 - [Release Notes — 0.0.4](releases/0.0.4.md): previous release notes.
 - [Release Notes — 0.0.3](releases/0.0.3.md): previous release notes.

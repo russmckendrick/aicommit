@@ -1,0 +1,140 @@
+name: Update WinGet
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to submit. Defaults to the latest GitHub release.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  INSTALLER_NAME: aic-windows-amd64.exe
+  PACKAGE_IDENTIFIER: RussMcKendrick.Aicommit
+  PACKAGE_MANIFEST_PATH: manifests/r/RussMcKendrick/Aicommit
+
+jobs:
+  update-winget:
+    name: Update WinGet package
+    runs-on: windows-latest
+
+    steps:
+      - name: Install .NET runtime
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Resolve release version
+        id: version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${{ github.event.release.tag_name }}"
+
+          if (-not $tag) {
+            $tag = "${{ inputs.release_tag }}"
+          }
+
+          if (-not $tag) {
+            $headers = @{
+              Authorization = "Bearer $env:GH_TOKEN"
+              "X-GitHub-Api-Version" = "2022-11-28"
+            }
+            $release = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/${{ github.repository }}/releases/latest"
+            $tag = $release.tag_name
+          }
+
+          if (-not $tag) {
+            throw "Unable to determine the release tag to submit to WinGet."
+          }
+
+          $version = $tag.TrimStart('v')
+          $installerUrl = "https://github.com/${{ github.repository }}/releases/download/$tag/$env:INSTALLER_NAME"
+
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "installer_url=$installerUrl" >> $env:GITHUB_OUTPUT
+
+      - name: Wait for Windows release asset
+        shell: pwsh
+        run: |
+          $url = "${{ steps.version.outputs.installer_url }}"
+
+          for ($attempt = 1; $attempt -le 10; $attempt++) {
+            try {
+              Invoke-WebRequest -Method Head -MaximumRedirection 5 -Uri $url | Out-Null
+              Write-Host "Installer is available: $url"
+              exit 0
+            } catch {
+              if ($attempt -eq 10) {
+                throw "Windows release asset was not ready after $attempt attempts: $url"
+              }
+
+              Write-Host "Installer not ready yet, retrying in 6 seconds..."
+              Start-Sleep -Seconds 6
+            }
+          }
+
+      - name: Check package availability in winget-pkgs
+        id: package
+        shell: pwsh
+        run: |
+          $url = "https://api.github.com/repos/microsoft/winget-pkgs/contents/$env:PACKAGE_MANIFEST_PATH"
+          $headers = @{
+            "User-Agent" = "aicommit-update-winget-workflow"
+            "X-GitHub-Api-Version" = "2022-11-28"
+          }
+
+          try {
+            Invoke-RestMethod -Headers $headers -Uri $url | Out-Null
+            "exists=true" >> $env:GITHUB_OUTPUT
+            Write-Host "Package manifest path is live in winget-pkgs: $env:PACKAGE_MANIFEST_PATH"
+          } catch {
+            $statusCode = $_.Exception.Response.StatusCode.value__
+
+            if ($statusCode -eq 404) {
+              "exists=false" >> $env:GITHUB_OUTPUT
+              $message = @(
+                "WinGet package ID $env:PACKAGE_IDENTIFIER is not live in microsoft/winget-pkgs yet.",
+                "",
+                "This usually means the initial package PR has not merged. Once it lands, rerun this workflow from Actions and provide release tag ${{ steps.version.outputs.tag }} if needed."
+              ) -join [Environment]::NewLine
+              Write-Host $message
+              $message | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            } else {
+              throw
+            }
+          }
+
+      - name: Download WingetCreate
+        if: steps.package.outputs.exists == 'true'
+        shell: pwsh
+        run: Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+
+      - name: Submit manifest update
+        if: steps.package.outputs.exists == 'true'
+        shell: pwsh
+        env:
+          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
+        run: |
+          if (-not $env:WINGET_CREATE_GITHUB_TOKEN) {
+            throw "Missing WINGET_CREATE_GITHUB_TOKEN secret."
+          }
+
+          .\wingetcreate.exe update $env:PACKAGE_IDENTIFIER `
+            -u "${{ steps.version.outputs.installer_url }}" `
+            -v "${{ steps.version.outputs.version }}" `
+            -t "$env:WINGET_CREATE_GITHUB_TOKEN" `
+            --submit
+
+      - name: Report skipped update
+        if: steps.package.outputs.exists != 'true'
+        shell: pwsh
+        run: |
+          Write-Host "Skipping WinGet update because $env:PACKAGE_IDENTIFIER is not live in microsoft/winget-pkgs yet."

@@ -8,6 +8,9 @@ A fast, opinionated CLI that generates Git commit messages and reviews staged di
 # Install via Homebrew (macOS)
 brew install russmckendrick/tap/aicommit
 
+# Install via WinGet (Windows)
+winget install --id RussMcKendrick.Aicommit -e
+
 # Or download a binary from GitHub Releases
 # https://github.com/russmckendrick/aicommit/releases
 
@@ -115,7 +118,7 @@ See [docs/configuration.md](docs/configuration.md) for the full key reference.
 
 Detailed docs live in [`docs/`](docs/):
 
-- [Installation](docs/installation.md) — Homebrew, GitHub Releases, from source
+- [Installation](docs/installation.md) — Homebrew, WinGet, GitHub Releases, from source
 - [Usage](docs/usage.md) — commit workflow, review, flags, hooks
 - [Configuration](docs/configuration.md) — keys, prompt templates, ignore files
 - [Providers](docs/providers.md) — OpenAI, Azure OpenAI, Claude Code, Codex, custom endpoints
