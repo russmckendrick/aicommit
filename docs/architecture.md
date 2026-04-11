@@ -6,9 +6,9 @@ The Rust crate is organized around small modules:
 src/cli.rs              CLI parser and dispatch
 src/cli_help.toml       Bundled help text and config-key descriptions
 src/commands/           User-facing command flows
-src/config.rs           Defaults, global config, and environment overrides
-src/git.rs              Git command wrapper and repository helpers
-src/prompt.rs           Prompt-template interpolation and response cleanup
+src/config/             Defaults, global config, parsing, validation, and persistence
+src/git/                Git command wrapper, repo helpers, branch logic, remotes, and hooks
+src/prompt/             Prompt builders, prompt-template interpolation, and response cleanup
 src/token.rs            Token counting and diff splitting
 src/generator.rs        Prompt, chunking, and AI engine orchestration
 src/history.rs          Commit and review history persistence
@@ -21,10 +21,10 @@ The `aic` binary calls the shared library entrypoint.
 flowchart LR
     Bin["aic binary"] --> Cli["src/cli.rs"]
     Cli --> Commands["src/commands"]
-    Commands --> Config["src/config.rs"]
-    Commands --> Git["src/git.rs"]
+    Commands --> Config["src/config"]
+    Commands --> Git["src/git"]
     Commands --> Generator["src/generator.rs"]
-    Generator --> Prompt["src/prompt.rs"]
+    Generator --> Prompt["src/prompt"]
     Generator --> Token["src/token.rs"]
     Generator --> Ai["src/ai"]
     Ai --> Provider["HTTP or local CLI provider"]
@@ -38,7 +38,14 @@ Current provider families:
 - Anthropic Messages API engine for `anthropic`
 - Command-backed engines for `claude-code` and `codex`
 
-Git behavior is isolated behind `src/git.rs` so commit, push, hooks, staged-file discovery, and ignore-file filtering are testable without mixing Git process logic into UI commands.
+Git behavior is isolated behind the `src/git/` module family so commit, push, hooks, staged-file discovery, branch/base-ref logic, and ignore-file filtering are testable without mixing Git process logic into UI commands.
+
+The largest command and support modules are now folderized to keep responsibilities local without changing public module paths:
+
+- `src/commands/commit/` separates staging, split-commit flow, push handling, and shared helpers behind `commands::commit::run`.
+- `src/commands/history/` separates formatting, rendering, and interactive browsing behind `commands::history::run`.
+- `src/config/` preserves `crate::config::*` while splitting model defaults, loading, parsing, validation, and writing.
+- `src/prompt/` preserves `crate::prompt::*` while separating commit, review, split, PR, and sanitization helpers.
 
 Prompt templates live in `prompts/`:
 

@@ -9,6 +9,7 @@
 - Added first-class `ollama` provider support as a named local OpenAI-compatible preset with local defaults and model listing.
 - Added interactive file-group diff splitting to the normal `aic` commit flow, including AI-suggested groups, manual regrouping, and sequential split commits.
 - Updated provider, configuration, installation, usage, architecture, and roadmap docs to cover Ollama and interactive diff splitting.
+- Refactored oversized Rust modules into folderized internal submodules such as `src/git/`, `src/config/`, `src/prompt/`, `src/commands/commit/`, and `src/commands/history/` while preserving the existing CLI behavior and public module paths.
 - Added a dedicated GitHub Actions workflow at `.github/workflows/update-winget.yml`
   to submit Windows package updates to the WinGet community repository after a
   GitHub release is published.
