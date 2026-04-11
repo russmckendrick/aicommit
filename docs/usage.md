@@ -9,11 +9,13 @@ aic
 
 If no files are staged, `aic` shows a menu that lets you stage all changed files, choose files interactively, or cancel.
 
-Skip the confirmation prompt:
+Skip the commit prompts and auto-stage all changed files. If push-after-commit is enabled and exactly one remote exists, `aic --yes` also pushes automatically:
 
 ```sh
 aic --yes
 ```
+
+If multiple remotes are configured, `aic --yes` stops with a clear error instead of guessing where to push.
 
 Add extra context for the generated message:
 

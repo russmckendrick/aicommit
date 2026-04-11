@@ -11,7 +11,7 @@ help = "Use the full GitMoji prompt"
 help = "Additional commit context"
 
 [root.args.yes]
-help = "Skip commit confirmation"
+help = "Skip commit prompts and auto-stage/auto-push when unambiguous"
 
 [root.args.dry_run]
 help = "Generate and print the message without committing"
@@ -190,6 +190,6 @@ AIC_MESSAGE_TEMPLATE_PLACEHOLDER = "Placeholder used in message templates"
 AIC_PROMPT_FILE = "Path to a custom system prompt template"
 AIC_ONE_LINE_COMMIT = "Generate a single-line message"
 AIC_OMIT_SCOPE = "Avoid conventional commit scopes"
-AIC_GITPUSH = "Ask whether to push after committing"
+AIC_GITPUSH = "Enable push-after-commit flow"
 AIC_REMOTE_ICON_STYLE = "Remote host icon style for push prompts: auto, nerd-font, emoji, or label"
 AIC_HOOK_AUTO_UNCOMMENT = "Write hook-generated messages uncommented"

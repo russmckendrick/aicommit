@@ -16,6 +16,12 @@ fn init_repo() -> TempDir {
     temp
 }
 
+fn init_bare_repo() -> TempDir {
+    let temp = TempDir::new().unwrap();
+    run_git(temp.path(), ["init", "--bare"]);
+    temp
+}
+
 fn run_git<I, S>(cwd: &std::path::Path, args: I)
 where
     I: IntoIterator<Item = S>,
@@ -27,6 +33,20 @@ where
         .status()
         .unwrap();
     assert!(status.success());
+}
+
+fn git_stdout<I, S>(cwd: &std::path::Path, args: I) -> String
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<std::ffi::OsStr>,
+{
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(cwd)
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    String::from_utf8_lossy(&output.stdout).trim().to_owned()
 }
 
 fn install_fake_binary(dir: &Path, name: &str, output: &str) {
@@ -180,6 +200,125 @@ fn commits_staged_file_with_test_provider() {
     assert_eq!(
         String::from_utf8_lossy(&output.stdout).trim(),
         "feat: add generated commit message"
+    );
+}
+
+#[test]
+fn yes_stages_all_changed_files_before_committing() {
+    let repo = init_repo();
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "test")
+        .env("AIC_GITPUSH", "false")
+        .arg("--yes")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Staged files (1)"))
+        .stdout(predicate::str::contains("committed changes"));
+
+    assert_eq!(
+        git_stdout(repo.path(), ["log", "--format=%s", "-1"]),
+        "feat: add generated commit message"
+    );
+}
+
+#[test]
+fn yes_does_not_push_when_push_is_disabled() {
+    let repo = init_repo();
+    let remote = init_bare_repo();
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+    run_git(
+        repo.path(),
+        ["remote", "add", "origin", remote.path().to_str().unwrap()],
+    );
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "test")
+        .env("AIC_GITPUSH", "false")
+        .arg("--yes")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("committed changes"))
+        .stdout(predicate::str::contains("pushed to").not());
+
+    assert_eq!(
+        git_stdout(remote.path(), ["rev-list", "--count", "--all"]),
+        "0"
+    );
+}
+
+#[test]
+fn yes_pushes_to_the_only_remote() {
+    let repo = init_repo();
+    let remote = init_bare_repo();
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+    run_git(
+        repo.path(),
+        ["remote", "add", "origin", remote.path().to_str().unwrap()],
+    );
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "test")
+        .env("AIC_GITPUSH", "true")
+        .arg("--yes")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("committed changes"))
+        .stdout(predicate::str::contains("pushed to origin"));
+
+    assert_eq!(
+        git_stdout(remote.path(), ["rev-list", "--count", "--all"]),
+        "1"
+    );
+}
+
+#[test]
+fn yes_fails_when_multiple_remotes_are_configured_for_push() {
+    let repo = init_repo();
+    let remote_one = init_bare_repo();
+    let remote_two = init_bare_repo();
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+    run_git(
+        repo.path(),
+        [
+            "remote",
+            "add",
+            "origin",
+            remote_one.path().to_str().unwrap(),
+        ],
+    );
+    run_git(
+        repo.path(),
+        [
+            "remote",
+            "add",
+            "backup",
+            remote_two.path().to_str().unwrap(),
+        ],
+    );
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "test")
+        .env("AIC_GITPUSH", "true")
+        .arg("--yes")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "cannot auto-push with --yes because multiple remotes are configured",
+        ));
+
+    assert_eq!(
+        git_stdout(remote_one.path(), ["rev-list", "--count", "--all"]),
+        "0"
+    );
+    assert_eq!(
+        git_stdout(remote_two.path(), ["rev-list", "--count", "--all"]),
+        "0"
     );
 }
 

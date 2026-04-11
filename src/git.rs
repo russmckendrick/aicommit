@@ -363,7 +363,12 @@ fn shell_quote(value: &str) -> String {
 }
 
 pub fn current_branch() -> Option<String> {
-    run_git(["rev-parse", "--abbrev-ref", "HEAD"])
+    let root = repo_root().ok()?;
+    current_branch_in(&root)
+}
+
+fn current_branch_in(root: &Path) -> Option<String> {
+    run_git_in(root, ["rev-parse", "--abbrev-ref", "HEAD"])
         .ok()
         .map(|output| output.stdout)
         .filter(|branch| !branch.is_empty() && branch != "HEAD")
@@ -524,7 +529,13 @@ pub fn push(remote: Option<&str>) -> Result<GitOutput> {
     let root = repo_root()?;
     let mut args = vec!["push".to_owned()];
     if let Some(remote) = remote {
-        args.push(remote.to_owned());
+        if let Some(branch) = current_branch_in(&root) {
+            args.push("--set-upstream".to_owned());
+            args.push(remote.to_owned());
+            args.push(branch);
+        } else {
+            args.push(remote.to_owned());
+        }
     }
     run_git_dynamic_in(&root, args)
 }

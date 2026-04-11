@@ -99,6 +99,8 @@ aic models --provider groq
 
 The alias `claudecode` is accepted and normalized to `claude-code`.
 
+`AIC_GITPUSH` controls whether `aic` offers a push step after committing. In the normal interactive flow, the single-remote prompt now defaults to `Yes`. With `aic --yes`, `aic` pushes automatically when exactly one remote is configured.
+
 `AIC_REMOTE_ICON_STYLE` controls Git host icons in push prompts. Use `auto` or `nerd-font` for Nerd Font icons with emoji and label fallback, `emoji` for emoji with label fallback, or `label` for plain provider labels only.
 
 ## Prompt Template

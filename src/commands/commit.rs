@@ -9,6 +9,7 @@ const CANCEL_STAGE_OPTION: &str = "Cancel";
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum StagingState {
     UseExisting,
+    AutoStageAll,
     PromptForSelection,
 }
 
@@ -24,6 +25,28 @@ enum StagingPlan {
     AddFiles(Vec<String>),
     Abort,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PushRemoteOption {
+    name: String,
+    label: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum PushPlan {
+    Skip,
+    AutoPush(PushRemoteOption),
+    ConfirmSingle {
+        remote: PushRemoteOption,
+        default: bool,
+    },
+    SelectRemote(Vec<PushRemoteOption>),
+}
+
+const MULTI_REMOTE_AUTO_PUSH_ERROR: &str = concat!(
+    "cannot auto-push with --yes because multiple remotes are configured; ",
+    "rerun without --yes to choose a remote or set AIC_GITPUSH=false"
+);
 
 pub async fn run(
     extra_args: Vec<String>,
@@ -49,7 +72,7 @@ pub async fn run(
         let diff = git::last_commit_diff()?;
         (files, diff)
     } else {
-        ensure_staged_files().await?;
+        ensure_staged_files(skip_confirmation).await?;
         let staged = git::staged_files()?;
         if staged.is_empty() {
             bail!(AicError::NoChanges);
@@ -104,12 +127,16 @@ fn enrich_context_with_branch(context: &str) -> String {
     }
 }
 
-pub async fn ensure_staged_files() -> Result<()> {
+pub async fn ensure_staged_files(skip_confirmation: bool) -> Result<()> {
     let staged = git::staged_files()?;
     let changed = git::changed_files()?;
 
-    match resolve_staging_state(&staged, &changed)? {
+    match resolve_staging_state(&staged, &changed, skip_confirmation)? {
         StagingState::UseExisting => Ok(()),
+        StagingState::AutoStageAll => {
+            let files = build_staging_plan(StageSelectionAction::StageAll, changed, vec![])?;
+            apply_staging_plan(files)
+        }
         StagingState::PromptForSelection => {
             let action = prompt_for_stage_selection()?;
             let selected_files = if action == StageSelectionAction::ChooseFiles {
@@ -118,24 +145,34 @@ pub async fn ensure_staged_files() -> Result<()> {
                 Vec::new()
             };
 
-            match build_staging_plan(action, changed, selected_files)? {
-                StagingPlan::AddFiles(files) => {
-                    git::add_files(&files)?;
-                    Ok(())
-                }
-                StagingPlan::Abort => bail!("commit aborted"),
-            }
+            apply_staging_plan(build_staging_plan(action, changed, selected_files)?)
         }
     }
 }
 
-fn resolve_staging_state(staged: &[String], changed: &[String]) -> Result<StagingState> {
+fn apply_staging_plan(plan: StagingPlan) -> Result<()> {
+    match plan {
+        StagingPlan::AddFiles(files) => {
+            git::add_files(&files)?;
+            Ok(())
+        }
+        StagingPlan::Abort => bail!("commit aborted"),
+    }
+}
+
+fn resolve_staging_state(
+    staged: &[String],
+    changed: &[String],
+    skip_confirmation: bool,
+) -> Result<StagingState> {
     if changed.is_empty() && staged.is_empty() {
         bail!(AicError::NoChanges);
     }
 
     if !staged.is_empty() {
         Ok(StagingState::UseExisting)
+    } else if skip_confirmation {
+        Ok(StagingState::AutoStageAll)
     } else {
         Ok(StagingState::PromptForSelection)
     }
@@ -221,11 +258,23 @@ async fn generate_confirm_and_commit(
 
         match action.as_str() {
             "Yes" => {
-                return commit_and_maybe_push(config, &commit_message, extra_args, staged_files);
+                return commit_and_maybe_push(
+                    config,
+                    &commit_message,
+                    extra_args,
+                    staged_files,
+                    skip_confirmation,
+                );
             }
             "Edit" => {
                 let edited = ui::text("Edit commit message", Some(&commit_message))?;
-                return commit_and_maybe_push(config, &edited, extra_args, staged_files);
+                return commit_and_maybe_push(
+                    config,
+                    &edited,
+                    extra_args,
+                    staged_files,
+                    skip_confirmation,
+                );
             }
             "No" if ui::confirm("Regenerate the message?", true)? => continue,
             _ => bail!("commit aborted"),
@@ -254,7 +303,15 @@ fn commit_and_maybe_push(
     message: &str,
     extra_args: &[String],
     staged_files: &[String],
+    skip_confirmation: bool,
 ) -> Result<()> {
+    let push_plan = build_push_plan(
+        config.gitpush,
+        skip_confirmation,
+        &git::remote_metadata()?,
+        &config.remote_icon_style,
+    )?;
+
     let output = git::commit(message, &filtered_extra_args(config, extra_args))?;
     ui::success("committed changes");
     if !output.stdout.is_empty() {
@@ -278,53 +335,73 @@ fn commit_and_maybe_push(
         ui::warn(format!("failed to save history: {e}"));
     }
 
-    if !config.gitpush {
-        return Ok(());
+    execute_push_plan(push_plan)
+}
+
+fn build_push_plan(
+    gitpush: bool,
+    skip_confirmation: bool,
+    remotes: &[git::GitRemoteMetadata],
+    icon_style: &str,
+) -> Result<PushPlan> {
+    if !gitpush || remotes.is_empty() {
+        return Ok(PushPlan::Skip);
     }
 
-    let remotes = git::remote_metadata()?;
+    let remotes = remotes
+        .iter()
+        .map(|remote| PushRemoteOption {
+            name: remote.name.clone(),
+            label: remote_display_label(remote, icon_style),
+        })
+        .collect::<Vec<_>>();
+
     match remotes.as_slice() {
-        [] => Ok(()),
-        [remote] => {
-            let label = remote_display_label(remote, &config.remote_icon_style);
-            if ui::confirm(&format!("Run git push {label}?"), false)? {
-                let output = git::push(Some(&remote.name))?;
-                ui::success(format!("pushed to {label}"));
-                if !output.stdout.is_empty() {
-                    ui::secondary(output.stdout);
-                }
+        [remote] if skip_confirmation => Ok(PushPlan::AutoPush(remote.clone())),
+        [remote] => Ok(PushPlan::ConfirmSingle {
+            remote: remote.clone(),
+            default: true,
+        }),
+        _ if skip_confirmation => bail!(MULTI_REMOTE_AUTO_PUSH_ERROR),
+        _ => Ok(PushPlan::SelectRemote(remotes)),
+    }
+}
+
+fn execute_push_plan(plan: PushPlan) -> Result<()> {
+    match plan {
+        PushPlan::Skip => Ok(()),
+        PushPlan::AutoPush(remote) => push_to_remote(&remote),
+        PushPlan::ConfirmSingle { remote, default } => {
+            if ui::confirm(&format!("Run git push {}?", remote.label), default)? {
+                push_to_remote(&remote)?;
             }
             Ok(())
         }
-        remotes => {
-            let remote_options = remotes
+        PushPlan::SelectRemote(remotes) => {
+            let mut options = remotes
                 .iter()
-                .map(|remote| {
-                    (
-                        remote.name.clone(),
-                        remote_display_label(remote, &config.remote_icon_style),
-                    )
-                })
-                .collect::<Vec<_>>();
-            let mut options = remote_options
-                .iter()
-                .map(|(_, label)| label.clone())
+                .map(|remote| remote.label.clone())
                 .collect::<Vec<_>>();
             options.push("do not push".to_owned());
             let selected = ui::select("Choose a remote to push to", options)?;
-            if let Some((remote, label)) = remote_options
-                .iter()
-                .find(|(_, label)| label.as_str() == selected)
-            {
-                let output = git::push(Some(remote))?;
-                ui::success(format!("pushed to {label}"));
-                if !output.stdout.is_empty() {
-                    ui::secondary(output.stdout);
-                }
+            if let Some(remote) = remotes.iter().find(|remote| remote.label == selected) {
+                push_to_remote(remote)?;
             }
             Ok(())
         }
     }
+}
+
+fn push_to_remote(remote: &PushRemoteOption) -> Result<()> {
+    let output = git::push(Some(&remote.name))?;
+    ui::success(format!("pushed to {}", remote.label));
+    if !output.stdout.is_empty() {
+        ui::secondary(output.stdout);
+    }
+    if !output.stderr.is_empty() {
+        ui::secondary(output.stderr);
+    }
+    Ok(())
 }
 
 fn remote_display_label(remote: &git::GitRemoteMetadata, icon_style: &str) -> String {
@@ -388,7 +465,7 @@ mod tests {
 
     #[test]
     fn staging_state_reports_no_changes_when_repo_is_clean() {
-        let error = resolve_staging_state(&[], &[]).unwrap_err();
+        let error = resolve_staging_state(&[], &[], false).unwrap_err();
         assert_eq!(error.to_string(), "no changes detected");
     }
 
@@ -398,7 +475,7 @@ mod tests {
         let changed = vec!["src/main.rs".to_owned(), "README.md".to_owned()];
 
         assert_eq!(
-            resolve_staging_state(&staged, &changed).unwrap(),
+            resolve_staging_state(&staged, &changed, false).unwrap(),
             StagingState::UseExisting
         );
     }
@@ -408,8 +485,18 @@ mod tests {
         let changed = vec!["src/main.rs".to_owned(), "README.md".to_owned()];
 
         assert_eq!(
-            resolve_staging_state(&[], &changed).unwrap(),
+            resolve_staging_state(&[], &changed, false).unwrap(),
             StagingState::PromptForSelection
+        );
+    }
+
+    #[test]
+    fn staging_state_auto_stages_all_with_yes_when_only_unstaged_files_exist() {
+        let changed = vec!["src/main.rs".to_owned(), "README.md".to_owned()];
+
+        assert_eq!(
+            resolve_staging_state(&[], &changed, true).unwrap(),
+            StagingState::AutoStageAll
         );
     }
 
@@ -469,6 +556,62 @@ mod tests {
         let result =
             apply_message_template(&config, &["issue-123: $msg".to_owned()], "feat: add cli");
         assert_eq!(result, "issue-123: feat: add cli");
+    }
+
+    fn remote(name: &str) -> git::GitRemoteMetadata {
+        git::GitRemoteMetadata {
+            name: name.to_owned(),
+            fetch_url: None,
+            push_url: None,
+            web_url: None,
+            provider: git::GitProvider::unknown(),
+        }
+    }
+
+    #[test]
+    fn push_plan_skips_when_push_is_disabled() {
+        let plan = build_push_plan(false, false, &[remote("origin")], "auto").unwrap();
+        assert_eq!(plan, PushPlan::Skip);
+    }
+
+    #[test]
+    fn push_plan_skips_when_no_remotes_exist() {
+        let plan = build_push_plan(true, false, &[], "auto").unwrap();
+        assert_eq!(plan, PushPlan::Skip);
+    }
+
+    #[test]
+    fn push_plan_auto_pushes_single_remote_with_yes() {
+        let plan = build_push_plan(true, true, &[remote("origin")], "auto").unwrap();
+        assert_eq!(
+            plan,
+            PushPlan::AutoPush(PushRemoteOption {
+                name: "origin".to_owned(),
+                label: "origin".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn push_plan_prompts_single_remote_with_default_yes() {
+        let plan = build_push_plan(true, false, &[remote("origin")], "auto").unwrap();
+        assert_eq!(
+            plan,
+            PushPlan::ConfirmSingle {
+                remote: PushRemoteOption {
+                    name: "origin".to_owned(),
+                    label: "origin".to_owned(),
+                },
+                default: true,
+            }
+        );
+    }
+
+    #[test]
+    fn push_plan_rejects_multiple_remotes_with_yes() {
+        let error =
+            build_push_plan(true, true, &[remote("origin"), remote("backup")], "auto").unwrap_err();
+        assert_eq!(error.to_string(), MULTI_REMOTE_AUTO_PUSH_ERROR);
     }
 
     #[test]

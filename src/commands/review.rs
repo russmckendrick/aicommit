@@ -20,7 +20,7 @@ pub async fn run(context: String, provider_override: Option<String>) -> Result<(
         bail!(AicError::MissingApiKey(config.ai_provider));
     }
 
-    super::commit::ensure_staged_files().await?;
+    super::commit::ensure_staged_files(false).await?;
     let staged = git::staged_files()?;
     if staged.is_empty() {
         bail!(AicError::NoChanges);

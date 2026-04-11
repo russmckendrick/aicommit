@@ -28,13 +28,14 @@ aic
 ```
 
 If nothing is staged, `aic` lets you stage all changed files, choose files interactively, or cancel.
+With `--yes`, it stages all changed files automatically.
 
 ### Flags
 
 | Flag | Description |
 |------|-------------|
 | `-c`, `--context` | Add context for the AI (e.g., `-c "closes #42"`) |
-| `-y`, `--yes` | Skip the confirmation prompt |
+| `-y`, `--yes` | Skip commit prompts and auto-stage/auto-push when unambiguous |
 | `-d`, `--dry-run` | Print the message without committing |
 | `--amend` | Regenerate and amend the last commit |
 | `--fgm` | Use the full GitMoji specification |
