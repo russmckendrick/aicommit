@@ -7,7 +7,7 @@ git add <files>
 aic
 ```
 
-If no files are staged, `aic` can stage all changed files or let you choose files interactively.
+If no files are staged, `aic` shows a menu that lets you stage all changed files, choose files interactively, or cancel.
 
 Skip the confirmation prompt:
 

@@ -2,6 +2,29 @@ use anyhow::{Result, bail};
 
 use crate::{config::Config, errors::AicError, generator, git, history, ui};
 
+const STAGE_ALL_FILES_OPTION: &str = "Stage all files";
+const CHOOSE_FILES_OPTION: &str = "Choose files";
+const CANCEL_STAGE_OPTION: &str = "Cancel";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StagingState {
+    UseExisting,
+    PromptForSelection,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StageSelectionAction {
+    StageAll,
+    ChooseFiles,
+    Cancel,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum StagingPlan {
+    AddFiles(Vec<String>),
+    Abort,
+}
+
 pub async fn run(
     extra_args: Vec<String>,
     context: String,
@@ -85,25 +108,72 @@ pub async fn ensure_staged_files() -> Result<()> {
     let staged = git::staged_files()?;
     let changed = git::changed_files()?;
 
+    match resolve_staging_state(&staged, &changed)? {
+        StagingState::UseExisting => Ok(()),
+        StagingState::PromptForSelection => {
+            let action = prompt_for_stage_selection()?;
+            let selected_files = if action == StageSelectionAction::ChooseFiles {
+                ui::multiselect("Select files to stage", changed.clone())?
+            } else {
+                Vec::new()
+            };
+
+            match build_staging_plan(action, changed, selected_files)? {
+                StagingPlan::AddFiles(files) => {
+                    git::add_files(&files)?;
+                    Ok(())
+                }
+                StagingPlan::Abort => bail!("commit aborted"),
+            }
+        }
+    }
+}
+
+fn resolve_staging_state(staged: &[String], changed: &[String]) -> Result<StagingState> {
     if changed.is_empty() && staged.is_empty() {
         bail!(AicError::NoChanges);
     }
 
     if !staged.is_empty() {
-        return Ok(());
+        Ok(StagingState::UseExisting)
+    } else {
+        Ok(StagingState::PromptForSelection)
     }
+}
 
-    if ui::confirm("No files are staged. Stage all files and continue?", true)? {
-        git::add_files(&changed)?;
-        return Ok(());
-    }
+fn prompt_for_stage_selection() -> Result<StageSelectionAction> {
+    let selection = ui::select(
+        "No files are staged. What would you like to do?",
+        vec![
+            STAGE_ALL_FILES_OPTION.to_owned(),
+            CHOOSE_FILES_OPTION.to_owned(),
+            CANCEL_STAGE_OPTION.to_owned(),
+        ],
+    )?;
 
-    let files = ui::multiselect("Select files to stage", changed)?;
-    if files.is_empty() {
-        bail!("no files selected");
+    match selection.as_str() {
+        STAGE_ALL_FILES_OPTION => Ok(StageSelectionAction::StageAll),
+        CHOOSE_FILES_OPTION => Ok(StageSelectionAction::ChooseFiles),
+        CANCEL_STAGE_OPTION => Ok(StageSelectionAction::Cancel),
+        _ => bail!("invalid staging selection"),
     }
-    git::add_files(&files)?;
-    Ok(())
+}
+
+fn build_staging_plan(
+    action: StageSelectionAction,
+    changed: Vec<String>,
+    selected_files: Vec<String>,
+) -> Result<StagingPlan> {
+    match action {
+        StageSelectionAction::StageAll => Ok(StagingPlan::AddFiles(changed)),
+        StageSelectionAction::ChooseFiles => {
+            if selected_files.is_empty() {
+                bail!("no files selected");
+            }
+            Ok(StagingPlan::AddFiles(selected_files))
+        }
+        StageSelectionAction::Cancel => Ok(StagingPlan::Abort),
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -315,6 +385,83 @@ fn provider_display_label(provider: &git::GitProvider, style: RemoteIconStyle) -
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn staging_state_reports_no_changes_when_repo_is_clean() {
+        let error = resolve_staging_state(&[], &[]).unwrap_err();
+        assert_eq!(error.to_string(), "no changes detected");
+    }
+
+    #[test]
+    fn staging_state_bypasses_prompt_when_files_are_already_staged() {
+        let staged = vec!["src/main.rs".to_owned()];
+        let changed = vec!["src/main.rs".to_owned(), "README.md".to_owned()];
+
+        assert_eq!(
+            resolve_staging_state(&staged, &changed).unwrap(),
+            StagingState::UseExisting
+        );
+    }
+
+    #[test]
+    fn staging_state_prompts_when_only_unstaged_files_exist() {
+        let changed = vec!["src/main.rs".to_owned(), "README.md".to_owned()];
+
+        assert_eq!(
+            resolve_staging_state(&[], &changed).unwrap(),
+            StagingState::PromptForSelection
+        );
+    }
+
+    #[test]
+    fn staging_plan_stages_all_changed_files() {
+        let changed = vec!["src/main.rs".to_owned(), "README.md".to_owned()];
+
+        assert_eq!(
+            build_staging_plan(StageSelectionAction::StageAll, changed.clone(), vec![]).unwrap(),
+            StagingPlan::AddFiles(changed)
+        );
+    }
+
+    #[test]
+    fn staging_plan_stages_only_selected_files() {
+        let selected = vec!["README.md".to_owned()];
+
+        assert_eq!(
+            build_staging_plan(
+                StageSelectionAction::ChooseFiles,
+                vec!["src/main.rs".to_owned(), "README.md".to_owned()],
+                selected.clone(),
+            )
+            .unwrap(),
+            StagingPlan::AddFiles(selected)
+        );
+    }
+
+    #[test]
+    fn staging_plan_rejects_empty_file_selection() {
+        let error = build_staging_plan(
+            StageSelectionAction::ChooseFiles,
+            vec!["src/main.rs".to_owned()],
+            vec![],
+        )
+        .unwrap_err();
+
+        assert_eq!(error.to_string(), "no files selected");
+    }
+
+    #[test]
+    fn staging_plan_aborts_when_user_cancels() {
+        assert_eq!(
+            build_staging_plan(
+                StageSelectionAction::Cancel,
+                vec!["src/main.rs".to_owned()],
+                vec!["src/main.rs".to_owned()],
+            )
+            .unwrap(),
+            StagingPlan::Abort
+        );
+    }
 
     #[test]
     fn applies_message_template() {
