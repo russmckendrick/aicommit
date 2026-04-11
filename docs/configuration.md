@@ -32,6 +32,17 @@ aic config describe
 aic config describe AIC_MODEL
 ```
 
+You can also inspect the config subcommands directly:
+
+```sh
+aic config --help
+aic config set --help
+aic config get --help
+aic config describe --help
+```
+
+`aic config describe` uses the same shared config-key descriptions as the CLI help metadata, so the wording stays aligned across help output, completions, and the config reference commands.
+
 Supported v1 keys:
 
 ```text

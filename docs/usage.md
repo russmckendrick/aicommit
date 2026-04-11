@@ -55,6 +55,19 @@ The placeholder defaults to `$msg` and can be changed with `AIC_MESSAGE_TEMPLATE
 
 Tune the system prompt without recompiling by setting `AIC_PROMPT_FILE` to a custom prompt-template path.
 
+## Command Help
+
+Use the built-in help when you want a quick command reference from the terminal:
+
+```sh
+aic --help
+aic config --help
+aic hook --help
+aic review --help
+```
+
+Top-level commands, nested subcommands, and important positional arguments now include descriptions, so the CLI can be used as a quick reference without jumping back to the docs.
+
 ## Diff Review
 
 Get AI-powered feedback on staged changes before committing:
@@ -140,3 +153,5 @@ aic completions bash
 aic completions zsh
 aic completions fish
 ```
+
+Shell completion descriptions are generated from the same metadata as `aic --help`, so command wording stays consistent across both surfaces.

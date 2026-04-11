@@ -12,6 +12,14 @@ Unset it:
 aic hook unset
 ```
 
+Use the built-in help for a quick reminder of the available hook commands:
+
+```sh
+aic hook --help
+aic hook set --help
+aic hook unset --help
+```
+
 When the hook runs, it generates a commit message for staged files and writes it into Git's commit message file.
 
 ```mermaid
