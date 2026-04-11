@@ -42,6 +42,7 @@ enum Command {
     HookRun(HookRunCommand),
     Completions(CompletionsCommand),
     Review(ReviewCommand),
+    Pr(PrCommand),
     History(HistoryCommand),
     Log(LogCommand),
 }
@@ -92,6 +93,18 @@ struct CompletionsCommand {
 struct ReviewCommand {
     #[arg(short = 'c', long, default_value = "")]
     context: String,
+}
+
+#[derive(Debug, Args)]
+struct PrCommand {
+    #[arg(short = 'c', long, default_value = "")]
+    context: String,
+
+    #[arg(long)]
+    base: Option<String>,
+
+    #[arg(short = 'y', long)]
+    yes: bool,
 }
 
 #[derive(Debug, Args)]
@@ -155,6 +168,9 @@ pub async fn run() -> Result<()> {
         }
         Some(Command::Review(command)) => {
             commands::review::run(command.context, cli.provider).await
+        }
+        Some(Command::Pr(command)) => {
+            commands::pr::run(command.context, command.base, command.yes, cli.provider).await
         }
         Some(Command::History(command)) => commands::history::run(
             command.count,

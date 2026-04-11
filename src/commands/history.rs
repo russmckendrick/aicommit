@@ -166,7 +166,7 @@ fn show_entry_detail(entry: &HistoryEntry) -> Result<bool> {
     }
 
     ui::blank_line();
-    if entry.kind == "review" {
+    if uses_markdown_rendering(&entry.kind) {
         ui::markdown(&entry.message);
     } else {
         ui::commit_message(&entry.message);
@@ -249,7 +249,7 @@ fn render_verbose_entry(entry: &HistoryEntry) {
     }
 
     ui::blank_line();
-    if entry.kind == "review" {
+    if uses_markdown_rendering(&entry.kind) {
         ui::markdown(&entry.message);
     } else {
         ui::commit_message(&entry.message);
@@ -326,6 +326,10 @@ fn compact_summary(entry: &HistoryEntry) -> String {
             .trim()
             .to_string()
     }
+}
+
+fn uses_markdown_rendering(kind: &str) -> bool {
+    matches!(kind, "review" | "pr")
 }
 
 fn review_excerpt(message: &str) -> String {

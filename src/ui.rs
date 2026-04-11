@@ -3,7 +3,7 @@ use std::fmt::Display;
 use anyhow::{Error, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
-use inquire::{Confirm, InquireError, MultiSelect, Select, Text};
+use inquire::{Confirm, Editor, InquireError, MultiSelect, Select, Text};
 
 pub fn info(message: impl AsRef<str>) {
     println!("{}", message.as_ref());
@@ -94,6 +94,13 @@ pub fn text(message: &str, initial: Option<&str>) -> Result<String> {
         prompt
     };
     Ok(prompt.prompt()?)
+}
+
+pub fn editor(message: &str, initial: &str) -> Result<String> {
+    Ok(Editor::new(message)
+        .with_predefined_text(initial)
+        .with_file_extension(".md")
+        .prompt()?)
 }
 
 pub fn is_prompt_cancelled(error: &Error) -> bool {

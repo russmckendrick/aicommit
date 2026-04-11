@@ -71,9 +71,22 @@ aic review --context "focus on security"
 
 Findings are grouped by severity (Critical, Warning, Suggestion) and cover bugs, security, performance, correctness, and readability. Large diffs are automatically chunked and synthesized into a single review.
 
+## Pull Request Drafts
+
+Generate a pull request title and Markdown description from the current branch:
+
+```sh
+aic pr
+aic pr --base origin/main
+aic pr --context "call out migration risk"
+aic pr --yes
+```
+
+`aic pr` compares `HEAD` against a base ref, uses the branch commits plus cumulative diff as context, and prints a copy-ready title and description. If you do not pass `--base`, `aic` tries `refs/remotes/origin/HEAD`, then `origin/main`, `origin/master`, `main`, and `master`.
+
 ## Commit History
 
-Every generated commit message and review is saved to `~/.aicommit-history.json`. Browse recent entries:
+Every generated commit message, PR draft, and review is saved to `~/.aicommit-history.json`. Browse recent entries:
 
 ```sh
 aic history
@@ -89,6 +102,7 @@ Filter by kind:
 
 ```sh
 aic history --kind commit
+aic history --kind pr
 aic history --kind review
 ```
 

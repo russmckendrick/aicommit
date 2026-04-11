@@ -5,5 +5,6 @@ pub mod history;
 pub mod hook;
 pub mod log;
 pub mod models;
+pub mod pr;
 pub mod review;
 pub mod setup;

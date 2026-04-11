@@ -2,7 +2,7 @@ use std::{
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
     sync::OnceLock,
 };
 
@@ -220,23 +220,7 @@ pub fn last_n_commits(n: usize) -> Result<Vec<CommitInfo>> {
             "--format=%H%x00%s%x00%b%x00--AIC-END--",
         ],
     )?;
-
-    let mut commits = Vec::new();
-    for block in output.stdout.split("--AIC-END--") {
-        let block = block.trim();
-        if block.is_empty() {
-            continue;
-        }
-        let parts: Vec<&str> = block.splitn(3, '\0').collect();
-        if parts.len() >= 2 {
-            commits.push(CommitInfo {
-                hash: parts[0].trim().to_owned(),
-                subject: parts[1].trim().to_owned(),
-                body: parts.get(2).unwrap_or(&"").trim().to_owned(),
-            });
-        }
-    }
-
+    let mut commits = parse_commit_blocks(&output.stdout);
     commits.reverse();
     Ok(commits)
 }
@@ -385,6 +369,31 @@ pub fn current_branch() -> Option<String> {
         .filter(|branch| !branch.is_empty() && branch != "HEAD")
 }
 
+pub fn resolve_base_ref(explicit_base: Option<&str>) -> Result<String> {
+    let root = repo_root()?;
+    resolve_base_ref_in(&root, explicit_base)
+}
+
+pub fn merge_base_with_head(base_ref: &str) -> Result<String> {
+    let root = repo_root()?;
+    merge_base_with_head_in(&root, base_ref)
+}
+
+pub fn commits_since(base_ref: &str) -> Result<Vec<CommitInfo>> {
+    let root = repo_root()?;
+    commits_since_in(&root, base_ref)
+}
+
+pub fn diff_since(base_ref: &str) -> Result<String> {
+    let root = repo_root()?;
+    diff_since_in(&root, base_ref)
+}
+
+pub fn files_since(base_ref: &str) -> Result<Vec<String>> {
+    let root = repo_root()?;
+    files_since_in(&root, base_ref)
+}
+
 pub fn ticket_from_branch() -> Option<String> {
     let branch = current_branch()?;
     extract_ticket(&branch)
@@ -432,6 +441,59 @@ fn extract_ticket(branch: &str) -> Option<String> {
     }
 
     None
+}
+
+fn resolve_base_ref_in(root: &Path, explicit_base: Option<&str>) -> Result<String> {
+    if let Some(base_ref) = explicit_base {
+        if git_ref_exists_in(root, base_ref) {
+            return Ok(base_ref.to_owned());
+        }
+        bail!("base branch '{base_ref}' was not found; pass an existing ref to --base");
+    }
+
+    let remote_default = remote_default_branch_in(root);
+    if let Some(base_ref) = choose_default_base_ref(remote_default.as_deref(), |candidate| {
+        git_ref_exists_in(root, candidate)
+    }) {
+        return Ok(base_ref);
+    }
+
+    bail!("could not determine a base branch; pass --base <branch-or-ref>")
+}
+
+fn merge_base_with_head_in(root: &Path, base_ref: &str) -> Result<String> {
+    Ok(run_git_in(root, ["merge-base", base_ref, "HEAD"])?.stdout)
+}
+
+fn commits_since_in(root: &Path, base_ref: &str) -> Result<Vec<CommitInfo>> {
+    let merge_base = merge_base_with_head_in(root, base_ref)?;
+    let output = run_git_in(
+        root,
+        [
+            "log",
+            "--format=%H%x00%s%x00%b%x00--AIC-END--",
+            &format!("{merge_base}..HEAD"),
+        ],
+    )?;
+
+    let mut commits = parse_commit_blocks(&output.stdout);
+    commits.reverse();
+    Ok(commits)
+}
+
+fn diff_since_in(root: &Path, base_ref: &str) -> Result<String> {
+    let merge_base = merge_base_with_head_in(root, base_ref)?;
+    Ok(run_git_in(root, ["diff", &format!("{merge_base}..HEAD")])?.stdout)
+}
+
+fn files_since_in(root: &Path, base_ref: &str) -> Result<Vec<String>> {
+    let merge_base = merge_base_with_head_in(root, base_ref)?;
+    let output = run_git_in(
+        root,
+        ["diff", "--name-only", &format!("{merge_base}..HEAD")],
+    )?;
+    let files = parse_lines(&output.stdout);
+    filter_ignored(root, files)
 }
 
 pub fn commit(message: &str, extra_args: &[String]) -> Result<GitOutput> {
@@ -533,6 +595,25 @@ fn command_output(output: std::process::Output) -> Result<GitOutput> {
     Ok(GitOutput { stdout, stderr })
 }
 
+fn parse_commit_blocks(stdout: &str) -> Vec<CommitInfo> {
+    let mut commits = Vec::new();
+    for block in stdout.split("--AIC-END--") {
+        let block = block.trim();
+        if block.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = block.splitn(3, '\0').collect();
+        if parts.len() >= 2 {
+            commits.push(CommitInfo {
+                hash: parts[0].trim().to_owned(),
+                subject: parts[1].trim().to_owned(),
+                body: parts.get(2).unwrap_or(&"").trim().to_owned(),
+            });
+        }
+    }
+    commits
+}
+
 fn parse_lines(input: &str) -> Vec<String> {
     input
         .lines()
@@ -557,6 +638,43 @@ fn remote_url_info(url: &str) -> Option<RemoteUrlInfo> {
     let web_url = web_url_for_remote(&host, &path, provider_config);
 
     Some(RemoteUrlInfo { web_url, provider })
+}
+
+fn remote_default_branch_in(root: &Path) -> Option<String> {
+    run_git_in(
+        root,
+        ["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"],
+    )
+    .ok()
+    .map(|output| output.stdout.trim().to_owned())
+    .filter(|value| !value.is_empty())
+}
+
+fn choose_default_base_ref<F>(remote_default: Option<&str>, ref_exists: F) -> Option<String>
+where
+    F: Fn(&str) -> bool,
+{
+    remote_default
+        .into_iter()
+        .chain(["origin/main", "origin/master", "main", "master"])
+        .find(|candidate| ref_exists(candidate))
+        .map(str::to_owned)
+}
+
+fn git_ref_exists_in(root: &Path, ref_name: &str) -> bool {
+    Command::new("git")
+        .args([
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            &format!("{ref_name}^{{commit}}"),
+        ])
+        .current_dir(root)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
 }
 
 fn remote_url_host_and_path(url: &str) -> Option<(String, String)> {
@@ -772,6 +890,7 @@ pub fn remove_hook_if_owned(binary_path: &Path) -> Result<Option<PathBuf>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
 
     fn known_provider(label: &str, nerd_font_icon: &str, emoji_icon: &str) -> GitProvider {
         GitProvider::known_with_icons(
@@ -932,5 +1051,91 @@ mod tests {
                 provider: GitProvider::unknown(),
             }
         );
+    }
+
+    #[test]
+    fn choose_default_base_ref_prefers_remote_head_then_fallbacks() {
+        let chosen = choose_default_base_ref(Some("refs/remotes/origin/dev"), |candidate| {
+            matches!(
+                candidate,
+                "refs/remotes/origin/dev" | "origin/main" | "main"
+            )
+        });
+        assert_eq!(chosen, Some("refs/remotes/origin/dev".to_owned()));
+
+        let chosen = choose_default_base_ref(Some("refs/remotes/origin/dev"), |candidate| {
+            matches!(candidate, "origin/main" | "main")
+        });
+        assert_eq!(chosen, Some("origin/main".to_owned()));
+    }
+
+    #[test]
+    fn choose_default_base_ref_returns_none_when_no_candidates_exist() {
+        assert_eq!(choose_default_base_ref(None, |_| false), None);
+    }
+
+    #[test]
+    fn pr_range_helpers_use_merge_base_range() {
+        let repo = init_repo();
+        run_git_test(repo.path(), ["checkout", "-b", "feature/pr-draft"]);
+        std::fs::write(repo.path().join("src.txt"), "base\nfeature\n").unwrap();
+        run_git_test(repo.path(), ["add", "src.txt"]);
+        run_git_test(repo.path(), ["commit", "-m", "feat(cli): add PR flow"]);
+
+        let base = resolve_base_ref_in(repo.path(), None).unwrap();
+        assert_eq!(base, "main");
+
+        let merge_base = merge_base_with_head_in(repo.path(), "main").unwrap();
+        assert!(!merge_base.is_empty());
+
+        let commits = commits_since_in(repo.path(), "main").unwrap();
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].subject, "feat(cli): add PR flow");
+
+        let diff = diff_since_in(repo.path(), "main").unwrap();
+        assert!(diff.contains("+feature"));
+
+        let files = files_since_in(repo.path(), "main").unwrap();
+        assert_eq!(files, vec!["src.txt".to_owned()]);
+    }
+
+    #[test]
+    fn resolve_base_ref_in_reports_missing_explicit_base() {
+        let repo = init_repo();
+        let error = resolve_base_ref_in(repo.path(), Some("origin/nope")).unwrap_err();
+        assert!(error.to_string().contains("pass an existing ref to --base"));
+    }
+
+    #[test]
+    fn pr_range_helpers_return_empty_when_head_matches_base() {
+        let repo = init_repo();
+        let commits = commits_since_in(repo.path(), "main").unwrap();
+        assert!(commits.is_empty());
+        assert!(diff_since_in(repo.path(), "main").unwrap().is_empty());
+        assert!(files_since_in(repo.path(), "main").unwrap().is_empty());
+    }
+
+    fn init_repo() -> TempDir {
+        let temp = TempDir::new().unwrap();
+        run_git_test(temp.path(), ["init", "-b", "main"]);
+        run_git_test(temp.path(), ["config", "user.email", "test@example.com"]);
+        run_git_test(temp.path(), ["config", "user.name", "Test User"]);
+        std::fs::write(temp.path().join("src.txt"), "base\n").unwrap();
+        run_git_test(temp.path(), ["add", "src.txt"]);
+        run_git_test(temp.path(), ["commit", "-m", "feat: initial"]);
+        temp
+    }
+
+    fn run_git_test<I, S>(cwd: &Path, args: I)
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        let status = Command::new("git")
+            .args(args)
+            .current_dir(cwd)
+            .status()
+            .unwrap();
+        assert!(status.success());
     }
 }

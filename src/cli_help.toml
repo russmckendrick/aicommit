@@ -108,14 +108,36 @@ Examples:
 [root.commands.review.args.context]
 help = "Focus the review on a specific concern (for example, 'focus on security')"
 
+[root.commands.pr]
+about = "Generate a pull request title and description"
+long_about = """
+Generate a pull request title and Markdown description from the branch commits
+and cumulative diff against a base branch.
+
+Examples:
+  aic pr
+  aic pr --base origin/main
+  aic pr -c 'highlight migration risk'
+  aic pr --yes
+"""
+
+[root.commands.pr.args.context]
+help = "Additional pull request context to include in the prompt"
+
+[root.commands.pr.args.base]
+help = "Base branch or ref to diff against"
+
+[root.commands.pr.args.yes]
+help = "Skip confirmation and print the final PR text"
+
 [root.commands.history]
-about = "Show recent AI-generated commit messages and reviews"
+about = "Show recent AI-generated commit messages, PR drafts, and reviews"
 
 [root.commands.history.args.count]
 help = "Number of entries to show"
 
 [root.commands.history.args.kind]
-help = "Filter by kind: commit or review"
+help = "Filter by kind: commit, pr, or review"
 
 [root.commands.history.args.all]
 help = "Include temp and test history entries"

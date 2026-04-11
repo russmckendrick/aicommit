@@ -54,9 +54,20 @@ aic log
 aic log -n 3
 ```
 
+### Draft a pull request
+
+Generate a PR title and Markdown description from the branch commits and diff against a base branch:
+
+```sh
+aic pr
+aic pr --base origin/main
+aic pr -c "highlight rollout risk"
+aic pr --yes
+```
+
 ### Browse history
 
-View recent AI-generated commit messages and reviews:
+View recent AI-generated commit messages, PR drafts, and reviews:
 
 ```sh
 aic history                  # interactive by default in a terminal
@@ -83,10 +94,11 @@ aic completions zsh        # Generate shell completions
 - **Branch context** — extracts ticket/issue references from branch names
 - **Diff review** — AI-powered code review with severity grouping
 - **Message rewriting** — clean up commit history with `aic log`
-- **History** — browse past generated messages and reviews
+- **Pull request drafts** — generate a PR title and Markdown body with `aic pr`
+- **History** — browse past generated messages, PR drafts, and reviews
 - **Large diff handling** — automatic chunking and synthesis
 - **Custom prompts** — swap the system prompt without recompiling
-- **Provider choice** — OpenAI, Azure OpenAI, Claude Code, Codex, and compatible OpenAI-style endpoints
+- **Provider choice** — OpenAI, Azure OpenAI, Claude Code, Codex, and custom OpenAI-compatible endpoints
 
 ## Configuration
 

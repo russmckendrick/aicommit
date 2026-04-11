@@ -1,6 +1,6 @@
 # Documentation
 
-This folder is the detailed documentation entry point for `aic`, the Rust CLI for generating Git commit messages with AI.
+This folder is the detailed documentation entry point for `aic`, the Rust CLI for generating Git commit messages, PR drafts, and reviews with AI.
 
 ## Start Here
 
@@ -33,5 +33,7 @@ flowchart TD
     G --> I{"Push enabled?"}
     I -->|Yes| J["git push"]
     I -->|No| K["Done"]
+    G --> PR["Run aic pr"]
+    PR --> PRD["Draft PR title + description"]
     AMEND["Run aic --amend"] --> E
 ```

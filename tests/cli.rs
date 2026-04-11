@@ -130,6 +130,9 @@ fn top_level_help_describes_all_visible_commands() {
             "hook         Manage the Git commit-msg hook",
         ))
         .stdout(predicate::str::contains(
+            "pr           Generate a pull request title and description",
+        ))
+        .stdout(predicate::str::contains(
             "Arguments passed through to git commit",
         ));
 }
@@ -253,6 +256,105 @@ fn review_honors_codex_provider_override() {
         .assert()
         .success()
         .stdout(predicate::str::contains("P1: stub review from codex"));
+}
+
+#[test]
+fn pr_honors_codex_provider_override_and_writes_history() {
+    let repo = init_repo();
+    let home = TempDir::new().unwrap();
+    let bin_dir = TempDir::new().unwrap();
+    install_fake_binary(
+        bin_dir.path(),
+        "codex",
+        "feat(cli): generate pull request drafts\n\n## Summary\n- Add a local `aic pr` workflow\n\n## Testing\n- cargo test",
+    );
+
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+    run_git(repo.path(), ["commit", "-m", "chore: initial"]);
+
+    fs::write(repo.path().join("src.txt"), "hello\nfeature\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+    run_git(repo.path(), ["commit", "-m", "feat(cli): add PR workflow"]);
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("HOME", home.path())
+        .env("USERPROFILE", home.path())
+        .env("AIC_AI_PROVIDER", "openai")
+        .env("PATH", path_with_fake_bin(bin_dir.path()))
+        .arg("pr")
+        .arg("--base")
+        .arg("HEAD~1")
+        .arg("--yes")
+        .arg("--provider")
+        .arg("codex")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "feat(cli): generate pull request drafts",
+        ))
+        .stdout(predicate::str::contains("## Summary"))
+        .stdout(predicate::str::contains("generated pull request draft"));
+
+    let history = fs::read_to_string(home.path().join(".aicommit-history.json")).unwrap();
+    assert!(history.contains("\"kind\": \"pr\""));
+    assert!(history.contains("feat(cli): generate pull request drafts"));
+}
+
+#[test]
+fn pr_honors_claude_code_provider_override() {
+    let repo = init_repo();
+    let bin_dir = TempDir::new().unwrap();
+    install_fake_binary(
+        bin_dir.path(),
+        "claude",
+        "feat(cli): describe branch changes\n\n## Summary\n- Summarize the feature branch\n\n## Testing\n- Not run",
+    );
+
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+    run_git(repo.path(), ["commit", "-m", "chore: initial"]);
+
+    fs::write(repo.path().join("src.txt"), "hello\nfeature\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+    run_git(repo.path(), ["commit", "-m", "feat(cli): add PR workflow"]);
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "openai")
+        .env("PATH", path_with_fake_bin(bin_dir.path()))
+        .arg("pr")
+        .arg("--base")
+        .arg("HEAD~1")
+        .arg("--yes")
+        .arg("--provider")
+        .arg("claude-code")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "feat(cli): describe branch changes",
+        ))
+        .stdout(predicate::str::contains("## Testing"));
+}
+
+#[test]
+fn pr_reports_missing_explicit_base() {
+    let repo = init_repo();
+    fs::write(repo.path().join("src.txt"), "hello\nfeature\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+    run_git(repo.path(), ["commit", "-m", "feat(cli): add PR workflow"]);
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "test")
+        .arg("pr")
+        .arg("--base")
+        .arg("origin/does-not-exist")
+        .arg("--yes")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("pass an existing ref to --base"));
 }
 
 #[test]

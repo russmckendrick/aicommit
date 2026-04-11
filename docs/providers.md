@@ -42,6 +42,8 @@ Use a custom compatible endpoint:
 aic config set AIC_AI_PROVIDER=openai AIC_API_URL=https://example.com/v1
 ```
 
+This existing `openai` + `AIC_API_URL` path is how `aic` supports OpenAI-compatible providers today. A future roadmap item may still add first-class provider names for specific compatible services, but a separate provider identifier is not required to use custom endpoints now.
+
 Configure Azure OpenAI:
 
 ```sh
