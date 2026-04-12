@@ -1,5 +1,14 @@
 # aicommit Unreleased
 
+## Added
+
+- Added `aic map` command family for generating SVG visualizations of the codebase and commit history:
+  - `aic map tree` — squarified treemap of the file hierarchy, sized by line count and coloured by directory.
+  - `aic map history` — vertical zigzag commit timeline with date circles, full commit messages, and file-change dots.
+  - `aic map heat` — horizontal bar chart of files ranked by modification frequency with a cold-to-hot colour scale.
+  - `aic map activity` — GitHub-style 52-week contribution grid from commit timestamps.
+- All map subcommands support `-o` for custom output paths and `-n` for controlling the commit range.
+
 ## Changed
 
 - Made `aic --yes` fully non-interactive for commits by auto-staging all changed files, auto-pushing when exactly one remote is configured, and failing clearly instead of guessing when multiple remotes exist.

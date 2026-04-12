@@ -20,7 +20,7 @@ aic map tree -o treemap.svg      # custom output path
 
 ### `aic map history`
 
-Draws a horizontal timeline of recent commits with file-change dots coloured by directory.
+Draws a vertical zigzag timeline of recent commits. Cards alternate left and right of a central line, with date circles on the spine, full commit messages (subject and body), and file-change dots coloured by directory.
 
 ```sh
 aic map history                  # last 20 commits

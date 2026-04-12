@@ -12,6 +12,7 @@ src/prompt/             Prompt builders, prompt-template interpolation, and resp
 src/token.rs            Token counting and diff splitting
 src/generator/          Prompt, chunking, and AI engine orchestration
 src/history_store/      Commit and review history persistence
+src/map/                SVG visualization renderers (treemap, timeline, heatmap, activity)
 src/ai/                 Provider trait and provider implementations
 ```
 
@@ -22,6 +23,7 @@ flowchart LR
     Bin["aic binary"] --> Cli["src/cli.rs"]
     Cli --> Commands["src/commands"]
     Commands --> Config["src/config"]
+    Commands --> Map["src/map"]
     Commands --> Git["src/git"]
     Commands --> Generator["src/generator"]
     Generator --> Prompt["src/prompt"]

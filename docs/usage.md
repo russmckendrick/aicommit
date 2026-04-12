@@ -163,6 +163,27 @@ Requirements:
 - The range must not contain merge commits.
 - This rewrites git history — do not use on commits that have been pushed to a shared branch.
 
+## Visualization
+
+Generate SVG visualizations of the codebase and commit history:
+
+```sh
+aic map tree                     # file hierarchy treemap
+aic map history                  # zigzag commit timeline
+aic map heat                     # file modification heatmap
+aic map activity                 # GitHub-style contribution grid
+```
+
+Control the commit range and output path:
+
+```sh
+aic map history -n 30 -o timeline.svg
+aic map heat -n 200
+aic map activity -n 1000
+```
+
+All subcommands produce standalone SVG files. See [Visualization](map.md) for full flag reference.
+
 ## Scope Hints
 
 When conventional commit scopes are enabled (the default), `aic` detects likely scopes from the staged file paths and suggests them to the AI. For example, changes to `src/ai/` hint at the scope `ai`, while `Cargo.toml` hints at `deps`. This improves scope consistency without requiring manual input. Disable scopes entirely with `AIC_OMIT_SCOPE=true`.
