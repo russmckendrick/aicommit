@@ -4,13 +4,14 @@ use anyhow::Result;
 
 use crate::{
     git::{self, stats},
-    map::{theme, treemap},
+    map::{config::MapConfig, theme, treemap},
     ui,
 };
 
-pub fn run(output: Option<String>, no_ai: bool, theme_name: &str) -> Result<()> {
+pub fn run(output: Option<String>, no_ai: bool, theme_override: Option<&str>) -> Result<()> {
     let _ = no_ai; // reserved for future AI annotation
     git::assert_git_repo()?;
+    let map_config = MapConfig::load()?;
 
     ui::section("Building codebase treemap");
 
@@ -33,8 +34,9 @@ pub fn run(output: Option<String>, no_ai: bool, theme_name: &str) -> Result<()> 
         file_sizes.values().sum::<usize>()
     ));
 
-    let tree = treemap::build_tree(&file_sizes);
+    let theme_name = theme_override.unwrap_or(&map_config.theme);
     let theme = theme::load_theme(theme_name)?;
+    let tree = treemap::build_tree(&file_sizes);
     let doc = treemap::render(&tree, None, theme);
 
     let output_path = output.unwrap_or_else(|| "aic-treemap.svg".to_owned());

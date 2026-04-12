@@ -2,12 +2,18 @@ use anyhow::Result;
 
 use crate::{
     git::{self, stats},
-    map::{heatmap, theme},
+    map::{config::MapConfig, heatmap, theme},
     ui,
 };
 
-pub fn run(output: Option<String>, commits: usize, theme_name: &str) -> Result<()> {
+pub fn run(
+    output: Option<String>,
+    commits: Option<usize>,
+    theme_override: Option<&str>,
+) -> Result<()> {
     git::assert_git_repo()?;
+    let map_config = MapConfig::load()?;
+    let commits = commits.unwrap_or(map_config.heat_commits);
 
     ui::section(format!("Building change heatmap ({commits} commits)"));
 
@@ -18,6 +24,7 @@ pub fn run(output: Option<String>, commits: usize, theme_name: &str) -> Result<(
 
     ui::bullet(format!("{} files changed", freq.len()));
 
+    let theme_name = theme_override.unwrap_or(&map_config.theme);
     let theme = theme::load_theme(theme_name)?;
     let doc = heatmap::render(&freq, commits, None, theme);
 

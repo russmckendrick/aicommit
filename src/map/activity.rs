@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn render_produces_svg_with_title() {
-        let theme = crate::map::theme::load_theme("default-light").unwrap();
+        let theme = crate::map::theme::load_theme("classic-light").unwrap();
         let dates = vec!["2026-04-10T10:00:00+00:00".to_owned()];
         let doc = render(&dates, None, theme);
         assert!(doc.to_string().contains("Activity Graph"));

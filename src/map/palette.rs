@@ -75,7 +75,7 @@ mod tests {
 
     #[test]
     fn directory_colour_wraps() {
-        let t = theme::load_theme("default-light").unwrap();
+        let t = theme::load_theme("classic-light").unwrap();
         let a = directory_colour(0, t);
         let b = directory_colour(15, t);
         assert_eq!(a, b);

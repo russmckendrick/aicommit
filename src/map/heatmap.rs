@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn render_produces_non_empty_svg() {
-        let theme = crate::map::theme::load_theme("default-light").unwrap();
+        let theme = crate::map::theme::load_theme("classic-light").unwrap();
         let mut freq = BTreeMap::new();
         freq.insert("src/main.rs".to_owned(), 5);
         freq.insert("src/lib.rs".to_owned(), 2);

@@ -20,14 +20,16 @@ pub struct Theme {
     pub directory_palette: Vec<String>,
 }
 
+pub const DEFAULT_THEME: &str = "github-light";
+
 const THEME_SOURCES: &[(&str, &str)] = &[
     (
-        "default-light",
-        include_str!("../../themes/default-light.toml"),
+        "classic-light",
+        include_str!("../../themes/classic-light.toml"),
     ),
     (
-        "default-dark",
-        include_str!("../../themes/default-dark.toml"),
+        "classic-dark",
+        include_str!("../../themes/classic-dark.toml"),
     ),
     (
         "solarized-light",
@@ -95,8 +97,14 @@ mod tests {
     }
 
     #[test]
-    fn loads_theme_by_name() {
-        let theme = load_theme("default-light").unwrap();
+    fn loads_default_theme() {
+        let theme = load_theme(DEFAULT_THEME).unwrap();
+        assert_eq!(theme.name, "GitHub Light");
+    }
+
+    #[test]
+    fn loads_classic_theme_by_name() {
+        let theme = load_theme("classic-light").unwrap();
         assert_eq!(theme.background, "#fafafa");
     }
 

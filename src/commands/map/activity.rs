@@ -2,12 +2,18 @@ use anyhow::Result;
 
 use crate::{
     git::{self, stats},
-    map::{activity as activity_render, theme},
+    map::{activity as activity_render, config::MapConfig, theme},
     ui,
 };
 
-pub fn run(output: Option<String>, commits: usize, theme_name: &str) -> Result<()> {
+pub fn run(
+    output: Option<String>,
+    commits: Option<usize>,
+    theme_override: Option<&str>,
+) -> Result<()> {
     git::assert_git_repo()?;
+    let map_config = MapConfig::load()?;
+    let commits = commits.unwrap_or(map_config.activity_commits);
 
     ui::section(format!("Building activity graph ({commits} commits)"));
 
@@ -20,6 +26,7 @@ pub fn run(output: Option<String>, commits: usize, theme_name: &str) -> Result<(
 
     ui::bullet(format!("{} commits loaded", commit_data.len()));
 
+    let theme_name = theme_override.unwrap_or(&map_config.theme);
     let theme = theme::load_theme(theme_name)?;
     let doc = activity_render::render(&dates, None, theme);
 

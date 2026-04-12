@@ -78,18 +78,38 @@ All map subcommands accept a `--theme` flag. Available themes:
 
 | Theme | Variant |
 |-------|---------|
-| `default-light` | Light (default) |
-| `default-dark` | Dark |
+| `github-light` | Light (default) |
+| `github-dark` | Dark |
+| `classic-light` | Light |
+| `classic-dark` | Dark |
 | `solarized-light` | Light |
 | `solarized-dark` | Dark |
-| `github-light` | Light |
-| `github-dark` | Dark |
 | `monokai` | Dark |
 | `dracula` | Dark |
 
 Theme definitions live in the `themes/` directory as TOML files. Each theme controls background, text, border, accent, and gradient colours.
 
 Example SVGs for every theme and visualization type are in [docs/maps/](maps/).
+
+## Configuration
+
+Create a `.aicommit-map` file in the repository root to set defaults for all map subcommands:
+
+```toml
+theme = "dracula"
+history_commits = 30
+heat_commits = 100
+activity_commits = 1000
+```
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `theme` | `github-light` | Default color theme |
+| `history_commits` | `20` | Default commit count for `aic map history` |
+| `heat_commits` | `50` | Default commit count for `aic map heat` |
+| `activity_commits` | `500` | Default commit count for `aic map activity` |
+
+CLI flags (`--theme`, `-n`) override the config file when specified.
 
 ## Output
 
