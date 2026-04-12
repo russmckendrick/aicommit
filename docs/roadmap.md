@@ -26,10 +26,10 @@ The v1 priority is a reliable Rust CLI for local commit generation through `aic`
 
 ## Visualization — `aic map`
 
-- **Codebase treemap** (`aic map tree`) — SVG treemap of the file/directory hierarchy, sized by line count or change frequency, with AI-generated labels for each cluster.
-- **Commit timeline** (`aic map history`) — horizontal SVG timeline of the last N commits with file-change nodes coloured by directory, lines connecting commits that touch the same files.
-- **Change heatmap** (`aic map heat`) — directory tree where each file is coloured by modification frequency over the last N commits to surface churn and architectural hotspots.
-- **Activity graph** (`aic map activity`) — GitHub-style contribution grid generated from commit timestamps.
+- ~~**Codebase treemap** (`aic map tree`)~~ — ✅ squarified treemap of the file hierarchy, sized by line count and coloured by directory.
+- ~~**Commit timeline** (`aic map history`)~~ — ✅ vertical zigzag commit timeline with date circles, full commit messages, and file-change dots.
+- ~~**Change heatmap** (`aic map heat`)~~ — ✅ horizontal bar chart of files ranked by modification frequency with a cold-to-hot colour scale.
+- ~~**Activity graph** (`aic map activity`)~~ — ✅ GitHub-style contribution grid generated from commit timestamps.
 
 ## Quality of Life
 
