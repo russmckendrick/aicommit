@@ -51,6 +51,8 @@ The largest command and support modules are now folderized to keep responsibilit
 - `src/prompt/` preserves `crate::prompt::*` while separating commit, review, split, PR, and sanitization helpers.
 - `src/history_store/` keeps history persistence separate from the `aic history` command module.
 - `src/ai/command/` keeps command-backed provider execution separate from command resolution and test helpers.
+- `src/commands/map/` separates the four visualization subcommands (`tree`, `history`, `heat`, `activity`) behind `commands::map`.
+- `src/map/` provides SVG rendering: treemap layout, timeline layout, heatmap bars, activity grid, palette helpers, and SVG element utilities.
 
 As a maintenance rule, modules that start combining multiple distinct concerns should usually graduate from a single `*.rs` file into a folder with a `mod.rs` compatibility layer and focused submodules.
 
