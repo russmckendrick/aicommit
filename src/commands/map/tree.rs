@@ -4,11 +4,11 @@ use anyhow::Result;
 
 use crate::{
     git::{self, stats},
-    map::treemap,
+    map::{theme, treemap},
     ui,
 };
 
-pub fn run(output: Option<String>, no_ai: bool) -> Result<()> {
+pub fn run(output: Option<String>, no_ai: bool, theme_name: &str) -> Result<()> {
     let _ = no_ai; // reserved for future AI annotation
     git::assert_git_repo()?;
 
@@ -34,7 +34,8 @@ pub fn run(output: Option<String>, no_ai: bool) -> Result<()> {
     ));
 
     let tree = treemap::build_tree(&file_sizes);
-    let doc = treemap::render(&tree, None);
+    let theme = theme::load_theme(theme_name)?;
+    let doc = treemap::render(&tree, None, theme);
 
     let output_path = output.unwrap_or_else(|| "aic-treemap.svg".to_owned());
     svg::save(&output_path, &doc)?;

@@ -1,0 +1,19 @@
+name = "Solarized Dark"
+variant = "dark"
+
+background = "#002b36"
+primary_text = "#eee8d5"
+secondary_text = "#839496"
+tertiary_text = "#586e75"
+border = "#073642"
+surface = "#073642"
+accent = "#268bd2"
+accent_text = "#2aa198"
+
+heat_stops = ["#073642", "#268bd2", "#cb4b16", "#dc322f"]
+activity_stops = ["#073642", "#1a4a1a", "#2d6a2d", "#859900", "#a6c400"]
+directory_palette = [
+    "#268bd2", "#859900", "#cb4b16", "#dc322f", "#6c71c4",
+    "#2aa198", "#b58900", "#d33682", "#268bd2", "#859900",
+    "#cb4b16", "#dc322f", "#6c71c4", "#2aa198", "#b58900",
+]

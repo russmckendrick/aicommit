@@ -6,10 +6,11 @@ use svg::Document;
 use super::{
     palette::activity_colour,
     svg_util::{new_document, rect, rounded_rect, subtitle_text, text, title_text},
+    theme::Theme,
 };
 
 /// Render a GitHub-style activity grid from commit dates.
-pub fn render(dates: &[String], label: Option<&str>) -> Document {
+pub fn render(dates: &[String], label: Option<&str>, theme: &Theme) -> Document {
     let padding = 40.0;
     let header_height = 60.0;
     let cell_size = 14.0;
@@ -41,10 +42,10 @@ pub fn render(dates: &[String], label: Option<&str>) -> Document {
     let total_height = padding * 2.0 + header_height + grid_height + 60.0;
 
     let mut doc = new_document(total_width, total_height);
-    doc = doc.add(rect(0.0, 0.0, total_width, total_height, "#fafafa"));
+    doc = doc.add(rect(0.0, 0.0, total_width, total_height, &theme.background));
 
     let title = label.unwrap_or("Activity Graph");
-    doc = doc.add(title_text(padding, padding + 20.0, title));
+    doc = doc.add(title_text(padding, padding + 20.0, title, theme));
 
     let total_commits: usize = counts.values().sum();
     let active_days = counts.len();
@@ -52,6 +53,7 @@ pub fn render(dates: &[String], label: Option<&str>) -> Document {
         padding,
         padding + 38.0,
         &format!("{total_commits} commits across {active_days} active days"),
+        theme,
     ));
 
     let grid_x = padding + day_labels_width;
@@ -67,8 +69,9 @@ pub fn render(dates: &[String], label: Option<&str>) -> Document {
                     grid_y + d as f64 * (cell_size + cell_gap) + cell_size - 2.0,
                     name,
                     9.0,
+                    theme,
                 )
-                .set("fill", "#999999"),
+                .set("fill", theme.tertiary_text.as_str()),
             );
         }
     }
@@ -82,7 +85,10 @@ pub fn render(dates: &[String], label: Option<&str>) -> Document {
             current_month = Some(month);
             let month_name = month_abbreviation(month);
             let mx = grid_x + week as f64 * (cell_size + cell_gap);
-            doc = doc.add(text(mx, grid_y - 4.0, month_name, 9.0).set("fill", "#999999"));
+            doc = doc.add(
+                text(mx, grid_y - 4.0, month_name, 9.0, theme)
+                    .set("fill", theme.tertiary_text.as_str()),
+            );
         }
     }
 
@@ -99,7 +105,7 @@ pub fn render(dates: &[String], label: Option<&str>) -> Document {
             } else {
                 (count as f64 / max_count as f64).max(0.15)
             };
-            let colour = activity_colour(t);
+            let colour = activity_colour(t, theme);
             let cx = grid_x + week as f64 * (cell_size + cell_gap);
             let cy = grid_y + day as f64 * (cell_size + cell_gap);
             doc = doc.add(rounded_rect(cx, cy, cell_size, cell_size, &colour, 2.0));
@@ -108,11 +114,12 @@ pub fn render(dates: &[String], label: Option<&str>) -> Document {
 
     // Legend
     let legend_y = grid_y + grid_height + 24.0;
-    doc = doc.add(text(padding, legend_y, "Less", 9.0).set("fill", "#999999"));
+    doc = doc
+        .add(text(padding, legend_y, "Less", 9.0, theme).set("fill", theme.tertiary_text.as_str()));
     let legend_steps = 5;
     for i in 0..legend_steps {
         let t = i as f64 / (legend_steps - 1) as f64;
-        let colour = activity_colour(t);
+        let colour = activity_colour(t, theme);
         doc = doc.add(rounded_rect(
             padding + 32.0 + i as f64 * (cell_size + 2.0),
             legend_y - 10.0,
@@ -128,8 +135,9 @@ pub fn render(dates: &[String], label: Option<&str>) -> Document {
             legend_y,
             "More",
             9.0,
+            theme,
         )
-        .set("fill", "#999999"),
+        .set("fill", theme.tertiary_text.as_str()),
     );
 
     doc
@@ -178,8 +186,9 @@ mod tests {
 
     #[test]
     fn render_produces_svg_with_title() {
+        let theme = crate::map::theme::load_theme("default-light").unwrap();
         let dates = vec!["2026-04-10T10:00:00+00:00".to_owned()];
-        let doc = render(&dates, None);
+        let doc = render(&dates, None, theme);
         assert!(doc.to_string().contains("Activity Graph"));
     }
 }

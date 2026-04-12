@@ -17,6 +17,9 @@ aic map tree -o treemap.svg      # custom output path
 |------------|--------------------|--------------------------------------------|
 | `-o`       | `aic-treemap.svg`  | Output file path                           |
 | `--no-ai`  | off                | Skip AI cluster annotation (reserved)      |
+| `--theme`  | `default-light`    | Color theme                                |
+
+![Treemap example (Dracula theme)](maps/treemap-dracula.svg)
 
 ### `aic map history`
 
@@ -31,6 +34,9 @@ aic map history -n 40            # last 40 commits
 |------|---------------------|---------------------------------|
 | `-o` | `aic-timeline.svg`  | Output file path                |
 | `-n` | `20`                | Number of commits to include    |
+| `--theme` | `default-light` | Color theme                    |
+
+![Timeline example (GitHub Dark theme)](maps/timeline-github-dark.svg)
 
 ### `aic map heat`
 
@@ -45,6 +51,9 @@ aic map heat -n 200 -o heat.svg  # deeper history
 |------|--------------------|-----------------------------------|
 | `-o` | `aic-heatmap.svg`  | Output file path                  |
 | `-n` | `50`               | Number of commits to analyze      |
+| `--theme` | `default-light` | Color theme                     |
+
+![Heatmap example (Monokai theme)](maps/heatmap-monokai.svg)
 
 ### `aic map activity`
 
@@ -59,6 +68,28 @@ aic map activity -n 1000         # larger sample
 |------|----------------------|---------------------------------|
 | `-o` | `aic-activity.svg`   | Output file path                |
 | `-n` | `500`                | Number of commits to load       |
+| `--theme` | `default-light`  | Color theme                    |
+
+![Activity example (Solarized Dark theme)](maps/activity-solarized-dark.svg)
+
+## Themes
+
+All map subcommands accept a `--theme` flag. Available themes:
+
+| Theme | Variant |
+|-------|---------|
+| `default-light` | Light (default) |
+| `default-dark` | Dark |
+| `solarized-light` | Light |
+| `solarized-dark` | Dark |
+| `github-light` | Light |
+| `github-dark` | Dark |
+| `monokai` | Dark |
+| `dracula` | Dark |
+
+Theme definitions live in the `themes/` directory as TOML files. Each theme controls background, text, border, accent, and gradient colours.
+
+Example SVGs for every theme and visualization type are in [docs/maps/](maps/).
 
 ## Output
 

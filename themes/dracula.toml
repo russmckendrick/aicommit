@@ -1,0 +1,19 @@
+name = "Dracula"
+variant = "dark"
+
+background = "#282a36"
+primary_text = "#f8f8f2"
+secondary_text = "#bfbfbf"
+tertiary_text = "#6272a4"
+border = "#44475a"
+surface = "#44475a"
+accent = "#bd93f9"
+accent_text = "#8be9fd"
+
+heat_stops = ["#44475a", "#8be9fd", "#ffb86c", "#ff5555"]
+activity_stops = ["#44475a", "#2d5a2d", "#3d8a3d", "#50fa7b", "#7dffaa"]
+directory_palette = [
+    "#8be9fd", "#50fa7b", "#ffb86c", "#ff5555", "#bd93f9",
+    "#ff79c6", "#f1fa8c", "#8be9fd", "#50fa7b", "#ffb86c",
+    "#ff5555", "#bd93f9", "#ff79c6", "#f1fa8c", "#8be9fd",
+]

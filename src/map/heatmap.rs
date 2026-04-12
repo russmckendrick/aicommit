@@ -7,10 +7,16 @@ use super::{
     svg_util::{
         group, new_document, rect, rounded_rect, subtitle_text, text, title_text, truncate_to_width,
     },
+    theme::Theme,
 };
 
 /// Render a heatmap of file modification frequency.
-pub fn render(freq: &BTreeMap<String, usize>, commits: usize, label: Option<&str>) -> Document {
+pub fn render(
+    freq: &BTreeMap<String, usize>,
+    commits: usize,
+    label: Option<&str>,
+    theme: &Theme,
+) -> Document {
     let padding = 40.0;
     let header_height = 60.0;
     let row_height = 22.0;
@@ -31,10 +37,10 @@ pub fn render(freq: &BTreeMap<String, usize>, commits: usize, label: Option<&str
     let total_height = map_height + header_height + padding * 2.0 + 40.0;
 
     let mut doc = new_document(total_width, total_height);
-    doc = doc.add(rect(0.0, 0.0, total_width, total_height, "#fafafa"));
+    doc = doc.add(rect(0.0, 0.0, total_width, total_height, &theme.background));
 
     let title = label.unwrap_or("Change Heatmap");
-    doc = doc.add(title_text(padding, padding + 20.0, title));
+    doc = doc.add(title_text(padding, padding + 20.0, title, theme));
     doc = doc.add(subtitle_text(
         padding,
         padding + 38.0,
@@ -42,6 +48,7 @@ pub fn render(freq: &BTreeMap<String, usize>, commits: usize, label: Option<&str
             "Top {} files by modification frequency over {} commits",
             capped, commits
         ),
+        theme,
     ));
 
     let start_y = header_height + padding + 10.0;
@@ -49,14 +56,14 @@ pub fn render(freq: &BTreeMap<String, usize>, commits: usize, label: Option<&str
     for (i, (file, count)) in sorted.iter().enumerate() {
         let y = start_y + i as f64 * row_height;
         let t = **count as f64 / max_freq as f64;
-        let colour = heat_colour(t);
+        let colour = heat_colour(t, theme);
         let bar_width = (t * bar_max_width).max(2.0);
 
         let mut row = group();
 
         // File name
         let name = truncate_to_width(file, label_width - 10.0, 10.0);
-        row = row.add(text(padding, y + 14.0, &name, 10.0));
+        row = row.add(text(padding, y + 14.0, &name, 10.0, theme));
 
         // Heat bar
         row = row.add(rounded_rect(
@@ -75,8 +82,9 @@ pub fn render(freq: &BTreeMap<String, usize>, commits: usize, label: Option<&str
                 y + 14.0,
                 &count.to_string(),
                 10.0,
+                theme,
             )
-            .set("fill", "#666666"),
+            .set("fill", theme.secondary_text.as_str()),
         );
 
         doc = doc.add(row);
@@ -84,11 +92,12 @@ pub fn render(freq: &BTreeMap<String, usize>, commits: usize, label: Option<&str
 
     // Legend
     let legend_y = start_y + capped as f64 * row_height + 20.0;
-    doc = doc.add(text(padding, legend_y, "Low", 9.0).set("fill", "#999999"));
+    doc = doc
+        .add(text(padding, legend_y, "Low", 9.0, theme).set("fill", theme.tertiary_text.as_str()));
     let legend_steps = 10;
     for i in 0..legend_steps {
         let t = i as f64 / (legend_steps - 1) as f64;
-        let colour = heat_colour(t);
+        let colour = heat_colour(t, theme);
         doc = doc.add(rounded_rect(
             padding + 30.0 + i as f64 * 18.0,
             legend_y - 10.0,
@@ -104,8 +113,9 @@ pub fn render(freq: &BTreeMap<String, usize>, commits: usize, label: Option<&str
             legend_y,
             "High",
             9.0,
+            theme,
         )
-        .set("fill", "#999999"),
+        .set("fill", theme.tertiary_text.as_str()),
     );
 
     doc
@@ -117,10 +127,11 @@ mod tests {
 
     #[test]
     fn render_produces_non_empty_svg() {
+        let theme = crate::map::theme::load_theme("default-light").unwrap();
         let mut freq = BTreeMap::new();
         freq.insert("src/main.rs".to_owned(), 5);
         freq.insert("src/lib.rs".to_owned(), 2);
-        let doc = render(&freq, 10, None);
+        let doc = render(&freq, 10, None, theme);
         let svg_string = doc.to_string();
         assert!(svg_string.contains("Change Heatmap"));
         assert!(svg_string.contains("src/main.rs"));

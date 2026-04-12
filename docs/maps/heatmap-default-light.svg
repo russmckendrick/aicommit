@@ -1,0 +1,478 @@
+<svg height="1300" viewBox="0 0 1000 1300" width="1000" xmlns="http://www.w3.org/2000/svg">
+<style>
+text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+</style>
+<rect fill="#fafafa" height="1300" width="1000" x="0" y="0"/>
+<text fill="#1a1a1a" font-size="18" font-weight="bold" x="40" y="60">
+Change Heatmap
+</text>
+<text fill="#999999" font-size="12" x="40" y="78">
+Top 50 files by modification frequency over 50 commits
+</text>
+<g>
+<text fill="#666666" font-size="10" x="40" y="124">
+docs/architecture.md
+</text>
+<rect fill="#ef5350" height="16" rx="3" ry="3" width="500" x="380" y="113"/>
+<text fill="#666666" font-size="10" x="888" y="124">
+15
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="146">
+src/git.rs
+</text>
+<rect fill="#f2674f" height="16" rx="3" ry="3" width="466.6666666666667" x="380" y="135"/>
+<text fill="#666666" font-size="10" x="888" y="146">
+14
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="168">
+README.md
+</text>
+<rect fill="#f57b4f" height="16" rx="3" ry="3" width="433.33333333333337" x="380" y="157"/>
+<text fill="#666666" font-size="10" x="888" y="168">
+13
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="190">
+docs/README.md
+</text>
+<rect fill="#f57b4f" height="16" rx="3" ry="3" width="433.33333333333337" x="380" y="179"/>
+<text fill="#666666" font-size="10" x="888" y="190">
+13
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="212">
+src/commands/commit.rs
+</text>
+<rect fill="#f98f4e" height="16" rx="3" ry="3" width="400" x="380" y="201"/>
+<text fill="#666666" font-size="10" x="888" y="212">
+12
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="234">
+tests/cli.rs
+</text>
+<rect fill="#f98f4e" height="16" rx="3" ry="3" width="400" x="380" y="223"/>
+<text fill="#666666" font-size="10" x="888" y="234">
+12
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="256">
+Cargo.toml
+</text>
+<rect fill="#fca34e" height="16" rx="3" ry="3" width="366.66666666666663" x="380" y="245"/>
+<text fill="#666666" font-size="10" x="888" y="256">
+11
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="278">
+docs/roadmap.md
+</text>
+<rect fill="#fca34e" height="16" rx="3" ry="3" width="366.66666666666663" x="380" y="267"/>
+<text fill="#666666" font-size="10" x="888" y="278">
+11
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="300">
+docs/usage.md
+</text>
+<rect fill="#fca34e" height="16" rx="3" ry="3" width="366.66666666666663" x="380" y="289"/>
+<text fill="#666666" font-size="10" x="888" y="300">
+11
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="322">
+Cargo.lock
+</text>
+<rect fill="#ffb74d" height="16" rx="3" ry="3" width="333.3333333333333" x="380" y="311"/>
+<text fill="#666666" font-size="10" x="888" y="322">
+10
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="344">
+docs/configuration.md
+</text>
+<rect fill="#ffb74d" height="16" rx="3" ry="3" width="333.3333333333333" x="380" y="333"/>
+<text fill="#666666" font-size="10" x="888" y="344">
+10
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="366">
+src/cli.rs
+</text>
+<rect fill="#d9b36f" height="16" rx="3" ry="3" width="300" x="380" y="355"/>
+<text fill="#666666" font-size="10" x="888" y="366">
+9
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="388">
+src/config.rs
+</text>
+<rect fill="#b3b090" height="16" rx="3" ry="3" width="266.6666666666667" x="380" y="377"/>
+<text fill="#666666" font-size="10" x="888" y="388">
+8
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="410">
+docs/releases/unreleased.md
+</text>
+<rect fill="#8eacb2" height="16" rx="3" ry="3" width="233.33333333333334" x="380" y="399"/>
+<text fill="#666666" font-size="10" x="888" y="410">
+7
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="432">
+.github/workflows/ci.yml
+</text>
+<rect fill="#68a9d3" height="16" rx="3" ry="3" width="200" x="380" y="421"/>
+<text fill="#666666" font-size="10" x="888" y="432">
+6
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="454">
+docs/installation.md
+</text>
+<rect fill="#68a9d3" height="16" rx="3" ry="3" width="200" x="380" y="443"/>
+<text fill="#666666" font-size="10" x="888" y="454">
+6
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="476">
+docs/providers.md
+</text>
+<rect fill="#68a9d3" height="16" rx="3" ry="3" width="200" x="380" y="465"/>
+<text fill="#666666" font-size="10" x="888" y="476">
+6
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="498">
+src/ai/command.rs
+</text>
+<rect fill="#68a9d3" height="16" rx="3" ry="3" width="200" x="380" y="487"/>
+<text fill="#666666" font-size="10" x="888" y="498">
+6
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="520">
+src/cli_help.toml
+</text>
+<rect fill="#68a9d3" height="16" rx="3" ry="3" width="200" x="380" y="509"/>
+<text fill="#666666" font-size="10" x="888" y="520">
+6
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="542">
+src/commands/review.rs
+</text>
+<rect fill="#68a9d3" height="16" rx="3" ry="3" width="200" x="380" y="531"/>
+<text fill="#666666" font-size="10" x="888" y="542">
+6
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="564">
+src/ai/mod.rs
+</text>
+<rect fill="#42a5f5" height="16" rx="3" ry="3" width="166.66666666666666" x="380" y="553"/>
+<text fill="#666666" font-size="10" x="888" y="564">
+5
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="586">
+src/commands/mod.rs
+</text>
+<rect fill="#42a5f5" height="16" rx="3" ry="3" width="166.66666666666666" x="380" y="575"/>
+<text fill="#666666" font-size="10" x="888" y="586">
+5
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="608">
+src/prompt.rs
+</text>
+<rect fill="#42a5f5" height="16" rx="3" ry="3" width="166.66666666666666" x="380" y="597"/>
+<text fill="#666666" font-size="10" x="888" y="608">
+5
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="630">
+src/ui.rs
+</text>
+<rect fill="#42a5f5" height="16" rx="3" ry="3" width="166.66666666666666" x="380" y="619"/>
+<text fill="#666666" font-size="10" x="888" y="630">
+5
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="652">
+tests/provider.rs
+</text>
+<rect fill="#42a5f5" height="16" rx="3" ry="3" width="166.66666666666666" x="380" y="641"/>
+<text fill="#666666" font-size="10" x="888" y="652">
+5
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="674">
+src/ai/openai_compat.rs
+</text>
+<rect fill="#63b3f5" height="16" rx="3" ry="3" width="133.33333333333334" x="380" y="663"/>
+<text fill="#666666" font-size="10" x="888" y="674">
+4
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="696">
+src/commands/history.rs
+</text>
+<rect fill="#63b3f5" height="16" rx="3" ry="3" width="133.33333333333334" x="380" y="685"/>
+<text fill="#666666" font-size="10" x="888" y="696">
+4
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="718">
+src/commands/models.rs
+</text>
+<rect fill="#63b3f5" height="16" rx="3" ry="3" width="133.33333333333334" x="380" y="707"/>
+<text fill="#666666" font-size="10" x="888" y="718">
+4
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="740">
+src/lib.rs
+</text>
+<rect fill="#63b3f5" height="16" rx="3" ry="3" width="133.33333333333334" x="380" y="729"/>
+<text fill="#666666" font-size="10" x="888" y="740">
+4
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="762">
+docs/hooks.md
+</text>
+<rect fill="#84c1f5" height="16" rx="3" ry="3" width="100" x="380" y="751"/>
+<text fill="#666666" font-size="10" x="888" y="762">
+3
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="784">
+docs/releases/0.0.5.md
+</text>
+<rect fill="#84c1f5" height="16" rx="3" ry="3" width="100" x="380" y="773"/>
+<text fill="#666666" font-size="10" x="888" y="784">
+3
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="806">
+src/commands/setup.rs
+</text>
+<rect fill="#84c1f5" height="16" rx="3" ry="3" width="100" x="380" y="795"/>
+<text fill="#666666" font-size="10" x="888" y="806">
+3
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="828">
+src/generator.rs
+</text>
+<rect fill="#84c1f5" height="16" rx="3" ry="3" width="100" x="380" y="817"/>
+<text fill="#666666" font-size="10" x="888" y="828">
+3
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="850">
+src/history.rs
+</text>
+<rect fill="#84c1f5" height="16" rx="3" ry="3" width="100" x="380" y="839"/>
+<text fill="#666666" font-size="10" x="888" y="850">
+3
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="872">
+src/map/timeline.rs
+</text>
+<rect fill="#84c1f5" height="16" rx="3" ry="3" width="100" x="380" y="861"/>
+<text fill="#666666" font-size="10" x="888" y="872">
+3
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="894">
+.github/workflows/update-tap.yml
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="883"/>
+<text fill="#666666" font-size="10" x="888" y="894">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="916">
+AGENTS.md
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="905"/>
+<text fill="#666666" font-size="10" x="888" y="916">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="938">
+docs/map.md
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="927"/>
+<text fill="#666666" font-size="10" x="888" y="938">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="960">
+docs/releases/0.0.1.md
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="949"/>
+<text fill="#666666" font-size="10" x="888" y="960">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="982">
+src/commands/commit/helpers.rs
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="971"/>
+<text fill="#666666" font-size="10" x="888" y="982">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="1004">
+src/commands/commit/push.rs
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="993"/>
+<text fill="#666666" font-size="10" x="888" y="1004">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="1026">
+src/commands/commit/split.rs
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="1015"/>
+<text fill="#666666" font-size="10" x="888" y="1026">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="1048">
+src/commands/completions.rs
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="1037"/>
+<text fill="#666666" font-size="10" x="888" y="1048">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="1070">
+src/commands/history/format.rs
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="1059"/>
+<text fill="#666666" font-size="10" x="888" y="1070">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="1092">
+src/commands/history/interactive.rs
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="1081"/>
+<text fill="#666666" font-size="10" x="888" y="1092">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="1114">
+src/commands/history/mod.rs
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="1103"/>
+<text fill="#666666" font-size="10" x="888" y="1114">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="1136">
+src/commands/history/render.rs
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="1125"/>
+<text fill="#666666" font-size="10" x="888" y="1136">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="1158">
+src/commands/hook.rs
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="1147"/>
+<text fill="#666666" font-size="10" x="888" y="1158">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="1180">
+src/commands/log.rs
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="1169"/>
+<text fill="#666666" font-size="10" x="888" y="1180">
+2
+</text>
+</g>
+<g>
+<text fill="#666666" font-size="10" x="40" y="1202">
+src/commands/pr.rs
+</text>
+<rect fill="#a6cef6" height="16" rx="3" ry="3" width="66.66666666666667" x="380" y="1191"/>
+<text fill="#666666" font-size="10" x="888" y="1202">
+2
+</text>
+</g>
+<text fill="#999999" font-size="9" x="40" y="1230">
+Low
+</text>
+<rect fill="#e8eaf6" height="12" rx="2" ry="2" width="16" x="70" y="1220"/>
+<rect fill="#b1d3f6" height="12" rx="2" ry="2" width="16" x="88" y="1220"/>
+<rect fill="#79bcf5" height="12" rx="2" ry="2" width="16" x="106" y="1220"/>
+<rect fill="#42a5f5" height="12" rx="2" ry="2" width="16" x="124" y="1220"/>
+<rect fill="#81abbd" height="12" rx="2" ry="2" width="16" x="142" y="1220"/>
+<rect fill="#c0b185" height="12" rx="2" ry="2" width="16" x="160" y="1220"/>
+<rect fill="#ffb74d" height="12" rx="2" ry="2" width="16" x="178" y="1220"/>
+<rect fill="#fa964e" height="12" rx="2" ry="2" width="16" x="196" y="1220"/>
+<rect fill="#f4744f" height="12" rx="2" ry="2" width="16" x="214" y="1220"/>
+<rect fill="#ef5350" height="12" rx="2" ry="2" width="16" x="232" y="1220"/>
+<text fill="#999999" font-size="9" x="254" y="1230">
+High
+</text>
+</svg>

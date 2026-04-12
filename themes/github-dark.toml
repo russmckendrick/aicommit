@@ -1,0 +1,19 @@
+name = "GitHub Dark"
+variant = "dark"
+
+background = "#0d1117"
+primary_text = "#e6edf3"
+secondary_text = "#8b949e"
+tertiary_text = "#6e7681"
+border = "#30363d"
+surface = "#161b22"
+accent = "#58a6ff"
+accent_text = "#79c0ff"
+
+heat_stops = ["#161b22", "#388bfd", "#d47616", "#f85149"]
+activity_stops = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"]
+directory_palette = [
+    "#58a6ff", "#3fb950", "#d29922", "#f85149", "#bc8cff",
+    "#79c0ff", "#56d364", "#e3b341", "#ff7b72", "#d2a8ff",
+    "#a5d6ff", "#7ee787", "#f2cc60", "#ffa198", "#e8c6ff",
+]

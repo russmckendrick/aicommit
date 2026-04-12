@@ -1,0 +1,19 @@
+name = "Default Light"
+variant = "light"
+
+background = "#fafafa"
+primary_text = "#1a1a1a"
+secondary_text = "#666666"
+tertiary_text = "#999999"
+border = "#e0e0e0"
+surface = "#ffffff"
+accent = "#90a4ae"
+accent_text = "#546e7a"
+
+heat_stops = ["#e8eaf6", "#42a5f5", "#ffb74d", "#ef5350"]
+activity_stops = ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"]
+directory_palette = [
+    "#4fc3f7", "#81c784", "#ffb74d", "#e57373", "#ba68c8",
+    "#4dd0e1", "#aed581", "#ffd54f", "#ff8a65", "#9575cd",
+    "#26c6da", "#dce775", "#ffca28", "#ff7043", "#7e57c2",
+]

@@ -7,6 +7,7 @@ use super::{
     svg_util::{
         group, new_document, rect, rounded_rect, subtitle_text, text, title_text, truncate_to_width,
     },
+    theme::Theme,
 };
 
 /// A node in the file tree. Leaf nodes have a size (line count); directories sum children.
@@ -90,7 +91,7 @@ fn collapse_single_children(node: &mut TreeNode) {
 }
 
 /// Render the tree as an SVG treemap.
-pub fn render(tree: &TreeNode, label: Option<&str>) -> Document {
+pub fn render(tree: &TreeNode, label: Option<&str>, theme: &Theme) -> Document {
     let padding = 40.0;
     let header_height = 60.0;
     let map_width = 960.0;
@@ -101,17 +102,18 @@ pub fn render(tree: &TreeNode, label: Option<&str>) -> Document {
     let mut doc = new_document(total_width, total_height);
 
     // Background
-    doc = doc.add(rect(0.0, 0.0, total_width, total_height, "#fafafa"));
+    doc = doc.add(rect(0.0, 0.0, total_width, total_height, &theme.background));
 
     // Title
     let title = label.unwrap_or("Codebase Treemap");
-    doc = doc.add(title_text(padding, padding + 20.0, title));
+    doc = doc.add(title_text(padding, padding + 20.0, title, theme));
     let file_count = count_leaves(tree);
     let total_lines = tree.total_size() as usize;
     doc = doc.add(subtitle_text(
         padding,
         padding + 38.0,
         &format!("{file_count} files, {total_lines} lines"),
+        theme,
     ));
 
     let map_x = padding;
@@ -127,14 +129,15 @@ pub fn render(tree: &TreeNode, label: Option<&str>) -> Document {
     let rects = squarify(&top_children, map_x, map_y, map_width, map_height);
 
     for (i, (node, rx, ry, rw, rh)) in rects.iter().enumerate() {
-        let colour = directory_colour(i);
-        let g = render_node(node, *rx, *ry, *rw, *rh, &colour, 0);
+        let colour = directory_colour(i, theme);
+        let g = render_node(node, *rx, *ry, *rw, *rh, &colour, 0, theme);
         doc = doc.add(g);
     }
 
     doc
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_node(
     node: &TreeNode,
     x: f64,
@@ -143,6 +146,7 @@ fn render_node(
     h: f64,
     base_colour: &str,
     depth: usize,
+    theme: &Theme,
 ) -> svg::node::element::Group {
     let mut g = group();
     let gap = 2.0;
@@ -159,12 +163,15 @@ fn render_node(
                 3.0,
             )
             .set("opacity", 0.85)
-            .set("stroke", "#ffffff")
+            .set("stroke", theme.surface.as_str())
             .set("stroke-width", 1),
         );
         if w > 30.0 && h > 14.0 {
             let label = truncate_to_width(&node.name, w - gap * 4.0, 10.0);
-            g = g.add(text(x + gap + 4.0, y + gap + 13.0, &label, 10.0).set("fill", "#1a1a1a"));
+            g = g.add(
+                text(x + gap + 4.0, y + gap + 13.0, &label, 10.0, theme)
+                    .set("fill", theme.primary_text.as_str()),
+            );
         }
     } else {
         // Directory container
@@ -183,8 +190,8 @@ fn render_node(
         if label_height > 0.0 && w > 40.0 {
             let label = truncate_to_width(&node.name, w - gap * 4.0, 11.0);
             g = g.add(
-                text(x + gap + 4.0, y + gap + 13.0, &label, 11.0)
-                    .set("fill", "#1a1a1a")
+                text(x + gap + 4.0, y + gap + 13.0, &label, 11.0, theme)
+                    .set("fill", theme.primary_text.as_str())
                     .set("font-weight", "600"),
             );
         }
@@ -204,6 +211,7 @@ fn render_node(
                 *ch,
                 base_colour,
                 depth + 1,
+                theme,
             ));
         }
     }

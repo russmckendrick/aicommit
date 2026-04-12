@@ -2,11 +2,11 @@ use anyhow::Result;
 
 use crate::{
     git::{self, stats},
-    map::heatmap,
+    map::{heatmap, theme},
     ui,
 };
 
-pub fn run(output: Option<String>, commits: usize) -> Result<()> {
+pub fn run(output: Option<String>, commits: usize, theme_name: &str) -> Result<()> {
     git::assert_git_repo()?;
 
     ui::section(format!("Building change heatmap ({commits} commits)"));
@@ -18,7 +18,8 @@ pub fn run(output: Option<String>, commits: usize) -> Result<()> {
 
     ui::bullet(format!("{} files changed", freq.len()));
 
-    let doc = heatmap::render(&freq, commits, None);
+    let theme = theme::load_theme(theme_name)?;
+    let doc = heatmap::render(&freq, commits, None, theme);
 
     let output_path = output.unwrap_or_else(|| "aic-heatmap.svg".to_owned());
     svg::save(&output_path, &doc)?;

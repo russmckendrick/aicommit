@@ -159,6 +159,9 @@ struct MapTreeCommand {
 
     #[arg(long)]
     no_ai: bool,
+
+    #[arg(long, default_value = "default-light")]
+    theme: String,
 }
 
 #[derive(Debug, Args)]
@@ -168,6 +171,9 @@ struct MapHistoryCommand {
 
     #[arg(short = 'n', long, default_value = "20")]
     commits: usize,
+
+    #[arg(long, default_value = "default-light")]
+    theme: String,
 }
 
 #[derive(Debug, Args)]
@@ -177,6 +183,9 @@ struct MapHeatCommand {
 
     #[arg(short = 'n', long, default_value = "50")]
     commits: usize,
+
+    #[arg(long, default_value = "default-light")]
+    theme: String,
 }
 
 #[derive(Debug, Args)]
@@ -186,6 +195,9 @@ struct MapActivityCommand {
 
     #[arg(short = 'n', long, default_value = "500")]
     commits: usize,
+
+    #[arg(long, default_value = "default-light")]
+    theme: String,
 }
 
 pub fn command() -> clap::Command {
@@ -235,10 +247,14 @@ pub async fn run() -> Result<()> {
             commands::log::run(command.count, command.yes, cli.provider).await
         }
         Some(Command::Map(command)) => match command.mode {
-            MapMode::Tree(sub) => commands::map::tree::run(sub.output, sub.no_ai),
-            MapMode::History(sub) => commands::map::history::run(sub.output, sub.commits),
-            MapMode::Heat(sub) => commands::map::heat::run(sub.output, sub.commits),
-            MapMode::Activity(sub) => commands::map::activity::run(sub.output, sub.commits),
+            MapMode::Tree(sub) => commands::map::tree::run(sub.output, sub.no_ai, &sub.theme),
+            MapMode::History(sub) => {
+                commands::map::history::run(sub.output, sub.commits, &sub.theme)
+            }
+            MapMode::Heat(sub) => commands::map::heat::run(sub.output, sub.commits, &sub.theme),
+            MapMode::Activity(sub) => {
+                commands::map::activity::run(sub.output, sub.commits, &sub.theme)
+            }
         },
         None => {
             commands::commit::run(

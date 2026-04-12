@@ -1,0 +1,19 @@
+name = "GitHub Light"
+variant = "light"
+
+background = "#ffffff"
+primary_text = "#1f2328"
+secondary_text = "#656d76"
+tertiary_text = "#8b949e"
+border = "#d1d9e0"
+surface = "#f6f8fa"
+accent = "#0969da"
+accent_text = "#0550ae"
+
+heat_stops = ["#edf2f7", "#54aeff", "#e16f24", "#cf222e"]
+activity_stops = ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"]
+directory_palette = [
+    "#0969da", "#1a7f37", "#bf8700", "#cf222e", "#8250df",
+    "#0550ae", "#2da44e", "#d4a72c", "#ff8182", "#a475f9",
+    "#218bff", "#3fb950", "#d29922", "#f85149", "#bc8cff",
+]

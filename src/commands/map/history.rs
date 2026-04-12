@@ -2,11 +2,11 @@ use anyhow::Result;
 
 use crate::{
     git::{self, stats},
-    map::timeline,
+    map::{theme, timeline},
     ui,
 };
 
-pub fn run(output: Option<String>, commits: usize) -> Result<()> {
+pub fn run(output: Option<String>, commits: usize, theme_name: &str) -> Result<()> {
     git::assert_git_repo()?;
 
     ui::section(format!("Building commit timeline ({commits} commits)"));
@@ -18,7 +18,8 @@ pub fn run(output: Option<String>, commits: usize) -> Result<()> {
 
     ui::bullet(format!("{} commits loaded", commit_data.len()));
 
-    let doc = timeline::render(&commit_data, None);
+    let theme = theme::load_theme(theme_name)?;
+    let doc = timeline::render(&commit_data, None, theme);
 
     let output_path = output.unwrap_or_else(|| "aic-timeline.svg".to_owned());
     svg::save(&output_path, &doc)?;

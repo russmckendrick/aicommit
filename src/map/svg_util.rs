@@ -1,6 +1,8 @@
 use svg::Document;
 use svg::node::element::{Group, Rectangle, Style, Text as SvgText};
 
+use super::theme::Theme;
+
 pub fn new_document(width: f64, height: f64) -> Document {
     Document::new()
         .set("viewBox", (0.0, 0.0, width, height))
@@ -23,30 +25,26 @@ pub fn rounded_rect(x: f64, y: f64, w: f64, h: f64, fill: &str, rx: f64) -> Rect
     rect(x, y, w, h, fill).set("rx", rx).set("ry", rx)
 }
 
-pub fn text(x: f64, y: f64, content: &str, size: f64) -> SvgText {
+pub fn text(x: f64, y: f64, content: &str, size: f64, theme: &Theme) -> SvgText {
     SvgText::new(content)
         .set("x", x)
         .set("y", y)
         .set("font-size", size)
-        .set("fill", "#333333")
-}
-
-pub fn text_with_colour(x: f64, y: f64, content: &str, size: f64, fill: &str) -> SvgText {
-    text(x, y, content, size).set("fill", fill)
+        .set("fill", theme.secondary_text.as_str())
 }
 
 pub fn group() -> Group {
     Group::new()
 }
 
-pub fn title_text(x: f64, y: f64, content: &str) -> SvgText {
-    text(x, y, content, 18.0)
+pub fn title_text(x: f64, y: f64, content: &str, theme: &Theme) -> SvgText {
+    text(x, y, content, 18.0, theme)
         .set("font-weight", "bold")
-        .set("fill", "#1a1a1a")
+        .set("fill", theme.primary_text.as_str())
 }
 
-pub fn subtitle_text(x: f64, y: f64, content: &str) -> SvgText {
-    text(x, y, content, 12.0).set("fill", "#666666")
+pub fn subtitle_text(x: f64, y: f64, content: &str, theme: &Theme) -> SvgText {
+    text(x, y, content, 12.0, theme).set("fill", theme.tertiary_text.as_str())
 }
 
 fn base_style() -> Style {

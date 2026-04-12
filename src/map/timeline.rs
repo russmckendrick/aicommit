@@ -7,6 +7,7 @@ use super::{
     svg_util::{
         group, new_document, rect, rounded_rect, subtitle_text, text, title_text, truncate_to_width,
     },
+    theme::Theme,
 };
 use crate::git::stats::TimestampedCommit;
 
@@ -23,7 +24,7 @@ const CIRCLE_RADIUS: f64 = 22.0;
 const MIN_CIRCLE_SPACING: f64 = 52.0;
 
 /// Render a vertical zigzag timeline of commits, alternating left and right.
-pub fn render(commits: &[TimestampedCommit], label: Option<&str>) -> Document {
+pub fn render(commits: &[TimestampedCommit], label: Option<&str>, theme: &Theme) -> Document {
     let padding = 30.0;
     let header_height = 50.0;
     let centre_x = CARD_WIDTH + ARM_LENGTH + CIRCLE_RADIUS + padding + 10.0;
@@ -34,7 +35,7 @@ pub fn render(commits: &[TimestampedCommit], label: Option<&str>) -> Document {
     let dir_colours: BTreeMap<String, String> = all_dirs
         .iter()
         .enumerate()
-        .map(|(i, d)| (d.clone(), directory_colour(i)))
+        .map(|(i, d)| (d.clone(), directory_colour(i, theme)))
         .collect();
 
     // Pre-calculate card heights to position everything
@@ -80,14 +81,15 @@ pub fn render(commits: &[TimestampedCommit], label: Option<&str>) -> Document {
     let total_height = timeline_bottom + legend_height + padding;
 
     let mut doc = new_document(total_width, total_height);
-    doc = doc.add(rect(0.0, 0.0, total_width, total_height, "#fafafa"));
+    doc = doc.add(rect(0.0, 0.0, total_width, total_height, &theme.background));
 
     let title = label.unwrap_or("Commit Timeline");
-    doc = doc.add(title_text(padding, padding + 18.0, title));
+    doc = doc.add(title_text(padding, padding + 18.0, title, theme));
     doc = doc.add(subtitle_text(
         padding,
         padding + 34.0,
         &format!("{} commits", commits.len()),
+        theme,
     ));
 
     // Draw vertical centre line
@@ -95,7 +97,7 @@ pub fn render(commits: &[TimestampedCommit], label: Option<&str>) -> Document {
         let y1 = start_y + CIRCLE_RADIUS;
         let last = y_positions.len() - 1;
         let y2 = y_positions[last] + card_heights[last] / 2.0;
-        doc = doc.add(rect(centre_x - 1.5, y1, 3.0, y2 - y1, "#e0e0e0").set("rx", 1.5));
+        doc = doc.add(rect(centre_x - 1.5, y1, 3.0, y2 - y1, &theme.border).set("rx", 1.5));
     }
 
     // Draw commits newest-first
@@ -110,17 +112,18 @@ pub fn render(commits: &[TimestampedCommit], label: Option<&str>) -> Document {
             text_max,
             is_left,
             &dir_colours,
+            theme,
         );
         doc = doc.add(g);
     }
 
     // Legend
     let legend_y = timeline_bottom + 10.0;
-    doc = doc.add(text(padding, legend_y, "Directories:", 10.0).set("font-weight", "600"));
+    doc = doc.add(text(padding, legend_y, "Directories:", 10.0, theme).set("font-weight", "600"));
     let mut lx = padding + 80.0;
     for (dir, colour) in &dir_colours {
         doc = doc.add(rounded_rect(lx, legend_y - 9.0, 10.0, 10.0, colour, 2.0));
-        doc = doc.add(text(lx + 14.0, legend_y, dir, 9.0));
+        doc = doc.add(text(lx + 14.0, legend_y, dir, 9.0, theme));
         lx += dir.len() as f64 * 6.0 + 28.0;
         if lx > total_width - padding {
             break;
@@ -159,6 +162,7 @@ fn render_commit(
     text_max: f64,
     is_left: bool,
     dir_colours: &BTreeMap<String, String>,
+    theme: &Theme,
 ) -> svg::node::element::Group {
     let mut g = group();
     let cy = y + card_h / 2.0;
@@ -169,8 +173,8 @@ fn render_commit(
             .set("cx", centre_x)
             .set("cy", cy)
             .set("r", CIRCLE_RADIUS)
-            .set("fill", "#ffffff")
-            .set("stroke", "#90a4ae")
+            .set("fill", theme.surface.as_str())
+            .set("stroke", theme.accent.as_str())
             .set("stroke-width", 2),
     );
 
@@ -184,13 +188,17 @@ fn render_commit(
         let month_day = format!("{}/{}", date_parts[1], date_parts[2]);
         let year = date_parts[0];
         g = g.add(
-            text(centre_x - 11.0, cy - 2.0, &month_day, 8.0)
-                .set("fill", "#546e7a")
+            text(centre_x - 11.0, cy - 2.0, &month_day, 8.0, theme)
+                .set("fill", theme.accent_text.as_str())
                 .set("font-weight", "600"),
         );
-        g = g.add(text(centre_x - 10.0, cy + 9.0, year, 7.0).set("fill", "#90a4ae"));
+        g = g.add(
+            text(centre_x - 10.0, cy + 9.0, year, 7.0, theme).set("fill", theme.accent.as_str()),
+        );
     } else {
-        g = g.add(text(centre_x - 14.0, cy + 3.0, ts, 7.0).set("fill", "#546e7a"));
+        g = g.add(
+            text(centre_x - 14.0, cy + 3.0, ts, 7.0, theme).set("fill", theme.accent_text.as_str()),
+        );
     }
 
     // --- Horizontal arm ---
@@ -209,7 +217,7 @@ fn render_commit(
     };
     let arm_left = arm_start.min(arm_end);
     let arm_w = (arm_start - arm_end).abs();
-    g = g.add(rect(arm_left, cy - 1.0, arm_w, 2.0, "#e0e0e0").set("rx", 1.0));
+    g = g.add(rect(arm_left, cy - 1.0, arm_w, 2.0, &theme.border).set("rx", 1.0));
 
     // Small dot at the arm end
     g = g.add(
@@ -217,14 +225,14 @@ fn render_commit(
             .set("cx", arm_end)
             .set("cy", cy)
             .set("r", 3.0)
-            .set("fill", "#90a4ae"),
+            .set("fill", theme.accent.as_str()),
     );
 
     // --- Detail card ---
     let card_y = y;
     g = g.add(
-        rounded_rect(detail_x, card_y, CARD_WIDTH, card_h, "#ffffff", 5.0)
-            .set("stroke", "#e0e0e0")
+        rounded_rect(detail_x, card_y, CARD_WIDTH, card_h, &theme.surface, 5.0)
+            .set("stroke", theme.border.as_str())
             .set("stroke-width", 1),
     );
 
@@ -234,14 +242,14 @@ fn render_commit(
     // Short hash
     let short_hash = &commit.hash[..7.min(commit.hash.len())];
     ty += LINE_HEIGHT;
-    g = g.add(text(tx, ty - 3.0, short_hash, 8.0).set("fill", "#90a4ae"));
+    g = g.add(text(tx, ty - 3.0, short_hash, 8.0, theme).set("fill", theme.accent.as_str()));
 
     // Subject
     let subject = truncate_to_width(&commit.subject, text_max, SUBJECT_SIZE);
     ty += LINE_HEIGHT;
     g = g.add(
-        text(tx, ty - 3.0, &subject, SUBJECT_SIZE)
-            .set("fill", "#1a1a1a")
+        text(tx, ty - 3.0, &subject, SUBJECT_SIZE, theme)
+            .set("fill", theme.primary_text.as_str())
             .set("font-weight", "600"),
     );
 
@@ -249,7 +257,9 @@ fn render_commit(
     let body_lines = wrap_text(&commit.body, text_max, BODY_SIZE);
     for line in &body_lines {
         ty += LINE_HEIGHT;
-        g = g.add(text(tx, ty - 3.0, line, BODY_SIZE).set("fill", "#666666"));
+        g = g.add(
+            text(tx, ty - 3.0, line, BODY_SIZE, theme).set("fill", theme.secondary_text.as_str()),
+        );
     }
 
     // File dots
@@ -261,7 +271,7 @@ fn render_commit(
             let colour = dir_colours
                 .get(&dir)
                 .cloned()
-                .unwrap_or_else(|| "#cccccc".to_owned());
+                .unwrap_or_else(|| theme.border.clone());
             let dx = tx + j as f64 * (DOT_SIZE + DOT_GAP);
             g = g.add(
                 rounded_rect(dx, ty - DOT_SIZE, DOT_SIZE, DOT_SIZE, &colour, 2.0)
@@ -271,7 +281,10 @@ fn render_commit(
         if commit.files.len() > max_dots {
             let overflow = format!("+{}", commit.files.len() - max_dots);
             let overflow_x = tx + max_dots as f64 * (DOT_SIZE + DOT_GAP) + 2.0;
-            g = g.add(text(overflow_x, ty, &overflow, 7.0).set("fill", "#999999"));
+            g = g.add(
+                text(overflow_x, ty, &overflow, 7.0, theme)
+                    .set("fill", theme.tertiary_text.as_str()),
+            );
         }
     }
 

@@ -1,0 +1,19 @@
+name = "Solarized Light"
+variant = "light"
+
+background = "#fdf6e3"
+primary_text = "#073642"
+secondary_text = "#657b83"
+tertiary_text = "#93a1a1"
+border = "#eee8d5"
+surface = "#fdf6e3"
+accent = "#268bd2"
+accent_text = "#2aa198"
+
+heat_stops = ["#eee8d5", "#268bd2", "#cb4b16", "#dc322f"]
+activity_stops = ["#eee8d5", "#859900", "#6c8f00", "#4a7800", "#2a6100"]
+directory_palette = [
+    "#268bd2", "#859900", "#cb4b16", "#dc322f", "#6c71c4",
+    "#2aa198", "#b58900", "#d33682", "#268bd2", "#859900",
+    "#cb4b16", "#dc322f", "#6c71c4", "#2aa198", "#b58900",
+]

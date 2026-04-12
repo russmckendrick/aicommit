@@ -1,0 +1,19 @@
+name = "Monokai"
+variant = "dark"
+
+background = "#272822"
+primary_text = "#f8f8f2"
+secondary_text = "#a6a69c"
+tertiary_text = "#75715e"
+border = "#3e3d32"
+surface = "#3e3d32"
+accent = "#66d9ef"
+accent_text = "#a6e22e"
+
+heat_stops = ["#3e3d32", "#66d9ef", "#fd971f", "#f92672"]
+activity_stops = ["#3e3d32", "#4a5e2b", "#6a8f2b", "#a6e22e", "#c8f560"]
+directory_palette = [
+    "#66d9ef", "#a6e22e", "#fd971f", "#f92672", "#ae81ff",
+    "#e6db74", "#66d9ef", "#a6e22e", "#fd971f", "#f92672",
+    "#ae81ff", "#e6db74", "#66d9ef", "#a6e22e", "#fd971f",
+]

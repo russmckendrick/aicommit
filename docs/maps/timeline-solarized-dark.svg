@@ -1,0 +1,1010 @@
+<svg height="2098" viewBox="0 0 804 2098" width="804" xmlns="http://www.w3.org/2000/svg">
+<style>
+text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+</style>
+<rect fill="#002b36" height="2098" width="804" x="0" y="0"/>
+<text fill="#eee8d5" font-size="18" font-weight="bold" x="30" y="48">
+Commit Timeline
+</text>
+<text fill="#586e75" font-size="12" x="30" y="64">
+20 commits
+</text>
+<rect fill="#073642" height="1804" rx="1.5" width="3" x="400.5" y="112"/>
+<g>
+<circle cx="402" cy="159.5" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="157.5">
+04/12
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="168.5">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="340" y="158.5"/>
+<circle cx="340" cy="159.5" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="139" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="40" y="90"/>
+<text fill="#268bd2" font-size="8" x="50" y="110">
+842099b
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="50" y="123">
+📝 docs(architecture): document the new m...
+</text>
+<text fill="#839496" font-size="9" x="50" y="136">
+- Describe how `commands::map` groups the four
+</text>
+<text fill="#839496" font-size="9" x="50" y="149">
+visualization subcommands behind one module
+</text>
+<text fill="#839496" font-size="9" x="50" y="162">
+- Explain that `src/map/` now owns SVG rendering,
+</text>
+<text fill="#839496" font-size="9" x="50" y="175">
+layouts, palettes, and element helpers
+</text>
+<text fill="#839496" font-size="9" x="50" y="188">
+- Keep the architecture guide aligned with the
+</text>
+<text fill="#839496" font-size="9" x="50" y="201">
+current maintenance boundary rules
+</text>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="50" y="208"/>
+</g>
+<g>
+<circle cx="402" cy="242.9" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="240.9">
+04/12
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="251.9">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="424" y="241.9"/>
+<circle cx="464" cy="242.9" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="139" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="470" y="173.4"/>
+<text fill="#268bd2" font-size="8" x="480" y="193.4">
+73548f7
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="480" y="206.4">
+📝 docs: document map visualizations and ...
+</text>
+<text fill="#839496" font-size="9" x="480" y="219.4">
+- Add the new `aic map` command family to the
+</text>
+<text fill="#839496" font-size="9" x="480" y="232.4">
+architecture and usage docs.
+</text>
+<text fill="#839496" font-size="9" x="480" y="245.4">
+- Describe the SVG outputs for treemap, history,
+</text>
+<text fill="#839496" font-size="9" x="480" y="258.4">
+heat, and activity visualizations.
+</text>
+<text fill="#839496" font-size="9" x="480" y="271.4">
+- Clarify history rendering details and note the
+</text>
+<text fill="#839496" font-size="9" x="480" y="284.4">
+shared `-o` and `-n` flags.
+</text>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="480" y="291.4"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="492" y="291.4"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="504" y="291.4"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="516" y="291.4"/>
+</g>
+<g>
+<circle cx="402" cy="318.5" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="316.5">
+04/12
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="327.5">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="340" y="317.5"/>
+<circle cx="340" cy="318.5" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="61" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="40" y="288"/>
+<text fill="#268bd2" font-size="8" x="50" y="308">
+257aa1c
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="50" y="321">
+✨ feat(timeline): improve vertical spacin...
+</text>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="50" y="328"/>
+</g>
+<g>
+<circle cx="402" cy="387.9" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="385.9">
+04/12
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="396.9">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="424" y="386.9"/>
+<circle cx="464" cy="387.9" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="139" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="470" y="318.4"/>
+<text fill="#268bd2" font-size="8" x="480" y="338.4">
+325a9dc
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="480" y="351.4">
+✨ feat(map): show commit bodies in the ti...
+</text>
+<text fill="#839496" font-size="9" x="480" y="364.4">
+- Teach git stats parsing to capture commit bodies,
+</text>
+<text fill="#839496" font-size="9" x="480" y="377.4">
+including multiline messages
+</text>
+<text fill="#839496" font-size="9" x="480" y="390.4">
+- Reflow timeline cards to size themselves around
+</text>
+<text fill="#839496" font-size="9" x="480" y="403.4">
+subject, body, and file markers
+</text>
+<text fill="#839496" font-size="9" x="480" y="416.4">
+- Tighten the visual treatment with smaller type,
+</text>
+<text fill="#839496" font-size="9" x="480" y="429.4">
+denser spacing, and updated legend layout
+</text>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="480" y="436.4"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="492" y="436.4"/>
+</g>
+<g>
+<circle cx="402" cy="479.09999999999997" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="477.09999999999997">
+04/12
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="488.09999999999997">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="340" y="478.09999999999997"/>
+<circle cx="340" cy="479.09999999999997" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="217" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="40" y="370.59999999999997"/>
+<text fill="#268bd2" font-size="8" x="50" y="390.59999999999997">
+4714b31
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="50" y="403.59999999999997">
+✨ feat(map): add SVG visualizations for r...
+</text>
+<text fill="#839496" font-size="9" x="50" y="416.59999999999997">
+- Introduce `aic map` with tree, history, heat, and
+</text>
+<text fill="#839496" font-size="9" x="50" y="429.59999999999997">
+activity subcommands, each writing standalone SVG
+</text>
+<text fill="#839496" font-size="9" x="50" y="442.59999999999997">
+output.
+</text>
+<text fill="#839496" font-size="9" x="50" y="455.59999999999997">
+- Add shared git stats and rendering layers to turn
+</text>
+<text fill="#839496" font-size="9" x="50" y="468.59999999999997">
+tracked files, churn, and timestamps into treemaps,
+</text>
+<text fill="#839496" font-size="9" x="50" y="481.59999999999997">
+timelines, heatmaps, and contribution grids.
+</text>
+<text fill="#839496" font-size="9" x="50" y="494.59999999999997">
+- Extend the CLI docs, help text, and roadmap so
+</text>
+<text fill="#839496" font-size="9" x="50" y="507.59999999999997">
+the new visualization workflow is discoverable and
+</text>
+<text fill="#839496" font-size="9" x="50" y="520.5999999999999">
+maintainable.
+</text>
+<text fill="#839496" font-size="9" x="50" y="533.5999999999999">
+- Teach commit scope detection about `src/map` and
+</text>
+<text fill="#839496" font-size="9" x="50" y="546.5999999999999">
+add the `svg` dependency needed to render the
+</text>
+<text fill="#839496" font-size="9" x="50" y="559.5999999999999">
+diagrams.
+</text>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="50" y="566.5999999999999"/>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="62" y="566.5999999999999"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="74" y="566.5999999999999"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="86" y="566.5999999999999"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="98" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="110" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="122" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="134" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="146" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="158" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="170" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="182" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="194" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="206" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="218" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="230" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="242" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="254" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="266" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="278" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="290" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="302" y="566.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="314" y="566.5999999999999"/>
+<text fill="#586e75" font-size="7" x="328" y="575.5999999999999">
++1
+</text>
+</g>
+<g>
+<circle cx="402" cy="601.4999999999999" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="599.4999999999999">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="610.4999999999999">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="424" y="600.4999999999999"/>
+<circle cx="464" cy="601.4999999999999" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="139" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="470" y="531.9999999999999"/>
+<text fill="#268bd2" font-size="8" x="480" y="551.9999999999999">
+849dc04
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="480" y="564.9999999999999">
+📝 docs(architecture): reflect folderized...
+</text>
+<text fill="#839496" font-size="9" x="480" y="577.9999999999999">
+- Update the architecture guide to point at
+</text>
+<text fill="#839496" font-size="9" x="480" y="590.9999999999999">
+`src/generator/` instead of the old flat file
+</text>
+<text fill="#839496" font-size="9" x="480" y="603.9999999999999">
+- Clarify the module breakdown for generator and
+</text>
+<text fill="#839496" font-size="9" x="480" y="616.9999999999999">
+command-backed AI execution paths
+</text>
+<text fill="#839496" font-size="9" x="480" y="629.9999999999999">
+- Keep the unreleased notes aligned with the
+</text>
+<text fill="#839496" font-size="9" x="480" y="642.9999999999999">
+current internal refactor layout
+</text>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="480" y="649.9999999999999"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="492" y="649.9999999999999"/>
+</g>
+<g>
+<circle cx="402" cy="690.0999999999999" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="688.0999999999999">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="699.0999999999999">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="340" y="689.0999999999999"/>
+<circle cx="340" cy="690.0999999999999" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="191" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="40" y="594.5999999999999"/>
+<text fill="#268bd2" font-size="8" x="50" y="614.5999999999999">
+0c21af3
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="50" y="627.5999999999999">
+✨ feat(ai): teach generators to chunk lar...
+</text>
+<text fill="#839496" font-size="9" x="50" y="640.5999999999999">
+- Add a command-backed AI engine that shells out to
+</text>
+<text fill="#839496" font-size="9" x="50" y="653.5999999999999">
+Claude Code or Codex
+</text>
+<text fill="#839496" font-size="9" x="50" y="666.5999999999999">
+- Split oversized commit, PR, and split-plan
+</text>
+<text fill="#839496" font-size="9" x="50" y="679.5999999999999">
+requests into chunk summaries, then synthesize one
+</text>
+<text fill="#839496" font-size="9" x="50" y="692.5999999999999">
+final result
+</text>
+<text fill="#839496" font-size="9" x="50" y="705.5999999999999">
+- Harden command execution and split-plan parsing
+</text>
+<text fill="#839496" font-size="9" x="50" y="718.5999999999999">
+with clearer errors and validation
+</text>
+<text fill="#839496" font-size="9" x="50" y="731.5999999999999">
+- Cover output sanitization, missing binaries,
+</text>
+<text fill="#839496" font-size="9" x="50" y="744.5999999999999">
+non-zero exits, and split-plan correctness with
+</text>
+<text fill="#839496" font-size="9" x="50" y="757.5999999999999">
+tests
+</text>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="50" y="764.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="62" y="764.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="74" y="764.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="86" y="764.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="98" y="764.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="110" y="764.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="122" y="764.5999999999999"/>
+</g>
+<g>
+<circle cx="402" cy="802.0999999999999" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="800.0999999999999">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="811.0999999999999">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="424" y="801.0999999999999"/>
+<circle cx="464" cy="802.0999999999999" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="165" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="470" y="719.5999999999999"/>
+<text fill="#268bd2" font-size="8" x="480" y="739.5999999999999">
+191a165
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="480" y="752.5999999999999">
+♻️ refactor: split command and storage ...
+</text>
+<text fill="#839496" font-size="9" x="480" y="765.5999999999999">
+- Move commit split handling into dedicated flow,
+</text>
+<text fill="#839496" font-size="9" x="480" y="778.5999999999999">
+draft, and group submodules
+</text>
+<text fill="#839496" font-size="9" x="480" y="791.5999999999999">
+- Extract push display and planning logic so remote
+</text>
+<text fill="#839496" font-size="9" x="480" y="804.5999999999999">
+formatting stays testable
+</text>
+<text fill="#839496" font-size="9" x="480" y="817.5999999999999">
+- Rename history persistence to `history_store` and
+</text>
+<text fill="#839496" font-size="9" x="480" y="830.5999999999999">
+update command callers
+</text>
+<text fill="#839496" font-size="9" x="480" y="843.5999999999999">
+- Tighten config loading and git remote parsing
+</text>
+<text fill="#839496" font-size="9" x="480" y="856.5999999999999">
+behind clearer module boundaries
+</text>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="480" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="492" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="504" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="516" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="528" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="540" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="552" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="564" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="576" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="588" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="600" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="612" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="624" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="636" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="648" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="660" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="672" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="684" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="696" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="708" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="720" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="732" y="863.5999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="744" y="863.5999999999999"/>
+<text fill="#586e75" font-size="7" x="758" y="872.5999999999999">
++1
+</text>
+</g>
+<g>
+<circle cx="402" cy="898.4999999999999" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="896.4999999999999">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="907.4999999999999">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="340" y="897.4999999999999"/>
+<circle cx="340" cy="898.4999999999999" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="139" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="40" y="828.9999999999999"/>
+<text fill="#268bd2" font-size="8" x="50" y="848.9999999999999">
+d3a99b9
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="50" y="861.9999999999999">
+♻️ refactor: folderize command, config,...
+</text>
+<text fill="#839496" font-size="9" x="50" y="874.9999999999999">
+- Split oversized modules into focused submodules
+</text>
+<text fill="#839496" font-size="9" x="50" y="887.9999999999999">
+while preserving the existing public paths
+</text>
+<text fill="#839496" font-size="9" x="50" y="900.9999999999999">
+- Keep commit, history, config, git, and prompt
+</text>
+<text fill="#839496" font-size="9" x="50" y="913.9999999999999">
+behavior intact by re-exporting the same APIs
+</text>
+<text fill="#839496" font-size="9" x="50" y="926.9999999999999">
+- Update the architecture docs and release notes to
+</text>
+<text fill="#839496" font-size="9" x="50" y="939.9999999999999">
+reflect the new module layout
+</text>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="50" y="946.9999999999999"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="62" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="74" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="86" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="98" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="110" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="122" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="134" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="146" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="158" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="170" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="182" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="194" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="206" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="218" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="230" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="242" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="254" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="266" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="278" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="290" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="302" y="946.9999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="314" y="946.9999999999999"/>
+<text fill="#586e75" font-size="7" x="328" y="955.9999999999999">
++11
+</text>
+</g>
+<g>
+<circle cx="402" cy="981.8999999999999" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="979.8999999999999">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="990.8999999999999">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="424" y="980.8999999999999"/>
+<circle cx="464" cy="981.8999999999999" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="139" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="470" y="912.3999999999999"/>
+<text fill="#268bd2" font-size="8" x="480" y="932.3999999999999">
+1363338
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="480" y="945.3999999999999">
+🐛 fix(ai): make command tests portable a...
+</text>
+<text fill="#839496" font-size="9" x="480" y="958.3999999999999">
+- Split the test helper into a small command
+</text>
+<text fill="#839496" font-size="9" x="480" y="971.3999999999999">
+descriptor instead of returning a raw path
+</text>
+<text fill="#839496" font-size="9" x="480" y="984.3999999999999">
+- Run unix fixtures through `/bin/sh` so scripted
+</text>
+<text fill="#839496" font-size="9" x="480" y="997.3999999999999">
+binaries execute the same way in tests
+</text>
+<text fill="#839496" font-size="9" x="480" y="1010.3999999999999">
+- Keep windows fixtures as direct executables,
+</text>
+<text fill="#839496" font-size="9" x="480" y="1023.3999999999999">
+avoiding platform-specific test failures
+</text>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="480" y="1030.3999999999999"/>
+</g>
+<g>
+<circle cx="402" cy="1065.2999999999997" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="1063.2999999999997">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="1074.2999999999997">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="340" y="1064.2999999999997"/>
+<circle cx="340" cy="1065.2999999999997" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="139" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="40" y="995.7999999999998"/>
+<text fill="#268bd2" font-size="8" x="50" y="1015.7999999999998">
+2360927
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="50" y="1028.7999999999997">
+✨ feat(docs): document ollama support and...
+</text>
+<text fill="#839496" font-size="9" x="50" y="1041.7999999999997">
+- Add Ollama as a first-class provider across the
+</text>
+<text fill="#839496" font-size="9" x="50" y="1054.7999999999997">
+docs and configuration guidance
+</text>
+<text fill="#839496" font-size="9" x="50" y="1067.7999999999997">
+- Describe the new interactive split-commit flow,
+</text>
+<text fill="#839496" font-size="9" x="50" y="1080.7999999999997">
+including its limits and preview loop
+</text>
+<text fill="#839496" font-size="9" x="50" y="1093.7999999999997">
+- Refresh architecture and roadmap notes so the new
+</text>
+<text fill="#839496" font-size="9" x="50" y="1106.7999999999997">
+provider and workflow are discoverable
+</text>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="50" y="1113.7999999999997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="62" y="1113.7999999999997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="74" y="1113.7999999999997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="86" y="1113.7999999999997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="98" y="1113.7999999999997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="110" y="1113.7999999999997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="122" y="1113.7999999999997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="134" y="1113.7999999999997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="146" y="1113.7999999999997"/>
+<rect fill="#859900" height="9" opacity="0.9" rx="2" ry="2" width="9" x="158" y="1113.7999999999997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="170" y="1113.7999999999997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="182" y="1113.7999999999997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="194" y="1113.7999999999997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="206" y="1113.7999999999997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="218" y="1113.7999999999997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="230" y="1113.7999999999997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="242" y="1113.7999999999997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="254" y="1113.7999999999997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="266" y="1113.7999999999997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="278" y="1113.7999999999997"/>
+<rect fill="#dc322f" height="9" opacity="0.9" rx="2" ry="2" width="9" x="290" y="1113.7999999999997"/>
+<rect fill="#dc322f" height="9" opacity="0.9" rx="2" ry="2" width="9" x="302" y="1113.7999999999997"/>
+</g>
+<g>
+<circle cx="402" cy="1151.2999999999997" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="1149.2999999999997">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="1160.2999999999997">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="424" y="1150.2999999999997"/>
+<circle cx="464" cy="1151.2999999999997" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="165" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="470" y="1068.7999999999997"/>
+<text fill="#268bd2" font-size="8" x="480" y="1088.7999999999997">
+29654f9
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="480" y="1101.7999999999997">
+🔧 config: make helper scripts publish at...
+</text>
+<text fill="#839496" font-size="9" x="480" y="1114.7999999999997">
+- Write temporary scripts first, then rename them
+</text>
+<text fill="#839496" font-size="9" x="480" y="1127.7999999999997">
+into place to avoid partially initialized
+</text>
+<text fill="#839496" font-size="9" x="480" y="1140.7999999999997">
+executables.
+</text>
+<text fill="#839496" font-size="9" x="480" y="1153.7999999999997">
+- Factor executable-script creation into a shared
+</text>
+<text fill="#839496" font-size="9" x="480" y="1166.7999999999997">
+helper so rebase/editor setup follows the same
+</text>
+<text fill="#839496" font-size="9" x="480" y="1179.7999999999997">
+safer path.
+</text>
+<text fill="#839496" font-size="9" x="480" y="1192.7999999999997">
+- Keep test fakes aligned with production behavior
+</text>
+<text fill="#839496" font-size="9" x="480" y="1205.7999999999997">
+by using the same atomic publish pattern.
+</text>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="480" y="1212.7999999999997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="492" y="1212.7999999999997"/>
+<rect fill="#dc322f" height="9" opacity="0.9" rx="2" ry="2" width="9" x="504" y="1212.7999999999997"/>
+</g>
+<g>
+<circle cx="402" cy="1252.8999999999996" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="1250.8999999999996">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="1261.8999999999996">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="340" y="1251.8999999999996"/>
+<circle cx="340" cy="1252.8999999999996" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="191" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="40" y="1157.3999999999996"/>
+<text fill="#268bd2" font-size="8" x="50" y="1177.3999999999996">
+dc5707e
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="50" y="1190.3999999999996">
+✨ feat(cli): make `--yes` fully non-inter...
+</text>
+<text fill="#839496" font-size="9" x="50" y="1203.3999999999996">
+- Auto-stage all changed files when nothing is
+</text>
+<text fill="#839496" font-size="9" x="50" y="1216.3999999999996">
+staged, so `--yes` no longer stalls on the staging
+</text>
+<text fill="#839496" font-size="9" x="50" y="1229.3999999999996">
+prompt
+</text>
+<text fill="#839496" font-size="9" x="50" y="1242.3999999999996">
+- Push automatically when exactly one remote is
+</text>
+<text fill="#839496" font-size="9" x="50" y="1255.3999999999996">
+configured, and fail clearly when multiple remotes
+</text>
+<text fill="#839496" font-size="9" x="50" y="1268.3999999999996">
+would require a guess
+</text>
+<text fill="#839496" font-size="9" x="50" y="1281.3999999999996">
+- Default the interactive single-remote push prompt
+</text>
+<text fill="#839496" font-size="9" x="50" y="1294.3999999999996">
+to `Yes` and update the help/config docs to match
+</text>
+<text fill="#839496" font-size="9" x="50" y="1307.3999999999996">
+- Cover the new staging and push flows with unit
+</text>
+<text fill="#839496" font-size="9" x="50" y="1320.3999999999996">
+and CLI tests
+</text>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="50" y="1327.3999999999996"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="62" y="1327.3999999999996"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="74" y="1327.3999999999996"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="86" y="1327.3999999999996"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="98" y="1327.3999999999996"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="110" y="1327.3999999999996"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="122" y="1327.3999999999996"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="134" y="1327.3999999999996"/>
+<rect fill="#dc322f" height="9" opacity="0.9" rx="2" ry="2" width="9" x="146" y="1327.3999999999996"/>
+</g>
+<g>
+<circle cx="402" cy="1364.8999999999996" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="1362.8999999999996">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="1373.8999999999996">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="424" y="1363.8999999999996"/>
+<circle cx="464" cy="1364.8999999999996" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="165" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="470" y="1282.3999999999996"/>
+<text fill="#268bd2" font-size="8" x="480" y="1302.3999999999996">
+a769374
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="480" y="1315.3999999999996">
+✨ feat(ai): add anthropic and groq provid...
+</text>
+<text fill="#839496" font-size="9" x="480" y="1328.3999999999996">
+- Teach the engine registry, config, and model
+</text>
+<text fill="#839496" font-size="9" x="480" y="1341.3999999999996">
+listing paths about two new hosted providers
+</text>
+<text fill="#839496" font-size="9" x="480" y="1354.3999999999996">
+- Add an Anthropic Messages API implementation and
+</text>
+<text fill="#839496" font-size="9" x="480" y="1367.3999999999996">
+Groq OpenAI-compatible defaults
+</text>
+<text fill="#839496" font-size="9" x="480" y="1380.3999999999996">
+- Refresh docs, help text, and release notes so
+</text>
+<text fill="#839496" font-size="9" x="480" y="1393.3999999999996">
+setup and overrides match the new providers
+</text>
+<text fill="#839496" font-size="9" x="480" y="1406.3999999999996">
+- Expand tests to cover provider selection, model
+</text>
+<text fill="#839496" font-size="9" x="480" y="1419.3999999999996">
+discovery, and request formatting
+</text>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="480" y="1426.3999999999996"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="492" y="1426.3999999999996"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="504" y="1426.3999999999996"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="516" y="1426.3999999999996"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="528" y="1426.3999999999996"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="540" y="1426.3999999999996"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="552" y="1426.3999999999996"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="564" y="1426.3999999999996"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="576" y="1426.3999999999996"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="588" y="1426.3999999999996"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="600" y="1426.3999999999996"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="612" y="1426.3999999999996"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="624" y="1426.3999999999996"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="636" y="1426.3999999999996"/>
+<rect fill="#dc322f" height="9" opacity="0.9" rx="2" ry="2" width="9" x="648" y="1426.3999999999996"/>
+<rect fill="#dc322f" height="9" opacity="0.9" rx="2" ry="2" width="9" x="660" y="1426.3999999999996"/>
+</g>
+<g>
+<circle cx="402" cy="1461.2999999999997" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="1459.2999999999997">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="1470.2999999999997">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="340" y="1460.2999999999997"/>
+<circle cx="340" cy="1461.2999999999997" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="139" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="40" y="1391.7999999999997"/>
+<text fill="#268bd2" font-size="8" x="50" y="1411.7999999999997">
+93da9fb
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="50" y="1424.7999999999997">
+✨ feat(windows): automate WinGet updates ...
+</text>
+<text fill="#839496" font-size="9" x="50" y="1437.7999999999997">
+- Add a release-driven workflow that submits new
+</text>
+<text fill="#839496" font-size="9" x="50" y="1450.7999999999997">
+Windows builds to winget-pkgs
+</text>
+<text fill="#839496" font-size="9" x="50" y="1463.7999999999997">
+- Wait for the release asset to land and skip
+</text>
+<text fill="#839496" font-size="9" x="50" y="1476.7999999999997">
+cleanly until the package exists
+</text>
+<text fill="#839496" font-size="9" x="50" y="1489.7999999999997">
+- Document WinGet as the recommended Windows
+</text>
+<text fill="#839496" font-size="9" x="50" y="1502.7999999999997">
+install path, with direct downloads as fallback
+</text>
+<rect fill="#6c71c4" height="9" opacity="0.9" rx="2" ry="2" width="9" x="50" y="1509.7999999999997"/>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="62" y="1509.7999999999997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="74" y="1509.7999999999997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="86" y="1509.7999999999997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="98" y="1509.7999999999997"/>
+</g>
+<g>
+<circle cx="402" cy="1547.2999999999997" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="1545.2999999999997">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="1556.2999999999997">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="424" y="1546.2999999999997"/>
+<circle cx="464" cy="1547.2999999999997" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="165" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="470" y="1464.7999999999997"/>
+<text fill="#268bd2" font-size="8" x="480" y="1484.7999999999997">
+49bc2ef
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="480" y="1497.7999999999997">
+📝 docs(release): document PR draft gener...
+</text>
+<text fill="#839496" font-size="9" x="480" y="1510.7999999999997">
+- Describe the new `aic pr` flow for generating PR
+</text>
+<text fill="#839496" font-size="9" x="480" y="1523.7999999999997">
+titles and Markdown descriptions from branch
+</text>
+<text fill="#839496" font-size="9" x="480" y="1536.7999999999997">
+history and diffs
+</text>
+<text fill="#839496" font-size="9" x="480" y="1549.7999999999997">
+- Spell out base-branch detection, interactive
+</text>
+<text fill="#839496" font-size="9" x="480" y="1562.7999999999997">
+editing, provider overrides, and history
+</text>
+<text fill="#839496" font-size="9" x="480" y="1575.7999999999997">
+persistence
+</text>
+<text fill="#839496" font-size="9" x="480" y="1588.7999999999997">
+- Add the release-note caveat that PR drafting is
+</text>
+<text fill="#839496" font-size="9" x="480" y="1601.7999999999997">
+generation-only and does not call Git hosting APIs
+</text>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="480" y="1608.7999999999997"/>
+</g>
+<g>
+<circle cx="402" cy="1644.9999999999998" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="1642.9999999999998">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="1653.9999999999998">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="340" y="1643.9999999999998"/>
+<circle cx="340" cy="1644.9999999999998" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="152" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="40" y="1568.9999999999998"/>
+<text fill="#268bd2" font-size="8" x="50" y="1588.9999999999998">
+0fe180b
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="50" y="1601.9999999999998">
+📝 docs(release): document the new stagin...
+</text>
+<text fill="#839496" font-size="9" x="50" y="1614.9999999999998">
+- Clarify that `aic` now offers an explicit
+</text>
+<text fill="#839496" font-size="9" x="50" y="1627.9999999999998">
+no-stage menu with stage-all, picker, and cancel
+</text>
+<text fill="#839496" font-size="9" x="50" y="1640.9999999999998">
+paths.
+</text>
+<text fill="#839496" font-size="9" x="50" y="1653.9999999999998">
+- Refresh the docs index, roadmap, and release
+</text>
+<text fill="#839496" font-size="9" x="50" y="1666.9999999999998">
+notes so the new workflow is easy to find.
+</text>
+<text fill="#839496" font-size="9" x="50" y="1679.9999999999998">
+- Bump the package version and note the interactive
+</text>
+<text fill="#839496" font-size="9" x="50" y="1692.9999999999998">
+staging improvement for the 0.0.5 release.
+</text>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="50" y="1699.9999999999998"/>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="62" y="1699.9999999999998"/>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="74" y="1699.9999999999998"/>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="86" y="1699.9999999999998"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="98" y="1699.9999999999998"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="110" y="1699.9999999999998"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="122" y="1699.9999999999998"/>
+</g>
+<g>
+<circle cx="402" cy="1734.8999999999999" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="1732.8999999999999">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="1743.8999999999999">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="424" y="1733.8999999999999"/>
+<circle cx="464" cy="1734.8999999999999" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="139" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="470" y="1665.3999999999999"/>
+<text fill="#268bd2" font-size="8" x="480" y="1685.3999999999999">
+69cf50d
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="480" y="1698.3999999999999">
+✨ feat(cli): make unstaged commit staging...
+</text>
+<text fill="#839496" font-size="9" x="480" y="1711.3999999999999">
+- Replace the yes/no staging prompt with a menu
+</text>
+<text fill="#839496" font-size="9" x="480" y="1724.3999999999999">
+that can stage everything, pick files, or cancel
+</text>
+<text fill="#839496" font-size="9" x="480" y="1737.3999999999999">
+- Split staging decisions into small testable steps
+</text>
+<text fill="#839496" font-size="9" x="480" y="1750.3999999999999">
+so the flow is easier to reason about
+</text>
+<text fill="#839496" font-size="9" x="480" y="1763.3999999999999">
+- Update the usage guide to match the new
+</text>
+<text fill="#839496" font-size="9" x="480" y="1776.3999999999999">
+interactive behavior
+</text>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="480" y="1783.3999999999999"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="492" y="1783.3999999999999"/>
+</g>
+<g>
+<circle cx="402" cy="1819.6" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="1817.6">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="1828.6">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="340" y="1818.6"/>
+<circle cx="340" cy="1819.6" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="152" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="40" y="1743.6"/>
+<text fill="#268bd2" font-size="8" x="50" y="1763.6">
+f439d52
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="50" y="1776.6">
+📝 docs: document the richer CLI help sur...
+</text>
+<text fill="#839496" font-size="9" x="50" y="1789.6">
+- Add the new 0.0.5 release notes and update the
+</text>
+<text fill="#839496" font-size="9" x="50" y="1802.6">
+docs index to point readers at it first
+</text>
+<text fill="#839496" font-size="9" x="50" y="1815.6">
+- Show how to use `--help` on top-level and nested
+</text>
+<text fill="#839496" font-size="9" x="50" y="1828.6">
+commands for quicker terminal reference
+</text>
+<text fill="#839496" font-size="9" x="50" y="1841.6">
+- Explain that config and completion copy now come
+</text>
+<text fill="#839496" font-size="9" x="50" y="1854.6">
+from the same shared metadata, so wording stays
+</text>
+<text fill="#839496" font-size="9" x="50" y="1867.6">
+aligned
+</text>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="50" y="1874.6"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="62" y="1874.6"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="74" y="1874.6"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="86" y="1874.6"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="98" y="1874.6"/>
+</g>
+<g>
+<circle cx="402" cy="1916" fill="#073642" r="22" stroke="#268bd2" stroke-width="2"/>
+<text fill="#2aa198" font-size="8" font-weight="600" x="391" y="1914">
+04/11
+</text>
+<text fill="#268bd2" font-size="7" x="392" y="1925">
+2026
+</text>
+<rect fill="#073642" height="2" rx="1" width="40" x="424" y="1915"/>
+<circle cx="464" cy="1916" fill="#268bd2" r="3"/>
+<rect fill="#073642" height="204" rx="5" ry="5" stroke="#073642" stroke-width="1" width="300" x="470" y="1814"/>
+<text fill="#268bd2" font-size="8" x="480" y="1834">
+ee2bbe5
+</text>
+<text fill="#eee8d5" font-size="10" font-weight="600" x="480" y="1847">
+✨ feat(cli): add PR draft generation work...
+</text>
+<text fill="#839496" font-size="9" x="480" y="1860">
+- Add a new `aic pr` command that drafts a PR title
+</text>
+<text fill="#839496" font-size="9" x="480" y="1873">
+and Markdown body from the branch diff and commit
+</text>
+<text fill="#839496" font-size="9" x="480" y="1886">
+history.
+</text>
+<text fill="#839496" font-size="9" x="480" y="1899">
+- Teach the generator to chunk oversized diffs,
+</text>
+<text fill="#839496" font-size="9" x="480" y="1912">
+synthesize partial summaries, and render PR output
+</text>
+<text fill="#839496" font-size="9" x="480" y="1925">
+with a dedicated prompt.
+</text>
+<text fill="#839496" font-size="9" x="480" y="1938">
+- Save PR drafts in history and render them
+</text>
+<text fill="#839496" font-size="9" x="480" y="1951">
+correctly alongside commit messages and reviews.
+</text>
+<text fill="#839496" font-size="9" x="480" y="1964">
+- Update docs, help text, and tests to cover
+</text>
+<text fill="#839496" font-size="9" x="480" y="1977">
+base-ref selection, editor-based editing, and
+</text>
+<text fill="#839496" font-size="9" x="480" y="1990">
+provider overrides.
+</text>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="480" y="1997"/>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="492" y="1997"/>
+<rect fill="#073642" height="9" opacity="0.9" rx="2" ry="2" width="9" x="504" y="1997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="516" y="1997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="528" y="1997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="540" y="1997"/>
+<rect fill="#268bd2" height="9" opacity="0.9" rx="2" ry="2" width="9" x="552" y="1997"/>
+<rect fill="#859900" height="9" opacity="0.9" rx="2" ry="2" width="9" x="564" y="1997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="576" y="1997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="588" y="1997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="600" y="1997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="612" y="1997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="624" y="1997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="636" y="1997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="648" y="1997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="660" y="1997"/>
+<rect fill="#cb4b16" height="9" opacity="0.9" rx="2" ry="2" width="9" x="672" y="1997"/>
+<rect fill="#dc322f" height="9" opacity="0.9" rx="2" ry="2" width="9" x="684" y="1997"/>
+<rect fill="#dc322f" height="9" opacity="0.9" rx="2" ry="2" width="9" x="696" y="1997"/>
+</g>
+<text fill="#839496" font-size="10" font-weight="600" x="30" y="2038">
+Directories:
+</text>
+<rect fill="#6c71c4" height="10" rx="2" ry="2" width="10" x="110" y="2029"/>
+<text fill="#839496" font-size="9" x="124" y="2038">
+.github
+</text>
+<rect fill="#268bd2" height="10" rx="2" ry="2" width="10" x="180" y="2029"/>
+<text fill="#839496" font-size="9" x="194" y="2038">
+docs
+</text>
+<rect fill="#859900" height="10" rx="2" ry="2" width="10" x="232" y="2029"/>
+<text fill="#839496" font-size="9" x="246" y="2038">
+prompts
+</text>
+<rect fill="#cb4b16" height="10" rx="2" ry="2" width="10" x="302" y="2029"/>
+<text fill="#839496" font-size="9" x="316" y="2038">
+src
+</text>
+<rect fill="#dc322f" height="10" rx="2" ry="2" width="10" x="348" y="2029"/>
+<text fill="#839496" font-size="9" x="362" y="2038">
+tests
+</text>
+</svg>

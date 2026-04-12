@@ -1,3 +1,5 @@
+use super::theme::Theme;
+
 /// Interpolate between two hex colours by `t` (0.0 = start, 1.0 = end).
 pub fn lerp_colour(start: &str, end: &str, t: f64) -> String {
     let t = t.clamp(0.0, 1.0);
@@ -26,23 +28,24 @@ pub fn gradient(stops: &[&str], t: f64) -> String {
     lerp_colour(stops[idx], stops[idx + 1], local_t)
 }
 
-/// Heat scale: cold (low) = blue-grey, warm = orange, hot = red.
-pub fn heat_colour(t: f64) -> String {
-    gradient(&["#e8eaf6", "#42a5f5", "#ffb74d", "#ef5350"], t)
+/// Heat scale using the theme's gradient stops.
+pub fn heat_colour(t: f64, theme: &Theme) -> String {
+    let stops: Vec<&str> = theme.heat_stops.iter().map(String::as_str).collect();
+    gradient(&stops, t)
 }
 
-/// Activity scale: empty = light grey, active = green.
-pub fn activity_colour(t: f64) -> String {
-    gradient(&["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"], t)
+/// Activity scale using the theme's gradient stops.
+pub fn activity_colour(t: f64, theme: &Theme) -> String {
+    let stops: Vec<&str> = theme.activity_stops.iter().map(String::as_str).collect();
+    gradient(&stops, t)
 }
 
-/// Treemap directory palette: given a directory index, return a hue-shifted colour.
-pub fn directory_colour(index: usize) -> String {
-    const PALETTE: &[&str] = &[
-        "#4fc3f7", "#81c784", "#ffb74d", "#e57373", "#ba68c8", "#4dd0e1", "#aed581", "#ffd54f",
-        "#ff8a65", "#9575cd", "#26c6da", "#dce775", "#ffca28", "#ff7043", "#7e57c2",
-    ];
-    PALETTE[index % PALETTE.len()].to_owned()
+/// Directory palette colour from the theme.
+pub fn directory_colour(index: usize, theme: &Theme) -> String {
+    if theme.directory_palette.is_empty() {
+        return "#888888".to_owned();
+    }
+    theme.directory_palette[index % theme.directory_palette.len()].clone()
 }
 
 fn hex_to_rgb(hex: &str) -> (u8, u8, u8) {
@@ -56,6 +59,7 @@ fn hex_to_rgb(hex: &str) -> (u8, u8, u8) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::map::theme;
 
     #[test]
     fn lerp_colour_midpoint() {
@@ -71,8 +75,9 @@ mod tests {
 
     #[test]
     fn directory_colour_wraps() {
-        let a = directory_colour(0);
-        let b = directory_colour(15);
+        let t = theme::load_theme("default-light").unwrap();
+        let a = directory_colour(0, t);
+        let b = directory_colour(15, t);
         assert_eq!(a, b);
     }
 }

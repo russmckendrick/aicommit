@@ -201,6 +201,9 @@ help = "Output file path (default: aic-treemap.svg)"
 [root.commands.map.commands.tree.args.no_ai]
 help = "Skip AI-powered cluster annotation (reserved for future use)"
 
+[root.commands.map.commands.tree.args.theme]
+help = "Color theme: default-light, default-dark, solarized-light, solarized-dark, github-light, github-dark, monokai, or dracula"
+
 [root.commands.map.commands.history]
 about = "Generate a commit timeline visualization"
 
@@ -209,6 +212,9 @@ help = "Output file path (default: aic-timeline.svg)"
 
 [root.commands.map.commands.history.args.commits]
 help = "Number of recent commits to include"
+
+[root.commands.map.commands.history.args.theme]
+help = "Color theme: default-light, default-dark, solarized-light, solarized-dark, github-light, github-dark, monokai, or dracula"
 
 [root.commands.map.commands.heat]
 about = "Generate a file modification heatmap"
@@ -219,6 +225,9 @@ help = "Output file path (default: aic-heatmap.svg)"
 [root.commands.map.commands.heat.args.commits]
 help = "Number of recent commits to analyze"
 
+[root.commands.map.commands.heat.args.theme]
+help = "Color theme: default-light, default-dark, solarized-light, solarized-dark, github-light, github-dark, monokai, or dracula"
+
 [root.commands.map.commands.activity]
 about = "Generate a GitHub-style activity contribution grid"
 
@@ -227,6 +236,9 @@ help = "Output file path (default: aic-activity.svg)"
 
 [root.commands.map.commands.activity.args.commits]
 help = "Number of recent commits to include"
+
+[root.commands.map.commands.activity.args.theme]
+help = "Color theme: default-light, default-dark, solarized-light, solarized-dark, github-light, github-dark, monokai, or dracula"
 
 [config_keys]
 AIC_AI_PROVIDER = "AI provider to use for commit generation: openai, azure-openai, anthropic, groq, ollama, claude-code, or codex"
