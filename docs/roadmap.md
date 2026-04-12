@@ -24,6 +24,13 @@ The v1 priority is a reliable Rust CLI for local commit generation through `aic`
 - **Config profiles** — named profiles (`~/.aicommit.d/work.toml`, `~/.aicommit.d/personal.toml`) selectable via `--profile` or auto-detected from the git remote URL.
 - Commitlint-style config inference.
 
+## Visualization — `aic map`
+
+- **Codebase treemap** (`aic map tree`) — SVG treemap of the file/directory hierarchy, sized by line count or change frequency, with AI-generated labels for each cluster.
+- **Commit timeline** (`aic map history`) — horizontal SVG timeline of the last N commits with file-change nodes coloured by directory, lines connecting commits that touch the same files.
+- **Change heatmap** (`aic map heat`) — directory tree where each file is coloured by modification frequency over the last N commits to surface churn and architectural hotspots.
+- **Activity graph** (`aic map activity`) — GitHub-style contribution grid generated from commit timestamps.
+
 ## Quality of Life
 
 - **`aic init`** — generate a `.aicommitignore` with sensible defaults for the detected project type.

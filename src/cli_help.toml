@@ -174,6 +174,60 @@ help = "Number of commits to rewrite"
 [root.commands.log.args.yes]
 help = "Skip confirmation"
 
+[root.commands.map]
+about = "Generate SVG visualizations of the codebase and commit history"
+long_about = """
+Generate SVG visualizations of the codebase and commit history.
+
+Subcommands:
+  tree      Treemap of the file hierarchy sized by line count
+  history   Horizontal timeline of recent commits
+  heat      Heatmap of file modification frequency
+  activity  GitHub-style contribution grid from commit timestamps
+
+Examples:
+  aic map tree
+  aic map history -n 30
+  aic map heat -n 100 -o heatmap.svg
+  aic map activity
+"""
+
+[root.commands.map.commands.tree]
+about = "Generate a treemap of the codebase file hierarchy"
+
+[root.commands.map.commands.tree.args.output]
+help = "Output file path (default: aic-treemap.svg)"
+
+[root.commands.map.commands.tree.args.no_ai]
+help = "Skip AI-powered cluster annotation (reserved for future use)"
+
+[root.commands.map.commands.history]
+about = "Generate a commit timeline visualization"
+
+[root.commands.map.commands.history.args.output]
+help = "Output file path (default: aic-timeline.svg)"
+
+[root.commands.map.commands.history.args.commits]
+help = "Number of recent commits to include"
+
+[root.commands.map.commands.heat]
+about = "Generate a file modification heatmap"
+
+[root.commands.map.commands.heat.args.output]
+help = "Output file path (default: aic-heatmap.svg)"
+
+[root.commands.map.commands.heat.args.commits]
+help = "Number of recent commits to analyze"
+
+[root.commands.map.commands.activity]
+about = "Generate a GitHub-style activity contribution grid"
+
+[root.commands.map.commands.activity.args.output]
+help = "Output file path (default: aic-activity.svg)"
+
+[root.commands.map.commands.activity.args.commits]
+help = "Number of recent commits to include"
+
 [config_keys]
 AIC_AI_PROVIDER = "AI provider to use for commit generation: openai, azure-openai, anthropic, groq, ollama, claude-code, or codex"
 AIC_API_KEY = "API key for the selected provider"

@@ -4,6 +4,7 @@ pub mod config;
 pub mod history;
 pub mod hook;
 pub mod log;
+pub mod map;
 pub mod models;
 pub mod pr;
 pub mod review;

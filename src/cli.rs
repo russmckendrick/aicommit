@@ -45,6 +45,7 @@ enum Command {
     Pr(PrCommand),
     History(HistoryCommand),
     Log(LogCommand),
+    Map(MapCommand),
 }
 
 #[derive(Debug, Args)]
@@ -137,6 +138,56 @@ struct LogCommand {
     yes: bool,
 }
 
+#[derive(Debug, Args)]
+struct MapCommand {
+    #[command(subcommand)]
+    mode: MapMode,
+}
+
+#[derive(Debug, Subcommand)]
+enum MapMode {
+    Tree(MapTreeCommand),
+    History(MapHistoryCommand),
+    Heat(MapHeatCommand),
+    Activity(MapActivityCommand),
+}
+
+#[derive(Debug, Args)]
+struct MapTreeCommand {
+    #[arg(short = 'o', long)]
+    output: Option<String>,
+
+    #[arg(long)]
+    no_ai: bool,
+}
+
+#[derive(Debug, Args)]
+struct MapHistoryCommand {
+    #[arg(short = 'o', long)]
+    output: Option<String>,
+
+    #[arg(short = 'n', long, default_value = "20")]
+    commits: usize,
+}
+
+#[derive(Debug, Args)]
+struct MapHeatCommand {
+    #[arg(short = 'o', long)]
+    output: Option<String>,
+
+    #[arg(short = 'n', long, default_value = "50")]
+    commits: usize,
+}
+
+#[derive(Debug, Args)]
+struct MapActivityCommand {
+    #[arg(short = 'o', long)]
+    output: Option<String>,
+
+    #[arg(short = 'n', long, default_value = "500")]
+    commits: usize,
+}
+
 pub fn command() -> clap::Command {
     crate::cli_text::command(Cli::command())
 }
@@ -183,6 +234,12 @@ pub async fn run() -> Result<()> {
         Some(Command::Log(command)) => {
             commands::log::run(command.count, command.yes, cli.provider).await
         }
+        Some(Command::Map(command)) => match command.mode {
+            MapMode::Tree(sub) => commands::map::tree::run(sub.output, sub.no_ai),
+            MapMode::History(sub) => commands::map::history::run(sub.output, sub.commits),
+            MapMode::Heat(sub) => commands::map::heat::run(sub.output, sub.commits),
+            MapMode::Activity(sub) => commands::map::activity::run(sub.output, sub.commits),
+        },
         None => {
             commands::commit::run(
                 cli.git_args,

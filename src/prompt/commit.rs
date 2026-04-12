@@ -124,6 +124,7 @@ pub fn detect_scope_hints(files: &[String]) -> Vec<String> {
             [".github", ..] => Some("ci"),
             ["src", "ai", ..] => Some("ai"),
             ["src", "commands", ..] => Some("cli"),
+            ["src", "map", ..] => Some("map"),
             ["src", file] => {
                 let stem = Path::new(file)
                     .file_stem()

@@ -10,6 +10,7 @@ mod history;
 mod hooks;
 mod remote;
 mod repo;
+pub mod stats;
 
 pub use branch::{
     commits_since, current_branch, diff_since, files_since, merge_base_with_head, resolve_base_ref,
