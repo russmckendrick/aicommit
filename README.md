@@ -8,8 +8,8 @@ A fast, opinionated CLI that generates Git commit messages and reviews staged di
 # Install via Homebrew (macOS)
 brew install russmckendrick/tap/aicommit
 
-# Install via WinGet (Windows) - Coming Soon
-# winget install --id RussMcKendrick.Aicommit -e
+# Install via WinGet (Windows)
+winget install --id RussMcKendrick.Aicommit -e
 
 # Or download a binary from GitHub Releases
 # https://github.com/russmckendrick/aicommit/releases
@@ -82,6 +82,17 @@ aic history --verbose
 aic history --kind review
 ```
 
+### Visualize the codebase
+
+Generate SVG visualizations of file structure, commit history, and activity:
+
+```sh
+aic map tree                 # file hierarchy treemap
+aic map history              # zigzag commit timeline
+aic map heat                 # file modification heatmap
+aic map activity             # GitHub-style contribution grid
+```
+
 ### More commands
 
 ```sh
@@ -104,6 +115,7 @@ aic completions zsh        # Generate shell completions
 - **Large diff handling** - automatic chunking and synthesis
 - **Custom prompts** - swap the system prompt without recompiling
 - **Split commits** - turn one staged change set into multiple file-group commits when concerns are separate
+- **Visualization** - generate SVG treemaps, timelines, heatmaps, and activity graphs with `aic map`
 - **Provider choice** - OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, and custom OpenAI-compatible endpoints
 
 ## Configuration

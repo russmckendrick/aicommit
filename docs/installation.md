@@ -16,17 +16,23 @@ brew upgrade aicommit
 
 The Homebrew formula installs the public CLI as `aic`.
 
-## WinGet (Windows) - Coming Soon
+## WinGet (Windows)
 
-WinGet support is planned but not yet available. Once the package is accepted
-into the community repository you will be able to install with:
+The recommended way to install on Windows is via WinGet:
 
 ```powershell
 winget install --id RussMcKendrick.Aicommit -e
 ```
 
-In the meantime, use the [GitHub Releases](#github-releases) binary or build
-from source.
+To upgrade to the latest version:
+
+```powershell
+winget upgrade --id RussMcKendrick.Aicommit -e
+```
+
+WinGet installs the public CLI as `aic`. Package updates are submitted
+automatically after each GitHub release and typically propagate within a few
+days of WinGet review.
 
 ## GitHub Releases
 

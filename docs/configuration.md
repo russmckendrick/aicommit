@@ -10,7 +10,8 @@
 flowchart LR
     Defaults["Built-in defaults"] --> Global["~/.aicommit"]
     Global --> Env["Process environment"]
-    Env --> Runtime["Resolved runtime config"]
+    Env --> Flags["CLI flags (--provider, --fgm, etc.)"]
+    Flags --> Runtime["Resolved runtime config"]
 ```
 
 Set global values:

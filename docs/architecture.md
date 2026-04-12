@@ -14,6 +14,7 @@ src/generator/          Prompt, chunking, and AI engine orchestration
 src/history_store/      Commit and review history persistence
 src/map/                SVG visualization renderers (treemap, timeline, heatmap, activity)
 src/ai/                 Provider trait and provider implementations
+src/ai/command/         Command-backed provider execution (claude-code, codex)
 ```
 
 The `aic` binary calls the shared library entrypoint.
@@ -29,7 +30,8 @@ flowchart LR
     Generator --> Prompt["src/prompt"]
     Generator --> Token["src/token.rs"]
     Generator --> Ai["src/ai"]
-    Ai --> Provider["HTTP or local CLI provider"]
+    Ai --> HTTP["HTTP provider (OpenAI, Azure, Anthropic, Groq, Ollama)"]
+    Ai --> Command["src/ai/command (claude-code, codex)"]
 ```
 
 Provider implementations use an `AiEngine` trait that accepts normalized chat messages and returns a commit message string. This keeps the commit flow independent of transport details such as HTTP payloads or local subprocess execution.

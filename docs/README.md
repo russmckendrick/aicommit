@@ -26,8 +26,20 @@ This folder is the detailed documentation entry point for `aic`, the Rust CLI fo
 ```mermaid
 flowchart TD
     A["Install aic"] --> B["Run aic setup"]
-    B --> C["Stage files with git add (optional)"]
-    C --> D["Run aic"]
+    B --> C{"Which command?"}
+    C -->|aic| D["Stage files with git add (optional)"]
+    C -->|aic map| MAP["Choose visualization"]
+    C -->|aic review| REV["AI diff review"]
+    C -->|aic log| LOG["Rewrite commit messages"]
+    C -->|aic pr| PR["Draft PR title + description"]
+    MAP --> TREE["aic map tree"]
+    MAP --> HIST["aic map history"]
+    MAP --> HEAT["aic map heat"]
+    MAP --> ACT["aic map activity"]
+    TREE --> SVG["SVG output"]
+    HIST --> SVG
+    HEAT --> SVG
+    ACT --> SVG
     D --> STAGE{"Anything staged?"}
     STAGE -->|No| PICK["Stage all, choose files, or cancel"]
     STAGE -->|Yes| SPLIT{"Split into multiple commits?"}
@@ -43,8 +55,6 @@ flowchart TD
     G --> I{"Push enabled?"}
     I -->|Yes| J["git push"]
     I -->|No| K["Done"]
-    G --> PR["Run aic pr"]
-    PR --> PRD["Draft PR title + description"]
     GC --> I
     AMEND["Run aic --amend"] --> E
 ```
