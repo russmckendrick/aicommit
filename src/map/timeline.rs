@@ -19,7 +19,8 @@ const DOT_SIZE: f64 = 9.0;
 const DOT_GAP: f64 = 3.0;
 const ARM_LENGTH: f64 = 40.0;
 const CIRCLE_RADIUS: f64 = 22.0;
-const ROW_GAP: f64 = 16.0;
+/// Minimum vertical distance between circle centres.
+const MIN_CIRCLE_SPACING: f64 = 52.0;
 
 /// Render a vertical zigzag timeline of commits, alternating left and right.
 pub fn render(commits: &[TimestampedCommit], label: Option<&str>) -> Document {
@@ -46,12 +47,35 @@ pub fn render(commits: &[TimestampedCommit], label: Option<&str>) -> Document {
 
     let start_y = header_height + padding + 10.0;
     let mut y_positions: Vec<f64> = Vec::with_capacity(card_heights.len());
-    let mut current_y = start_y;
-    for h in &card_heights {
-        y_positions.push(current_y);
-        current_y += h + ROW_GAP;
+    if !card_heights.is_empty() {
+        y_positions.push(start_y);
     }
-    let timeline_bottom = current_y;
+    for i in 1..card_heights.len() {
+        let prev_card_bottom = y_positions[i - 1] + card_heights[i - 1];
+        let prev_circle_y = y_positions[i - 1] + card_heights[i - 1] / 2.0;
+
+        // Same-side card is 2 positions back (if it exists)
+        let same_side_bottom = if i >= 2 {
+            y_positions[i - 2] + card_heights[i - 2] + 6.0
+        } else {
+            start_y
+        };
+
+        // Circle must be at least MIN_CIRCLE_SPACING below previous circle
+        let min_from_circle = prev_circle_y + MIN_CIRCLE_SPACING - card_heights[i] / 2.0;
+        // Card must not overlap same-side card
+        let min_from_same_side = same_side_bottom;
+        // Card must start after previous card's top (avoid arm crossing)
+        let min_from_prev = prev_card_bottom - card_heights[i] * 0.4;
+
+        let y = min_from_circle.max(min_from_same_side).max(min_from_prev);
+        y_positions.push(y);
+    }
+    let timeline_bottom = if let Some(&last_y) = y_positions.last() {
+        last_y + card_heights.last().copied().unwrap_or(0.0) + 10.0
+    } else {
+        start_y
+    };
     let legend_height = 40.0;
     let total_height = timeline_bottom + legend_height + padding;
 
