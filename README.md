@@ -8,7 +8,7 @@ A fast, opinionated CLI that generates Git commit messages and reviews staged di
 # Install via Homebrew (macOS)
 brew install russmckendrick/tap/aicommit
 
-# Install via WinGet (Windows) — Coming Soon
+# Install via WinGet (Windows) - Coming Soon
 # winget install --id RussMcKendrick.Aicommit -e
 
 # Or download a binary from GitHub Releases
@@ -20,7 +20,7 @@ aic setup
 
 ## Usage
 
-Stage your changes and run `aic` — it generates a conventional commit message, shows it for confirmation, and commits on approval:
+Stage your changes and run `aic` - it generates a conventional commit message, shows it for confirmation, and commits on approval:
 
 ```sh
 git add -p
@@ -43,7 +43,7 @@ In the normal interactive flow, `aic` can also split one staged change set into 
 
 ### Review staged changes
 
-Get AI-powered feedback on your staged diff before committing — findings are grouped by severity and rendered in the terminal:
+Get AI-powered feedback on your staged diff before committing - findings are grouped by severity and rendered in the terminal:
 
 ```sh
 aic review
@@ -95,16 +95,16 @@ aic completions zsh        # Generate shell completions
 ## Features
 
 - **Conventional commits** with optional GitMoji prefixes
-- **Scope hints** — detects likely scopes from changed file paths
-- **Branch context** — extracts ticket/issue references from branch names
-- **Diff review** — AI-powered code review with severity grouping
-- **Message rewriting** — clean up commit history with `aic log`
-- **Pull request drafts** — generate a PR title and Markdown body with `aic pr`
-- **History** — browse past generated messages, PR drafts, and reviews
-- **Large diff handling** — automatic chunking and synthesis
-- **Custom prompts** — swap the system prompt without recompiling
-- **Split commits** — turn one staged change set into multiple file-group commits when concerns are separate
-- **Provider choice** — OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, and custom OpenAI-compatible endpoints
+- **Scope hints** - detects likely scopes from changed file paths
+- **Branch context** - extracts ticket/issue references from branch names
+- **Diff review** - AI-powered code review with severity grouping
+- **Message rewriting** - clean up commit history with `aic log`
+- **Pull request drafts** - generate a PR title and Markdown body with `aic pr`
+- **History** - browse past generated messages, PR drafts, and reviews
+- **Large diff handling** - automatic chunking and synthesis
+- **Custom prompts** - swap the system prompt without recompiling
+- **Split commits** - turn one staged change set into multiple file-group commits when concerns are separate
+- **Provider choice** - OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, and custom OpenAI-compatible endpoints
 
 ## Configuration
 
@@ -121,12 +121,12 @@ See [docs/configuration.md](docs/configuration.md) for the full key reference.
 
 Detailed docs live in [`docs/`](docs/):
 
-- [Installation](docs/installation.md) — Homebrew, WinGet, GitHub Releases, from source
-- [Usage](docs/usage.md) — commit workflow, review, flags, hooks
-- [Configuration](docs/configuration.md) — keys, prompt templates, ignore files
-- [Providers](docs/providers.md) — OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, custom endpoints
-- [Architecture](docs/architecture.md) — module layout and data flow
-- [Roadmap](docs/roadmap.md) — planned and completed features
+- [Installation](docs/installation.md) - Homebrew, WinGet, GitHub Releases, from source
+- [Usage](docs/usage.md) - commit workflow, review, flags, hooks
+- [Configuration](docs/configuration.md) - keys, prompt templates, ignore files
+- [Providers](docs/providers.md) - OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, custom endpoints
+- [Architecture](docs/architecture.md) - module layout and data flow
+- [Roadmap](docs/roadmap.md) - planned and completed features
 
 ## License
 

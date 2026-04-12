@@ -1,4 +1,4 @@
-# Visualization — `aic map`
+# Visualization - `aic map`
 
 Generate SVG visualizations of the codebase structure and commit history.
 

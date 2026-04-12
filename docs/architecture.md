@@ -58,9 +58,9 @@ As a maintenance rule, modules that start combining multiple distinct concerns s
 
 Prompt templates live in `prompts/`:
 
-- `commit-system.md` — system prompt for commit message generation. Supports scope hints derived from staged file paths.
-- `split-system.md` — system prompt for grouping one staged change set into multiple file-based commits.
-- `review-system.md` — system prompt for `aic review` diff analysis.
+- `commit-system.md` - system prompt for commit message generation. Supports scope hints derived from staged file paths.
+- `split-system.md` - system prompt for grouping one staged change set into multiple file-based commits.
+- `review-system.md` - system prompt for `aic review` diff analysis.
 
 Use `AIC_PROMPT_FILE` to point at a custom commit prompt template.
 

@@ -161,7 +161,7 @@ This generates new messages for each commit, shows a before/after comparison, an
 Requirements:
 - The working tree must be clean (no uncommitted changes).
 - The range must not contain merge commits.
-- This rewrites git history — do not use on commits that have been pushed to a shared branch.
+- This rewrites git history - do not use on commits that have been pushed to a shared branch.
 
 ## Visualization
 

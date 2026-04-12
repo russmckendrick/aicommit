@@ -16,7 +16,7 @@ brew upgrade aicommit
 
 The Homebrew formula installs the public CLI as `aic`.
 
-## WinGet (Windows) — Coming Soon
+## WinGet (Windows) - Coming Soon
 
 WinGet support is planned but not yet available. Once the package is accepted
 into the community repository you will be able to install with:
