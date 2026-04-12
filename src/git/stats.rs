@@ -14,11 +14,12 @@ pub struct FileStats {
     pub deletions: usize,
 }
 
-/// A single commit with its ISO-8601 timestamp and subject.
+/// A single commit with its ISO-8601 timestamp, subject, body, and changed files.
 #[derive(Debug, Clone)]
 pub struct TimestampedCommit {
     pub hash: String,
     pub subject: String,
+    pub body: String,
     pub timestamp: String,
     pub files: Vec<String>,
 }
@@ -49,7 +50,7 @@ pub fn timestamped_commits(n: usize) -> Result<Vec<TimestampedCommit>> {
         [
             "log",
             &format!("-{n}"),
-            "--format=%H%x00%s%x00%aI%x00--AIC-TS--",
+            "--format=%H%x00%s%x00%aI%x00%b%x00--AIC-TS--",
             "--name-only",
         ],
     )?;
@@ -95,11 +96,12 @@ fn parse_numstat(input: &str) -> BTreeMap<String, FileStats> {
 }
 
 fn parse_timestamped_commits(input: &str) -> Vec<TimestampedCommit> {
-    // git output: header\0--AIC-TS--\nfile1\nfile2\n\nheader\0--AIC-TS--\n...
-    // Split by the delimiter; block 0 has the first header, block 1+ has
-    // [files from prev commit]\n[next header] etc.
+    // Format: hash\0subject\0timestamp\0body_maybe_multiline\0--AIC-TS--\nfile1\nfile2\n...
+    // Split by --AIC-TS-- delimiter. Each block except the last contains one commit's
+    // header fields and the previous commit's file list.
     let blocks: Vec<&str> = input.split("--AIC-TS--").collect();
-    let mut headers: Vec<(&str, &str, &str)> = Vec::new();
+
+    let mut raw_commits: Vec<ParsedHeader> = Vec::new();
     let mut file_groups: Vec<Vec<String>> = Vec::new();
 
     for (i, block) in blocks.iter().enumerate() {
@@ -109,17 +111,17 @@ fn parse_timestamped_commits(input: &str) -> Vec<TimestampedCommit> {
         }
 
         if i == 0 {
-            // First block: just a header line
-            if let Some((h, s, t)) = parse_header(block) {
-                headers.push((h, s, t));
+            // First block: header only (hash\0subject\0timestamp\0body)
+            if let Some(rc) = parse_header_block(block) {
+                raw_commits.push(rc);
             }
         } else {
-            // Subsequent blocks: files from previous commit, then optionally a new header
+            // Subsequent blocks: file list from prev commit, then optionally a new header.
+            // The header starts at the first line containing \0.
             let lines: Vec<&str> = block.lines().collect();
-            // Find the header line (contains \0)
             let header_idx = lines.iter().position(|l| l.contains('\0'));
-            let (file_lines, header_line) = match header_idx {
-                Some(idx) => (&lines[..idx], Some(lines[idx])),
+            let (file_lines, header_lines) = match header_idx {
+                Some(idx) => (&lines[..idx], Some(&lines[idx..])),
                 None => (lines.as_slice(), None),
             };
 
@@ -131,26 +133,28 @@ fn parse_timestamped_commits(input: &str) -> Vec<TimestampedCommit> {
                 .collect();
             file_groups.push(files);
 
-            if let Some(line) = header_line
-                && let Some((h, s, t)) = parse_header(line)
-            {
-                headers.push((h, s, t));
+            if let Some(hdr_lines) = header_lines {
+                let rejoined = hdr_lines.join("\n");
+                if let Some(rc) = parse_header_block(&rejoined) {
+                    raw_commits.push(rc);
+                }
             }
         }
     }
 
-    // Last header may not have a corresponding file group yet
-    while file_groups.len() < headers.len() {
+    // Last commit may not have a file group yet
+    while file_groups.len() < raw_commits.len() {
         file_groups.push(Vec::new());
     }
 
-    let mut commits: Vec<TimestampedCommit> = headers
+    let mut commits: Vec<TimestampedCommit> = raw_commits
         .into_iter()
         .zip(file_groups)
-        .map(|((hash, subject, timestamp), files)| TimestampedCommit {
-            hash: hash.to_owned(),
-            subject: subject.to_owned(),
-            timestamp: timestamp.to_owned(),
+        .map(|(rc, files)| TimestampedCommit {
+            hash: rc.hash,
+            subject: rc.subject,
+            body: rc.body,
+            timestamp: rc.timestamp,
             files,
         })
         .collect();
@@ -159,13 +163,32 @@ fn parse_timestamped_commits(input: &str) -> Vec<TimestampedCommit> {
     commits
 }
 
-fn parse_header(line: &str) -> Option<(&str, &str, &str)> {
-    let parts: Vec<&str> = line.split('\0').collect();
-    if parts.len() >= 3 {
-        Some((parts[0].trim(), parts[1].trim(), parts[2].trim()))
-    } else {
-        None
+/// Parse a block containing: hash\0subject\0timestamp\0body(multiline)
+/// The body may contain newlines; it's everything after the third \0.
+fn parse_header_block(block: &str) -> Option<ParsedHeader> {
+    let mut parts = block.splitn(4, '\0');
+    let hash = parts.next()?.trim();
+    let subject = parts.next()?.trim();
+    let timestamp = parts.next()?.trim();
+    let body = parts.next().unwrap_or("").trim().trim_matches('\0').trim();
+
+    if hash.is_empty() || subject.is_empty() {
+        return None;
     }
+
+    Some(ParsedHeader {
+        hash: hash.to_owned(),
+        subject: subject.to_owned(),
+        body: body.to_owned(),
+        timestamp: timestamp.to_owned(),
+    })
+}
+
+struct ParsedHeader {
+    hash: String,
+    subject: String,
+    body: String,
+    timestamp: String,
 }
 
 #[cfg(test)]
@@ -193,19 +216,34 @@ mod tests {
     #[test]
     fn parse_timestamped_commits_parses_blocks() {
         // git log outputs newest-first; the parser reverses to oldest-first
+        // format: hash\0subject\0timestamp\0body\0--AIC-TS--
         let input = "\
-def456\x00fix: bug\x002026-04-11T12:00:00+00:00\x00--AIC-TS--
+def456\x00fix: bug\x002026-04-11T12:00:00+00:00\x00- fixed the bug\x00--AIC-TS--
 src/lib.rs
 src/cli.rs
-abc123\x00feat: init\x002026-04-10T10:00:00+00:00\x00--AIC-TS--
+abc123\x00feat: init\x002026-04-10T10:00:00+00:00\x00\x00--AIC-TS--
 src/main.rs
 ";
         let commits = parse_timestamped_commits(input);
         assert_eq!(commits.len(), 2);
         assert_eq!(commits[0].hash, "abc123");
+        assert_eq!(commits[0].body, "");
         assert_eq!(commits[0].timestamp, "2026-04-10T10:00:00+00:00");
         assert_eq!(commits[0].files, vec!["src/main.rs"]);
         assert_eq!(commits[1].hash, "def456");
+        assert_eq!(commits[1].body, "- fixed the bug");
         assert_eq!(commits[1].files.len(), 2);
+    }
+
+    #[test]
+    fn parse_timestamped_commits_handles_multiline_body() {
+        let input = "\
+abc123\x00feat: init\x002026-04-10T10:00:00+00:00\x00- line one\n- line two\x00--AIC-TS--
+src/main.rs
+";
+        let commits = parse_timestamped_commits(input);
+        assert_eq!(commits.len(), 1);
+        assert!(commits[0].body.contains("line one"));
+        assert!(commits[0].body.contains("line two"));
     }
 }

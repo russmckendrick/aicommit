@@ -10,32 +10,23 @@ use super::{
 };
 use crate::git::stats::TimestampedCommit;
 
+const CARD_WIDTH: f64 = 300.0;
+const CARD_PAD: f64 = 10.0;
+const LINE_HEIGHT: f64 = 13.0;
+const SUBJECT_SIZE: f64 = 10.0;
+const BODY_SIZE: f64 = 9.0;
+const DOT_SIZE: f64 = 9.0;
+const DOT_GAP: f64 = 3.0;
+const ARM_LENGTH: f64 = 40.0;
+const CIRCLE_RADIUS: f64 = 22.0;
+const ROW_GAP: f64 = 16.0;
+
 /// Render a vertical zigzag timeline of commits, alternating left and right.
 pub fn render(commits: &[TimestampedCommit], label: Option<&str>) -> Document {
-    let padding = 40.0;
-    let header_height = 60.0;
-    let circle_radius = 24.0;
-    let row_height = 110.0;
-    let centre_x = 400.0;
-    let arm_length = 60.0;
-    let detail_width = 280.0;
-    let n = commits.len().max(1);
-
+    let padding = 30.0;
+    let header_height = 50.0;
+    let centre_x = CARD_WIDTH + ARM_LENGTH + CIRCLE_RADIUS + padding + 10.0;
     let total_width = centre_x * 2.0;
-    let timeline_height = n as f64 * row_height;
-    let legend_height = 50.0;
-    let total_height = padding * 2.0 + header_height + timeline_height + legend_height + 10.0;
-
-    let mut doc = new_document(total_width, total_height);
-    doc = doc.add(rect(0.0, 0.0, total_width, total_height, "#fafafa"));
-
-    let title = label.unwrap_or("Commit Timeline");
-    doc = doc.add(title_text(padding, padding + 20.0, title));
-    doc = doc.add(subtitle_text(
-        padding,
-        padding + 38.0,
-        &format!("{} commits", commits.len()),
-    ));
 
     // Build directory colour map
     let all_dirs = collect_directories(commits);
@@ -45,27 +36,54 @@ pub fn render(commits: &[TimestampedCommit], label: Option<&str>) -> Document {
         .map(|(i, d)| (d.clone(), directory_colour(i)))
         .collect();
 
-    let start_y = header_height + padding + 20.0;
+    // Pre-calculate card heights to position everything
+    let text_max = CARD_WIDTH - CARD_PAD * 2.0;
+    let card_heights: Vec<f64> = commits
+        .iter()
+        .rev()
+        .map(|c| card_height(c, text_max))
+        .collect();
+
+    let start_y = header_height + padding + 10.0;
+    let mut y_positions: Vec<f64> = Vec::with_capacity(card_heights.len());
+    let mut current_y = start_y;
+    for h in &card_heights {
+        y_positions.push(current_y);
+        current_y += h + ROW_GAP;
+    }
+    let timeline_bottom = current_y;
+    let legend_height = 40.0;
+    let total_height = timeline_bottom + legend_height + padding;
+
+    let mut doc = new_document(total_width, total_height);
+    doc = doc.add(rect(0.0, 0.0, total_width, total_height, "#fafafa"));
+
+    let title = label.unwrap_or("Commit Timeline");
+    doc = doc.add(title_text(padding, padding + 18.0, title));
+    doc = doc.add(subtitle_text(
+        padding,
+        padding + 34.0,
+        &format!("{} commits", commits.len()),
+    ));
 
     // Draw vertical centre line
     if commits.len() > 1 {
-        let y1 = start_y + circle_radius;
-        let y2 = start_y + (n - 1) as f64 * row_height + circle_radius;
+        let y1 = start_y + CIRCLE_RADIUS;
+        let last = y_positions.len() - 1;
+        let y2 = y_positions[last] + card_heights[last] / 2.0;
         doc = doc.add(rect(centre_x - 1.5, y1, 3.0, y2 - y1, "#e0e0e0").set("rx", 1.5));
     }
 
-    // Draw commits newest-first (reverse the oldest-first vec)
+    // Draw commits newest-first
     let display_commits: Vec<&TimestampedCommit> = commits.iter().rev().collect();
     for (i, commit) in display_commits.iter().enumerate() {
-        let cy = start_y + i as f64 * row_height;
         let is_left = i % 2 == 0;
         let g = render_commit(
             commit,
             centre_x,
-            cy,
-            circle_radius,
-            arm_length,
-            detail_width,
+            y_positions[i],
+            card_heights[i],
+            text_max,
             is_left,
             &dir_colours,
         );
@@ -73,13 +91,13 @@ pub fn render(commits: &[TimestampedCommit], label: Option<&str>) -> Document {
     }
 
     // Legend
-    let legend_y = start_y + n as f64 * row_height + 16.0;
-    doc = doc.add(text(padding, legend_y, "Directories:", 11.0).set("font-weight", "600"));
-    let mut lx = padding + 90.0;
+    let legend_y = timeline_bottom + 10.0;
+    doc = doc.add(text(padding, legend_y, "Directories:", 10.0).set("font-weight", "600"));
+    let mut lx = padding + 80.0;
     for (dir, colour) in &dir_colours {
-        doc = doc.add(rounded_rect(lx, legend_y - 10.0, 12.0, 12.0, colour, 2.0));
-        doc = doc.add(text(lx + 16.0, legend_y, dir, 10.0));
-        lx += dir.len() as f64 * 7.0 + 30.0;
+        doc = doc.add(rounded_rect(lx, legend_y - 9.0, 10.0, 10.0, colour, 2.0));
+        doc = doc.add(text(lx + 14.0, legend_y, dir, 9.0));
+        lx += dir.len() as f64 * 6.0 + 28.0;
         if lx > total_width - padding {
             break;
         }
@@ -88,32 +106,50 @@ pub fn render(commits: &[TimestampedCommit], label: Option<&str>) -> Document {
     doc
 }
 
+/// Calculate the height of a card for a given commit.
+fn card_height(commit: &TimestampedCommit, text_max: f64) -> f64 {
+    let mut h = CARD_PAD; // top padding
+    h += LINE_HEIGHT; // hash line
+    h += LINE_HEIGHT; // subject line
+
+    // Body lines
+    let body_lines = wrap_text(&commit.body, text_max, BODY_SIZE);
+    h += body_lines.len() as f64 * LINE_HEIGHT;
+
+    // Gap before dots
+    if !commit.files.is_empty() {
+        h += 4.0;
+        h += DOT_SIZE + 2.0;
+    }
+
+    h += CARD_PAD; // bottom padding
+    h.max(CIRCLE_RADIUS * 2.0 + 8.0) // minimum height to contain the circle
+}
+
 #[allow(clippy::too_many_arguments)]
 fn render_commit(
     commit: &TimestampedCommit,
     centre_x: f64,
     y: f64,
-    radius: f64,
-    arm_length: f64,
-    detail_width: f64,
+    card_h: f64,
+    text_max: f64,
     is_left: bool,
     dir_colours: &BTreeMap<String, String>,
 ) -> svg::node::element::Group {
     let mut g = group();
-    let cy = y + radius;
+    let cy = y + card_h / 2.0;
 
     // --- Circle on the centre line with date inside ---
     g = g.add(
         svg::node::element::Circle::new()
             .set("cx", centre_x)
             .set("cy", cy)
-            .set("r", radius)
+            .set("r", CIRCLE_RADIUS)
             .set("fill", "#ffffff")
             .set("stroke", "#90a4ae")
             .set("stroke-width", 2),
     );
 
-    // Date inside the circle (two lines: month+day, year)
     let ts = commit
         .timestamp
         .split('T')
@@ -124,86 +160,139 @@ fn render_commit(
         let month_day = format!("{}/{}", date_parts[1], date_parts[2]);
         let year = date_parts[0];
         g = g.add(
-            text(centre_x - 12.0, cy - 2.0, &month_day, 9.0)
+            text(centre_x - 11.0, cy - 2.0, &month_day, 8.0)
                 .set("fill", "#546e7a")
                 .set("font-weight", "600"),
         );
-        g = g.add(text(centre_x - 10.0, cy + 10.0, year, 8.0).set("fill", "#90a4ae"));
+        g = g.add(text(centre_x - 10.0, cy + 9.0, year, 7.0).set("fill", "#90a4ae"));
     } else {
-        g = g.add(text(centre_x - 16.0, cy + 4.0, ts, 8.0).set("fill", "#546e7a"));
+        g = g.add(text(centre_x - 14.0, cy + 3.0, ts, 7.0).set("fill", "#546e7a"));
     }
 
-    // --- Horizontal arm from circle to detail card ---
+    // --- Horizontal arm ---
     let (arm_start, arm_end, detail_x) = if is_left {
         (
-            centre_x - radius,
-            centre_x - radius - arm_length,
-            centre_x - radius - arm_length - detail_width,
+            centre_x - CIRCLE_RADIUS,
+            centre_x - CIRCLE_RADIUS - ARM_LENGTH,
+            centre_x - CIRCLE_RADIUS - ARM_LENGTH - CARD_WIDTH,
         )
     } else {
         (
-            centre_x + radius,
-            centre_x + radius + arm_length,
-            centre_x + radius + arm_length + 8.0,
+            centre_x + CIRCLE_RADIUS,
+            centre_x + CIRCLE_RADIUS + ARM_LENGTH,
+            centre_x + CIRCLE_RADIUS + ARM_LENGTH + 6.0,
         )
     };
     let arm_left = arm_start.min(arm_end);
     let arm_w = (arm_start - arm_end).abs();
-    g = g.add(rect(arm_left, cy - 1.5, arm_w, 3.0, "#e0e0e0").set("rx", 1.5));
+    g = g.add(rect(arm_left, cy - 1.0, arm_w, 2.0, "#e0e0e0").set("rx", 1.0));
 
-    // Small dot at the end of the arm
+    // Small dot at the arm end
     g = g.add(
         svg::node::element::Circle::new()
             .set("cx", arm_end)
             .set("cy", cy)
-            .set("r", 4.0)
+            .set("r", 3.0)
             .set("fill", "#90a4ae"),
     );
 
     // --- Detail card ---
-    let card_height = 70.0;
-    let card_y = cy - card_height / 2.0;
+    let card_y = y;
     g = g.add(
-        rounded_rect(detail_x, card_y, detail_width, card_height, "#ffffff", 6.0)
+        rounded_rect(detail_x, card_y, CARD_WIDTH, card_h, "#ffffff", 5.0)
             .set("stroke", "#e0e0e0")
             .set("stroke-width", 1),
     );
 
-    let text_x = detail_x + 12.0;
-    let text_max = detail_width - 24.0;
+    let tx = detail_x + CARD_PAD;
+    let mut ty = card_y + CARD_PAD;
 
     // Short hash
     let short_hash = &commit.hash[..7.min(commit.hash.len())];
-    g = g.add(text(text_x, card_y + 16.0, short_hash, 8.0).set("fill", "#90a4ae"));
+    ty += LINE_HEIGHT;
+    g = g.add(text(tx, ty - 3.0, short_hash, 8.0).set("fill", "#90a4ae"));
 
     // Subject
-    let subject = truncate_to_width(&commit.subject, text_max, 10.0);
+    let subject = truncate_to_width(&commit.subject, text_max, SUBJECT_SIZE);
+    ty += LINE_HEIGHT;
     g = g.add(
-        text(text_x, card_y + 30.0, &subject, 10.0)
+        text(tx, ty - 3.0, &subject, SUBJECT_SIZE)
             .set("fill", "#1a1a1a")
             .set("font-weight", "600"),
     );
 
-    // File dots
-    let dot_y = card_y + 40.0;
-    let dot_size = 10.0;
-    let max_dots = ((text_max) / (dot_size + 3.0)).floor() as usize;
-    for (j, file) in commit.files.iter().take(max_dots).enumerate() {
-        let dir = top_directory(file);
-        let colour = dir_colours
-            .get(&dir)
-            .cloned()
-            .unwrap_or_else(|| "#cccccc".to_owned());
-        let dx = text_x + j as f64 * (dot_size + 3.0);
-        g = g.add(rounded_rect(dx, dot_y, dot_size, dot_size, &colour, 2.0).set("opacity", 0.9));
+    // Body lines
+    let body_lines = wrap_text(&commit.body, text_max, BODY_SIZE);
+    for line in &body_lines {
+        ty += LINE_HEIGHT;
+        g = g.add(text(tx, ty - 3.0, line, BODY_SIZE).set("fill", "#666666"));
     }
-    if commit.files.len() > max_dots {
-        let overflow = format!("+{}", commit.files.len() - max_dots);
-        let overflow_x = text_x + max_dots as f64 * (dot_size + 3.0) + 4.0;
-        g = g.add(text(overflow_x, dot_y + dot_size, &overflow, 8.0).set("fill", "#999999"));
+
+    // File dots
+    if !commit.files.is_empty() {
+        ty += 4.0 + DOT_SIZE;
+        let max_dots = ((text_max) / (DOT_SIZE + DOT_GAP)).floor() as usize;
+        for (j, file) in commit.files.iter().take(max_dots).enumerate() {
+            let dir = top_directory(file);
+            let colour = dir_colours
+                .get(&dir)
+                .cloned()
+                .unwrap_or_else(|| "#cccccc".to_owned());
+            let dx = tx + j as f64 * (DOT_SIZE + DOT_GAP);
+            g = g.add(
+                rounded_rect(dx, ty - DOT_SIZE, DOT_SIZE, DOT_SIZE, &colour, 2.0)
+                    .set("opacity", 0.9),
+            );
+        }
+        if commit.files.len() > max_dots {
+            let overflow = format!("+{}", commit.files.len() - max_dots);
+            let overflow_x = tx + max_dots as f64 * (DOT_SIZE + DOT_GAP) + 2.0;
+            g = g.add(text(overflow_x, ty, &overflow, 7.0).set("fill", "#999999"));
+        }
     }
 
     g
+}
+
+/// Word-wrap text to fit within a pixel width at a given font size.
+fn wrap_text(input: &str, max_width: f64, font_size: f64) -> Vec<String> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return Vec::new();
+    }
+
+    let char_width = font_size * 0.6;
+    let max_chars = (max_width / char_width).floor() as usize;
+    let mut lines = Vec::new();
+
+    for raw_line in trimmed.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if line.len() <= max_chars {
+            lines.push(line.to_owned());
+        } else {
+            // Word-wrap
+            let words: Vec<&str> = line.split_whitespace().collect();
+            let mut current = String::new();
+            for word in words {
+                if current.is_empty() {
+                    current = word.to_owned();
+                } else if current.len() + 1 + word.len() <= max_chars {
+                    current.push(' ');
+                    current.push_str(word);
+                } else {
+                    lines.push(current);
+                    current = word.to_owned();
+                }
+            }
+            if !current.is_empty() {
+                lines.push(current);
+            }
+        }
+    }
+    lines
 }
 
 fn collect_directories(commits: &[TimestampedCommit]) -> Vec<String> {
@@ -234,5 +323,23 @@ mod tests {
     fn top_directory_extracts_first_component() {
         assert_eq!(top_directory("src/main.rs"), "src");
         assert_eq!(top_directory("README.md"), "README.md");
+    }
+
+    #[test]
+    fn wrap_text_handles_short_lines() {
+        let lines = wrap_text("hello world", 200.0, 10.0);
+        assert_eq!(lines, vec!["hello world"]);
+    }
+
+    #[test]
+    fn wrap_text_wraps_long_lines() {
+        let lines = wrap_text("this is a longer line that should wrap", 100.0, 10.0);
+        assert!(lines.len() >= 2);
+    }
+
+    #[test]
+    fn wrap_text_empty_returns_empty() {
+        assert!(wrap_text("", 200.0, 10.0).is_empty());
+        assert!(wrap_text("   ", 200.0, 10.0).is_empty());
     }
 }
