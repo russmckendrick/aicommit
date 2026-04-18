@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, fmt::Display, path::Path};
 
 use anyhow::{Error, Result};
-use console::{Alignment, Term, pad_str, style};
+use console::{Term, style};
 use indicatif::{ProgressBar, ProgressStyle};
 use inquire::{Confirm, Editor, InquireError, MultiSelect, Select, Text};
 use textwrap::Options;
@@ -111,6 +111,12 @@ pub fn primary_card(title: &str, body: &str) {
     }
 }
 
+pub fn markdown_card(title: &str, body: &str) {
+    for line in render_markdown_card_lines(title, body, card_width()) {
+        println!("{line}");
+    }
+}
+
 pub fn confirm(message: &str, default: bool) -> Result<bool> {
     Ok(Confirm::new(message).with_default(default).prompt()?)
 }
@@ -127,7 +133,7 @@ pub fn multiselect(message: &str, options: Vec<String>) -> Result<Vec<String>> {
 }
 
 pub fn markdown(text: &str) {
-    let skin = termimad::MadSkin::default();
+    let skin = markdown_skin();
     skin.print_text(text);
 }
 
@@ -204,13 +210,77 @@ pub(crate) fn summarize_roots(files: &[String], limit: usize) -> String {
 }
 
 pub(crate) fn render_card_lines(title: &str, body: &str, width: usize) -> Vec<String> {
+    let dimensions = card_dimensions(width);
+    let wrapped_lines = wrap_plain_lines(body, dimensions.content_width);
+    render_card_frame(title, &wrapped_lines, dimensions)
+}
+
+fn render_markdown_card_lines(title: &str, body: &str, width: usize) -> Vec<String> {
+    let dimensions = card_dimensions(width);
+    let rendered_lines = render_markdown_lines(body, dimensions.content_width);
+    render_card_frame(title, &rendered_lines, dimensions)
+}
+
+fn card_width() -> usize {
+    let (_, columns) = Term::stdout().size();
+    usize::from(columns)
+        .saturating_sub(4)
+        .clamp(DEFAULT_MIN_CARD_WIDTH, MAX_CARD_WIDTH)
+}
+
+#[derive(Clone, Copy)]
+struct CardDimensions {
+    content_width: usize,
+    border_inner_width: usize,
+}
+
+fn card_dimensions(width: usize) -> CardDimensions {
     let width = width.clamp(DEFAULT_MIN_CARD_WIDTH, MAX_CARD_WIDTH);
-    let inner_width = width.saturating_sub(4).max(20);
+    let content_width = width.saturating_sub(4).max(20);
+    CardDimensions {
+        content_width,
+        border_inner_width: content_width + 2,
+    }
+}
+
+fn render_card_frame(
+    title: &str,
+    body_lines: &[String],
+    dimensions: CardDimensions,
+) -> Vec<String> {
     let title = format!(" {title} ");
     let title_width = console::measure_text_width(&title);
-    let top_fill = "─".repeat(inner_width.saturating_sub(title_width));
+    let top_fill = "─".repeat(dimensions.border_inner_width.saturating_sub(title_width));
     let mut lines = vec![format!("  {}", style(format!("┌{title}{top_fill}┐")).dim())];
 
+    if body_lines.is_empty() {
+        lines.push(render_card_body_line("", dimensions.content_width));
+    } else {
+        for line in body_lines {
+            lines.push(render_card_body_line(line, dimensions.content_width));
+        }
+    }
+
+    lines.push(format!(
+        "  {}",
+        style(format!("└{}┘", "─".repeat(dimensions.border_inner_width))).dim()
+    ));
+    lines
+}
+
+fn render_card_body_line(line: &str, content_width: usize) -> String {
+    let visible_width = console::measure_text_width(line);
+    let padding = " ".repeat(content_width.saturating_sub(visible_width));
+    format!(
+        "  {}{}{}{}",
+        style("│ ").dim(),
+        line,
+        padding,
+        style(" │").dim()
+    )
+}
+
+fn wrap_plain_lines(body: &str, content_width: usize) -> Vec<String> {
     let mut wrapped_lines = Vec::new();
     for line in body.lines() {
         if line.trim().is_empty() {
@@ -218,7 +288,7 @@ pub(crate) fn render_card_lines(title: &str, body: &str, width: usize) -> Vec<St
             continue;
         }
 
-        let options = Options::new(inner_width)
+        let options = Options::new(content_width)
             .break_words(false)
             .word_separator(textwrap::WordSeparator::AsciiSpace);
         wrapped_lines.extend(
@@ -232,28 +302,28 @@ pub(crate) fn render_card_lines(title: &str, body: &str, width: usize) -> Vec<St
         wrapped_lines.push(String::new());
     }
 
-    for line in wrapped_lines {
-        let content = pad_str(&line, inner_width, Alignment::Left, None);
-        lines.push(format!(
-            "  {}{}{}",
-            style("│ ").dim(),
-            content,
-            style(" │").dim()
-        ));
-    }
-
-    lines.push(format!(
-        "  {}",
-        style(format!("└{}┘", "─".repeat(inner_width))).dim()
-    ));
-    lines
+    wrapped_lines
 }
 
-fn card_width() -> usize {
-    let (_, columns) = Term::stdout().size();
-    usize::from(columns)
-        .saturating_sub(4)
-        .clamp(DEFAULT_MIN_CARD_WIDTH, MAX_CARD_WIDTH)
+fn render_markdown_lines(body: &str, width: usize) -> Vec<String> {
+    let rendered = format!("{}", markdown_skin().text(body, Some(width)));
+    let lines = rendered.lines().map(ToOwned::to_owned).collect::<Vec<_>>();
+    if lines.is_empty() {
+        vec![String::new()]
+    } else {
+        lines
+    }
+}
+
+fn markdown_skin() -> termimad::MadSkin {
+    let mut skin = termimad::MadSkin {
+        list_items_indentation_mode: termimad::ListItemsIndentationMode::Block,
+        ..termimad::MadSkin::default()
+    };
+    for header in &mut skin.headers {
+        header.align = termimad::Alignment::Left;
+    }
+    skin
 }
 
 fn file_root(file: &str) -> String {
@@ -317,5 +387,45 @@ mod tests {
         assert!(lines[0].contains("Generated commit"));
         assert!(lines.len() > 4);
         assert!(lines.iter().all(|line| line.starts_with("  ")));
+        let widths = lines
+            .iter()
+            .map(|line| console::measure_text_width(line))
+            .collect::<Vec<_>>();
+        assert!(widths.windows(2).all(|window| window[0] == window[1]));
+    }
+
+    #[test]
+    fn render_markdown_card_lines_preserves_markdown_formatting() {
+        let lines = render_markdown_card_lines(
+            "AI review",
+            "**Warning**\n\n1. **Example finding**\n`src/main.rs`\n- keep markdown formatting readable",
+            52,
+        );
+
+        assert!(lines[0].contains("AI review"));
+        assert!(lines.iter().all(|line| line.starts_with("  ")));
+        assert!(lines.iter().all(|line| !line.contains("**Warning**")));
+        assert!(lines.iter().any(|line| line.contains("Warning")));
+        let widths = lines
+            .iter()
+            .map(|line| console::measure_text_width(line))
+            .collect::<Vec<_>>();
+        assert!(widths.windows(2).all(|window| window[0] == window[1]));
+    }
+
+    #[test]
+    fn render_markdown_card_lines_keep_width_with_mixed_width_content() {
+        let lines = render_markdown_card_lines(
+            "AI review",
+            "## Warning\n- plain ascii text\n- wide chars: 漢字 mixed with `code`\n- wrapped line with markdown emphasis around **important** details",
+            58,
+        );
+
+        assert!(lines[0].contains("AI review"));
+        let widths = lines
+            .iter()
+            .map(|line| console::measure_text_width(line))
+            .collect::<Vec<_>>();
+        assert!(widths.windows(2).all(|window| window[0] == window[1]));
     }
 }

@@ -20,7 +20,7 @@ pub async fn run(context: String, provider_override: Option<String>) -> Result<(
         bail!(AicError::MissingApiKey(config.ai_provider));
     }
 
-    super::commit::ensure_staged_files(false).await?;
+    super::commit::ensure_staged_files(false, "Review session", false).await?;
     let staged = git::staged_files()?;
     if staged.is_empty() {
         bail!(AicError::NoChanges);
@@ -67,12 +67,12 @@ pub async fn run(context: String, provider_override: Option<String>) -> Result<(
 
     let review = review?;
     ui::blank_line();
-    ui::primary_card("AI review", &review);
+    ui::markdown_card("AI review", &review);
 
-    if let Err(e) = history_store::append_entry(&history_store::HistoryEntry {
+    let history_saved = match history_store::append_entry(&history_store::HistoryEntry {
         timestamp: history_store::now_iso8601(),
         kind: "review".to_owned(),
-        message: review,
+        message: review.clone(),
         repo_path: git::repo_root()
             .map(|p| p.display().to_string())
             .unwrap_or_default(),
@@ -80,8 +80,23 @@ pub async fn run(context: String, provider_override: Option<String>) -> Result<(
         provider: config.ai_provider.clone(),
         model: config.model.clone(),
     }) {
-        ui::warn(format!("failed to save history: {e}"));
+        Ok(()) => true,
+        Err(e) => {
+            ui::warn(format!("failed to save history: {e}"));
+            false
+        }
+    };
+
+    ui::blank_line();
+    ui::section("Review complete");
+    let mut completion_items = vec![format!("analyzed: {}", ui::file_count_label(staged.len()))];
+    if history_saved {
+        completion_items.push("history: saved".to_owned());
     }
+    ui::metadata_row(&completion_items);
+    ui::secondary(
+        "Next: update the staged changes and run `aic review` again, or run `aic` when you're ready to draft a commit.",
+    );
 
     Ok(())
 }

@@ -163,7 +163,11 @@ fn show_entry_detail(entry: &HistoryEntry) -> Result<bool> {
     } else {
         "Stored output"
     };
-    ui::primary_card(title, &entry.message);
+    if uses_markdown_rendering(&entry.kind) {
+        ui::markdown_card(title, &entry.message);
+    } else {
+        ui::primary_card(title, &entry.message);
+    }
 
     ui::blank_line();
     let action = match ui::select(

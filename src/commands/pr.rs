@@ -114,7 +114,7 @@ fn preview(title: &str, body: &str) {
     ui::blank_line();
     ui::primary_card("PR title", title);
     ui::blank_line();
-    ui::primary_card(
+    ui::markdown_card(
         "PR description",
         if body.is_empty() { "(empty)" } else { body },
     );

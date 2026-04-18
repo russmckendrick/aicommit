@@ -104,5 +104,9 @@ pub(crate) fn render_verbose_entry(entry: &HistoryEntry) {
     } else {
         "Stored output"
     };
-    ui::primary_card(title, &entry.message);
+    if uses_markdown_rendering(&entry.kind) {
+        ui::markdown_card(title, &entry.message);
+    } else {
+        ui::primary_card(title, &entry.message);
+    }
 }
