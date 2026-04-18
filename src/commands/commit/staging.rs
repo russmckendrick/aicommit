@@ -1,7 +1,11 @@
+use std::io::{IsTerminal, stdin, stdout};
+
 use anyhow::{Result, bail};
 
 use crate::{errors::AicError, git, ui};
 
+const CONTINUE_STAGE_OPTION: &str = "Continue";
+const UNSTAGE_FILES_OPTION: &str = "Unstage files";
 const STAGE_ALL_FILES_OPTION: &str = "Stage all";
 const CHOOSE_FILES_OPTION: &str = "Choose files";
 const ABORT_STAGE_OPTION: &str = "Abort";
@@ -20,31 +24,78 @@ enum StageSelectionAction {
     Abort,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum StagingPlan {
-    AddFiles(Vec<String>),
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExistingStageAction {
+    Continue,
+    UnstageFiles,
     Abort,
 }
 
-pub async fn ensure_staged_files(skip_confirmation: bool) -> Result<()> {
-    let staged = git::staged_files()?;
-    let changed = git::changed_files()?;
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum StagingPlan {
+    AddFiles(Vec<String>),
+    RemoveFiles(Vec<String>),
+    NoOp,
+    Continue,
+    Abort,
+}
 
-    match resolve_staging_state(&staged, &changed, skip_confirmation)? {
-        StagingState::UseExisting => Ok(()),
-        StagingState::AutoStageAll => {
-            let files = build_staging_plan(StageSelectionAction::StageAll, changed, vec![])?;
-            apply_staging_plan(files)
-        }
-        StagingState::PromptForSelection => {
-            let action = prompt_for_stage_selection()?;
-            let selected_files = if action == StageSelectionAction::ChooseFiles {
-                ui::multiselect("Select files to stage", changed.clone())?
-            } else {
-                Vec::new()
-            };
+pub async fn ensure_staged_files(
+    skip_confirmation: bool,
+    session_title: &str,
+    allow_unstage_preflight: bool,
+) -> Result<()> {
+    loop {
+        let staged = git::staged_files()?;
+        let changed = git::changed_files()?;
 
-            apply_staging_plan(build_staging_plan(action, changed, selected_files)?)
+        match resolve_staging_state(&staged, &changed, skip_confirmation)? {
+            StagingState::UseExisting => 'existing_preflight: loop {
+                if !should_prompt_for_existing_stage_selection(
+                    skip_confirmation,
+                    &staged,
+                    allow_unstage_preflight,
+                ) {
+                    return Ok(());
+                }
+
+                let action = prompt_for_existing_stage_selection(session_title, &staged)?;
+                let selected_files = if action == ExistingStageAction::UnstageFiles {
+                    ui::multiselect("Select files to unstage", staged.clone())?
+                } else {
+                    Vec::new()
+                };
+
+                match build_existing_staging_plan(action, selected_files) {
+                    StagingPlan::RemoveFiles(files) => {
+                        git::unstage_files(&files)?;
+                        break 'existing_preflight;
+                    }
+                    StagingPlan::NoOp => {
+                        ui::session_step("No files were selected; keeping the current staged set");
+                        continue 'existing_preflight;
+                    }
+                    StagingPlan::Continue => return Ok(()),
+                    StagingPlan::Abort => bail!("commit aborted"),
+                    StagingPlan::AddFiles(_) => bail!("invalid existing staging plan"),
+                }
+            },
+            StagingState::AutoStageAll => {
+                let files = build_staging_plan(StageSelectionAction::StageAll, changed, vec![])?;
+                apply_staging_plan(files)?;
+                return Ok(());
+            }
+            StagingState::PromptForSelection => {
+                let action = prompt_for_stage_selection(session_title, &changed)?;
+                let selected_files = if action == StageSelectionAction::ChooseFiles {
+                    ui::multiselect("Select files to stage", changed.clone())?
+                } else {
+                    Vec::new()
+                };
+
+                apply_staging_plan(build_staging_plan(action, changed, selected_files)?)?;
+                return Ok(());
+            }
         }
     }
 }
@@ -55,6 +106,12 @@ fn apply_staging_plan(plan: StagingPlan) -> Result<()> {
             git::add_files(&files)?;
             Ok(())
         }
+        StagingPlan::RemoveFiles(files) => {
+            git::unstage_files(&files)?;
+            Ok(())
+        }
+        StagingPlan::NoOp => Ok(()),
+        StagingPlan::Continue => Ok(()),
         StagingPlan::Abort => bail!("commit aborted"),
     }
 }
@@ -77,10 +134,41 @@ fn resolve_staging_state(
     }
 }
 
-fn prompt_for_stage_selection() -> Result<StageSelectionAction> {
-    ui::section("Commit session");
+fn should_prompt_for_existing_stage_selection(
+    skip_confirmation: bool,
+    staged_files: &[String],
+    allow_unstage_preflight: bool,
+) -> bool {
+    should_prompt_for_existing_stage_selection_with_terminals(
+        skip_confirmation,
+        !staged_files.is_empty(),
+        allow_unstage_preflight,
+        stdin().is_terminal(),
+        stdout().is_terminal(),
+    )
+}
+
+fn should_prompt_for_existing_stage_selection_with_terminals(
+    skip_confirmation: bool,
+    has_staged_files: bool,
+    allow_unstage_preflight: bool,
+    stdin_is_terminal: bool,
+    stdout_is_terminal: bool,
+) -> bool {
+    !skip_confirmation
+        && has_staged_files
+        && allow_unstage_preflight
+        && stdin_is_terminal
+        && stdout_is_terminal
+}
+
+fn prompt_for_stage_selection(
+    session_title: &str,
+    changed_files: &[String],
+) -> Result<StageSelectionAction> {
+    ui::section(session_title);
     ui::session_step("No files are staged yet");
-    ui::file_list("Changed files", &git::changed_files()?);
+    ui::file_list("Changed files", changed_files);
 
     let selection = ui::select(
         "No files are staged. What would you like to do?",
@@ -95,10 +183,39 @@ fn prompt_for_stage_selection() -> Result<StageSelectionAction> {
     }
 }
 
+fn prompt_for_existing_stage_selection(
+    session_title: &str,
+    staged_files: &[String],
+) -> Result<ExistingStageAction> {
+    ui::section(session_title);
+    ui::session_step("These files are already staged");
+    ui::file_list("Staged changes", staged_files);
+
+    let selection = ui::select(
+        "What would you like to do with these staged files?",
+        existing_stage_selection_options(),
+    )?;
+
+    match selection.as_str() {
+        CONTINUE_STAGE_OPTION => Ok(ExistingStageAction::Continue),
+        UNSTAGE_FILES_OPTION => Ok(ExistingStageAction::UnstageFiles),
+        ABORT_STAGE_OPTION => Ok(ExistingStageAction::Abort),
+        _ => bail!("invalid existing staging selection"),
+    }
+}
+
 pub(crate) fn stage_selection_options() -> Vec<String> {
     vec![
         STAGE_ALL_FILES_OPTION.to_owned(),
         CHOOSE_FILES_OPTION.to_owned(),
+        ABORT_STAGE_OPTION.to_owned(),
+    ]
+}
+
+pub(crate) fn existing_stage_selection_options() -> Vec<String> {
+    vec![
+        CONTINUE_STAGE_OPTION.to_owned(),
+        UNSTAGE_FILES_OPTION.to_owned(),
         ABORT_STAGE_OPTION.to_owned(),
     ]
 }
@@ -117,6 +234,23 @@ fn build_staging_plan(
             Ok(StagingPlan::AddFiles(selected_files))
         }
         StageSelectionAction::Abort => Ok(StagingPlan::Abort),
+    }
+}
+
+fn build_existing_staging_plan(
+    action: ExistingStageAction,
+    selected_files: Vec<String>,
+) -> StagingPlan {
+    match action {
+        ExistingStageAction::Continue => StagingPlan::Continue,
+        ExistingStageAction::UnstageFiles => {
+            if selected_files.is_empty() {
+                StagingPlan::NoOp
+            } else {
+                StagingPlan::RemoveFiles(selected_files)
+            }
+        }
+        ExistingStageAction::Abort => StagingPlan::Abort,
     }
 }
 
@@ -221,5 +355,64 @@ mod tests {
                 "Abort".to_owned()
             ]
         );
+    }
+
+    #[test]
+    fn existing_stage_selection_options_include_unstage_action() {
+        assert_eq!(
+            existing_stage_selection_options(),
+            vec![
+                "Continue".to_owned(),
+                "Unstage files".to_owned(),
+                "Abort".to_owned()
+            ]
+        );
+    }
+
+    #[test]
+    fn existing_staging_plan_unstages_selected_files() {
+        let selected = vec!["src/main.rs".to_owned()];
+        assert_eq!(
+            build_existing_staging_plan(ExistingStageAction::UnstageFiles, selected.clone()),
+            StagingPlan::RemoveFiles(selected)
+        );
+    }
+
+    #[test]
+    fn existing_staging_plan_treats_empty_unstage_selection_as_no_op() {
+        assert_eq!(
+            build_existing_staging_plan(ExistingStageAction::UnstageFiles, vec![]),
+            StagingPlan::NoOp
+        );
+    }
+
+    #[test]
+    fn existing_staging_plan_continues_when_requested() {
+        assert_eq!(
+            build_existing_staging_plan(ExistingStageAction::Continue, vec![]),
+            StagingPlan::Continue
+        );
+    }
+
+    #[test]
+    fn existing_staging_prompt_is_skipped_for_yes_mode() {
+        assert!(!should_prompt_for_existing_stage_selection_with_terminals(
+            true, true, true, true, true
+        ));
+        assert!(should_prompt_for_existing_stage_selection_with_terminals(
+            false, true, true, true, true
+        ));
+        assert!(!should_prompt_for_existing_stage_selection_with_terminals(
+            false, false, true, true, true
+        ));
+        assert!(!should_prompt_for_existing_stage_selection_with_terminals(
+            false, true, true, false, true
+        ));
+        assert!(!should_prompt_for_existing_stage_selection_with_terminals(
+            false, true, true, true, false
+        ));
+        assert!(!should_prompt_for_existing_stage_selection_with_terminals(
+            false, true, false, true, true
+        ));
     }
 }

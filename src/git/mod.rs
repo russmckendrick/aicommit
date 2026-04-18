@@ -25,5 +25,5 @@ pub use hooks::{hooks_path, remove_hook_if_owned, write_hook};
 pub use remote::{GitProvider, GitRemoteMetadata, commit, push, remote_metadata, remotes};
 pub use repo::{
     add_files, assert_clean_worktree, assert_git_repo, changed_files, clear_index,
-    partially_staged_files, repo_root, staged_diff, staged_files,
+    partially_staged_files, repo_root, staged_diff, staged_files, unstage_files,
 };

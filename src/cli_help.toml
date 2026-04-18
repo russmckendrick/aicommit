@@ -98,6 +98,7 @@ long_about = """
 Review staged changes for bugs, security, and style issues.
 
 Only the staged diff (git diff --staged) is reviewed. Unstaged changes are ignored.
+In an interactive terminal, if nothing is staged, aic offers the staging menu first.
 
 Examples:
   aic review

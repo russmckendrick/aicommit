@@ -36,7 +36,7 @@ pub async fn run(
         let diff = git::last_commit_diff()?;
         (files, diff)
     } else {
-        ensure_staged_files(skip_confirmation).await?;
+        ensure_staged_files(skip_confirmation, "Commit session", true).await?;
         let staged = git::staged_files()?;
         if staged.is_empty() {
             bail!(AicError::NoChanges);

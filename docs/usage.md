@@ -7,6 +7,7 @@ git add <files>
 aic
 ```
 
+In an interactive terminal, if files are already staged, `aic` first shows a lightweight preflight where you can continue, unstage selected files, or abort.
 If no files are staged, `aic` shows a menu that lets you stage all changed files, choose files interactively, or cancel.
 
 When at least two files are staged in the normal interactive flow, `aic` can also split the change set into multiple file-group commits. It first suggests commit groups with AI, then lets you accept the groups, rebuild them manually, or fall back to one commit.
@@ -110,6 +111,8 @@ aic review --context "focus on security"
 ```
 
 Findings are grouped by severity (Critical, Warning, Suggestion) and cover bugs, security, performance, correctness, and readability. Large diffs are automatically chunked and synthesized into a single review.
+
+If files are already staged, `aic review` analyzes that staged set directly. In an interactive terminal, if nothing is staged, it reuses the staging menu so you can stage all changes or pick files first, but it keeps the review flow read-only once files are staged.
 
 ## Pull Request Drafts
 

@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use anyhow::{Context, Result, bail};
 use ignore::gitignore::GitignoreBuilder;
@@ -45,6 +48,22 @@ pub fn add_files(files: &[String]) -> Result<()> {
 
     let root = repo_root()?;
     let mut args = vec!["add".to_owned()];
+    args.extend(files.iter().cloned());
+    run_git_dynamic_in(&root, args)?;
+    Ok(())
+}
+
+pub fn unstage_files(files: &[String]) -> Result<()> {
+    if files.is_empty() {
+        return Ok(());
+    }
+
+    let root = repo_root()?;
+    let mut args = if head_exists(&root)? {
+        vec!["reset".to_owned(), "HEAD".to_owned(), "--".to_owned()]
+    } else {
+        vec!["rm".to_owned(), "--cached".to_owned(), "--".to_owned()]
+    };
     args.extend(files.iter().cloned());
     run_git_dynamic_in(&root, args)?;
     Ok(())
@@ -148,6 +167,14 @@ fn is_excluded_from_diff(file: &str) -> bool {
         || lower.ends_with(".gif")
 }
 
+fn head_exists(root: &Path) -> Result<bool> {
+    let output = Command::new("git")
+        .args(["rev-parse", "--verify", "HEAD"])
+        .current_dir(root)
+        .output()?;
+    Ok(output.status.success())
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -194,6 +221,56 @@ mod tests {
         assert!(staged_after.is_empty());
     }
 
+    #[test]
+    fn unstage_files_removes_only_selected_files_from_index() {
+        let _cwd = hold_cwd_for_test();
+        let repo = init_repo();
+        std::fs::write(repo.path().join("extra.txt"), "hello\n").unwrap();
+        std::fs::write(repo.path().join("keep.txt"), "keep\n").unwrap();
+        run_git_test(repo.path(), ["add", "extra.txt", "keep.txt"]);
+
+        let _dir = CurrentDirGuard::enter(repo.path());
+        unstage_files(&["extra.txt".to_owned()]).unwrap();
+        let staged_after = staged_files().unwrap();
+
+        assert_eq!(staged_after, vec!["keep.txt".to_owned()]);
+    }
+
+    #[test]
+    fn unstage_files_preserves_working_tree_contents() {
+        let _cwd = hold_cwd_for_test();
+        let repo = init_repo();
+        std::fs::write(repo.path().join("extra.txt"), "hello\n").unwrap();
+        run_git_test(repo.path(), ["add", "extra.txt"]);
+
+        let _dir = CurrentDirGuard::enter(repo.path());
+        unstage_files(&["extra.txt".to_owned()]).unwrap();
+
+        assert_eq!(
+            std::fs::read_to_string(repo.path().join("extra.txt")).unwrap(),
+            "hello\n"
+        );
+        assert!(changed_files().unwrap().contains(&"extra.txt".to_owned()));
+    }
+
+    #[test]
+    fn unstage_files_works_before_first_commit() {
+        let _cwd = hold_cwd_for_test();
+        let repo = init_unborn_repo();
+        std::fs::write(repo.path().join("extra.txt"), "hello\n").unwrap();
+        run_git_test(repo.path(), ["add", "extra.txt"]);
+
+        let _dir = CurrentDirGuard::enter(repo.path());
+        unstage_files(&["extra.txt".to_owned()]).unwrap();
+
+        assert!(staged_files().unwrap().is_empty());
+        assert_eq!(
+            std::fs::read_to_string(repo.path().join("extra.txt")).unwrap(),
+            "hello\n"
+        );
+        assert!(changed_files().unwrap().contains(&"extra.txt".to_owned()));
+    }
+
     fn init_repo() -> TempDir {
         let temp = TempDir::new().unwrap();
         run_git_test(temp.path(), ["init", "-b", "main"]);
@@ -202,6 +279,14 @@ mod tests {
         std::fs::write(temp.path().join("src.txt"), "base\n").unwrap();
         run_git_test(temp.path(), ["add", "src.txt"]);
         run_git_test(temp.path(), ["commit", "-m", "feat: initial"]);
+        temp
+    }
+
+    fn init_unborn_repo() -> TempDir {
+        let temp = TempDir::new().unwrap();
+        run_git_test(temp.path(), ["init", "-b", "main"]);
+        run_git_test(temp.path(), ["config", "user.email", "test@example.com"]);
+        run_git_test(temp.path(), ["config", "user.name", "Test User"]);
         temp
     }
 

@@ -27,6 +27,7 @@ git add -p
 aic
 ```
 
+In an interactive terminal, if files are already staged, `aic` lets you continue, unstage selected files, or abort before generation starts.
 If nothing is staged, `aic` lets you stage all changed files, choose files interactively, or cancel.
 With `--yes`, it stages all changed files automatically.
 In the normal interactive flow, `aic` can also split one staged change set into multiple file-group commits when the work clearly spans separate concerns.
@@ -49,6 +50,8 @@ Get AI-powered feedback on your staged diff before committing - findings are gro
 aic review
 aic review -c "focus on security"
 ```
+
+`aic review` inspects the current staged set as-is. In an interactive terminal, if nothing is staged, it offers the same staging menu as `aic`, but it does not unstage files during review.
 
 ### Rewrite commit messages
 

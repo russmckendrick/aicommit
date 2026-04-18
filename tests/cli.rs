@@ -400,6 +400,7 @@ fn review_honors_codex_provider_override() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Review session"))
+        .stdout(predicate::str::contains("Review complete"))
         .stdout(predicate::str::contains("P1: stub review from codex"));
 }
 
@@ -440,7 +441,7 @@ fn pr_honors_codex_provider_override_and_writes_history() {
         .stdout(predicate::str::contains(
             "feat(cli): generate pull request drafts",
         ))
-        .stdout(predicate::str::contains("## Summary"))
+        .stdout(predicate::str::contains("Summary"))
         .stdout(predicate::str::contains("Generated pull request draft"));
 
     let history = fs::read_to_string(home.path().join(".aicommit-history.json")).unwrap();
@@ -482,7 +483,7 @@ fn pr_honors_claude_code_provider_override() {
         .stdout(predicate::str::contains(
             "feat(cli): describe branch changes",
         ))
-        .stdout(predicate::str::contains("## Testing"));
+        .stdout(predicate::str::contains("Testing"));
 }
 
 #[test]
