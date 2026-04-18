@@ -25,6 +25,7 @@ jobs:
       - name: Validate WinGet token
         shell: pwsh
         env:
+          EXPECTED_FORK_USER: ${{ github.repository_owner }}
           WINGET_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
         run: |
           if (-not $env:WINGET_TOKEN) {
@@ -38,6 +39,7 @@ jobs:
 
           $response = Invoke-WebRequest -Headers $headers -Uri "https://api.github.com/user"
           $scopes = $response.Headers["X-OAuth-Scopes"]
+          $viewer = $response.Content | ConvertFrom-Json
 
           if (-not $scopes) {
             throw "WINGET_CREATE_GITHUB_TOKEN must be a classic PAT with public_repo scope. Fine-grained PATs are not supported by vedantmgoyal9/winget-releaser."
@@ -47,7 +49,32 @@ jobs:
             throw "WINGET_CREATE_GITHUB_TOKEN must include public_repo scope. Current scopes: $scopes"
           }
 
+          if (-not $viewer.login) {
+            throw "Unable to determine the GitHub user behind WINGET_CREATE_GITHUB_TOKEN."
+          }
+
+          $forkRepository = "$env:EXPECTED_FORK_USER/winget-pkgs"
+          $fork = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$forkRepository"
+
+          if (-not $fork.fork) {
+            throw "Expected '$forkRepository' to be a fork of microsoft/winget-pkgs, but GitHub does not mark it as a fork."
+          }
+
+          if (-not $fork.parent -or $fork.parent.full_name -ne "microsoft/winget-pkgs") {
+            throw "Expected '$forkRepository' to fork microsoft/winget-pkgs, but GitHub reports parent '$($fork.parent.full_name)'."
+          }
+
+          if ($fork.PSObject.Properties.Name -contains "permissions") {
+            $hasWriteAccess = $fork.permissions.admin -or $fork.permissions.maintain -or $fork.permissions.push
+
+            if (-not $hasWriteAccess) {
+              throw "Token user '$($viewer.login)' does not have write access to '$forkRepository'."
+            }
+          }
+
           Write-Host "Validated classic PAT scopes for WinGet submission: $scopes"
+          Write-Host "Token user: $($viewer.login)"
+          Write-Host "WinGet fork: $forkRepository"
 
       - name: Resolve release tag
         id: version
