@@ -13,16 +13,24 @@ function Add-StepSummary {
 }
 
 function New-GitHubHeaders {
-    $headers = @{
-        "User-Agent" = "aicommit-update-winget-workflow"
-        "X-GitHub-Api-Version" = "2022-11-28"
-    }
+	param(
+		[string]$Token
+	)
 
-    if ($env:GITHUB_TOKEN) {
-        $headers.Authorization = "Bearer $env:GITHUB_TOKEN"
-    }
+	$headers = @{
+		"User-Agent" = "aicommit-update-winget-workflow"
+		"X-GitHub-Api-Version" = "2022-11-28"
+	}
 
-    return $headers
+	if ([string]::IsNullOrWhiteSpace($Token)) {
+		$Token = $env:GITHUB_TOKEN
+	}
+
+	if (-not [string]::IsNullOrWhiteSpace($Token)) {
+		$headers.Authorization = "Bearer $Token"
+	}
+
+	return $headers
 }
 
 function Get-RequiredEnv {
@@ -55,6 +63,34 @@ function Get-EnvInt {
     }
 
     return [int]$raw
+}
+
+function Get-HttpStatusCode {
+	param(
+		[Parameter(Mandatory = $true)]
+		$ErrorRecord
+	)
+
+	$response = $ErrorRecord.Exception.Response
+
+	if ($response) {
+		return $response.StatusCode.value__
+	}
+
+	return $null
+}
+
+function Get-HttpErrorMessage {
+	param(
+		[Parameter(Mandatory = $true)]
+		$ErrorRecord
+	)
+
+	if ($ErrorRecord.ErrorDetails -and -not [string]::IsNullOrWhiteSpace($ErrorRecord.ErrorDetails.Message)) {
+		return $ErrorRecord.ErrorDetails.Message
+	}
+
+	return $ErrorRecord.Exception.Message
 }
 
 function Resolve-ReleaseTag {
@@ -207,6 +243,87 @@ function Test-WingetPackageExists {
     }
 }
 
+function Sync-WingetFork {
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$Token
+	)
+
+	$headers = New-GitHubHeaders -Token $Token
+	$viewer = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/user"
+
+	if ([string]::IsNullOrWhiteSpace($viewer.login)) {
+		throw "Unable to determine the GitHub account tied to WINGET_CREATE_GITHUB_TOKEN."
+	}
+
+	$forkRepository = "$($viewer.login)/winget-pkgs"
+
+	try {
+		$fork = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$forkRepository"
+	} catch {
+		$statusCode = Get-HttpStatusCode -ErrorRecord $_
+
+		if ($statusCode -eq 404) {
+			Write-Host "No accessible fork found at '$forkRepository'; letting wingetcreate manage fork setup."
+			return
+		}
+
+		$details = Get-HttpErrorMessage -ErrorRecord $_
+		throw "Unable to inspect the WinGet fork '$forkRepository'. Details: $details"
+	}
+
+	if (-not $fork.fork) {
+		Write-Host "Repository '$forkRepository' is not marked as a fork; skipping fork sync."
+		return
+	}
+
+	if (-not $fork.parent -or $fork.parent.full_name -ne "microsoft/winget-pkgs") {
+		Write-Host "Repository '$forkRepository' is not forked from 'microsoft/winget-pkgs'; skipping fork sync."
+		return
+	}
+
+	$defaultBranch = $fork.default_branch
+
+	if ([string]::IsNullOrWhiteSpace($defaultBranch)) {
+		$defaultBranch = "master"
+	}
+
+	$requestBody = @{
+		branch = $defaultBranch
+	} | ConvertTo-Json -Compress
+
+	try {
+		$syncResult = Invoke-RestMethod `
+			-Method Post `
+			-Headers $headers `
+			-ContentType "application/json" `
+			-Uri "https://api.github.com/repos/$forkRepository/merge-upstream" `
+			-Body $requestBody
+
+		$message = $syncResult.message
+
+		if ([string]::IsNullOrWhiteSpace($message)) {
+			$message = "Fork sync completed."
+		}
+
+		Write-Host "Synced WinGet fork '$forkRepository' branch '$defaultBranch': $message"
+	} catch {
+		$statusCode = Get-HttpStatusCode -ErrorRecord $_
+		$details = Get-HttpErrorMessage -ErrorRecord $_
+
+		if ($statusCode -eq 422 -and $details -match "(?i)no new commits|already up.?to.?date|fast-forwarded") {
+			Write-Host "WinGet fork '$forkRepository' branch '$defaultBranch' is already in sync."
+			return
+		}
+
+		if ($statusCode -eq 409) {
+			throw "Unable to sync the WinGet fork '$forkRepository' branch '$defaultBranch' because GitHub reported a merge conflict. Sync or recreate the fork, then rerun the workflow. Details: $details"
+		}
+
+		throw "Unable to sync the WinGet fork '$forkRepository' branch '$defaultBranch' before submission. Details: $details"
+	}
+}
+
 $repository = Get-RequiredEnv -Name "GITHUB_REPOSITORY"
 $installerName = Get-RequiredEnv -Name "INSTALLER_NAME"
 $packageIdentifier = Get-RequiredEnv -Name "PACKAGE_IDENTIFIER"
@@ -254,16 +371,17 @@ if (-not (Test-WingetPackageExists -PackageManifestPath $packageManifestPath)) {
 $wingetCreateToken = Get-RequiredEnv -Name "WINGET_CREATE_GITHUB_TOKEN"
 $wingetCreatePath = Join-Path $env:RUNNER_TEMP "wingetcreate.exe"
 
+Sync-WingetFork -Token $wingetCreateToken
+
 Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile $wingetCreatePath
 
 & $wingetCreatePath update $packageIdentifier `
     -u $installerUrl `
     -v $version `
-    -t $wingetCreateToken `
     --submit
 
 if ($LASTEXITCODE -ne 0) {
-    throw "wingetcreate update failed for '$packageIdentifier' at tag '$tag'."
+	throw "wingetcreate update failed for '$packageIdentifier' at tag '$tag' after syncing the WinGet fork."
 }
 
 $successMessage = @(
