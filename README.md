@@ -8,8 +8,8 @@ A fast, opinionated CLI that generates Git commit messages and reviews staged di
 # Install via Homebrew (macOS)
 brew install russmckendrick/tap/aicommit
 
-# Install via WinGet (Windows) - Coming Soon
-# winget install --id RussMcKendrick.Aicommit -e
+# Install via WinGet (Windows)
+winget install --id RussMcKendrick.Aicommit -e
 
 # Or download a binary from GitHub Releases
 # https://github.com/russmckendrick/aicommit/releases

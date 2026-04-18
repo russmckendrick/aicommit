@@ -244,3 +244,29 @@ jobs:
 
           git commit -m "Update aicommit to ${VERSION}"
           git push
+
+  update-winget:
+    name: Update WinGet package
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      INSTALLER_NAME: aic-windows-amd64.exe
+      PACKAGE_IDENTIFIER: RussMcKendrick.Aicommit
+      PACKAGE_MANIFEST_PATH: manifests/r/RussMcKendrick/Aicommit
+      RELEASE_TAG: ${{ github.ref_name }}
+      WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install .NET runtime
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Submit WinGet package update
+        shell: pwsh
+        run: .\.github\scripts\update-winget.ps1
