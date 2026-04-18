@@ -21,13 +21,13 @@ The Homebrew formula installs the public CLI as `aic`.
 The recommended way to install on Windows is via WinGet:
 
 ```powershell
-winget install --id RussMcKendrick.Aicommit -e
+winget install --id RussMckendrick.Aicommit -e
 ```
 
 To upgrade later:
 
 ```powershell
-winget upgrade --id RussMcKendrick.Aicommit -e
+winget upgrade --id RussMckendrick.Aicommit -e
 ```
 
 The WinGet package installs the public CLI as `aic`.

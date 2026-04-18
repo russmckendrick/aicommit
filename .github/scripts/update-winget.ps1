@@ -95,6 +95,7 @@ function Wait-ForReleaseAsset {
 
     $headers = New-GitHubHeaders
     $releaseUri = "https://api.github.com/repos/$Repository/releases/tags/$Tag"
+    $lastError = $null
 
     for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
         try {
@@ -106,13 +107,15 @@ function Wait-ForReleaseAsset {
                 return $asset
             }
         } catch {
-            if ($attempt -eq $Attempts) {
-                throw
-            }
+		$lastError = $_.Exception.Message
         }
 
         if ($attempt -eq $Attempts) {
-            throw "Windows release asset '$InstallerName' for tag '$Tag' was not ready after $Attempts attempts with a ${DelaySeconds}-second delay."
+		if ($lastError) {
+			throw "Windows release asset '$InstallerName' for tag '$Tag' could not be confirmed after $Attempts attempts with a ${DelaySeconds}-second delay. Last error: $lastError"
+		}
+
+		throw "Windows release asset '$InstallerName' for tag '$Tag' was not ready after $Attempts attempts with a ${DelaySeconds}-second delay."
         }
 
         Write-Host "Release asset '$InstallerName' for tag '$Tag' is not ready yet; retrying in $DelaySeconds seconds ($attempt/$Attempts)."

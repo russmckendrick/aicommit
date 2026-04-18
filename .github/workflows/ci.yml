@@ -253,8 +253,8 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       INSTALLER_NAME: aic-windows-amd64.exe
-      PACKAGE_IDENTIFIER: RussMcKendrick.Aicommit
-      PACKAGE_MANIFEST_PATH: manifests/r/RussMcKendrick/Aicommit
+      PACKAGE_IDENTIFIER: RussMckendrick.Aicommit
+      PACKAGE_MANIFEST_PATH: manifests/r/RussMckendrick/Aicommit
       RELEASE_TAG: ${{ github.ref_name }}
       WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
 
