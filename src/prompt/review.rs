@@ -49,5 +49,6 @@ mod tests {
         let prompt = review_system_prompt(&config, "").unwrap();
         assert!(!prompt.contains("<context>"));
         assert!(prompt.contains("code reviewer"));
+        assert!(prompt.contains("Review the whole diff before answering"));
     }
 }
