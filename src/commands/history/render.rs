@@ -67,14 +67,12 @@ pub(crate) fn render_entry_list(title: &str, entries: &[HistoryEntry], verbose: 
 
 pub(crate) fn render_compact_entry(entry: &HistoryEntry) {
     ui::headline(compact_summary(entry));
-    ui::secondary(format!(
-        "{} | {} | {}/{} | {}",
-        kind_badge(&entry.kind),
+    ui::metadata_row(&[
+        kind_badge(&entry.kind).to_owned(),
         format_timestamp(&entry.timestamp),
-        entry.provider,
-        entry.model,
-        repo_label(&entry.repo_path)
-    ));
+        format!("{}/{}", entry.provider, entry.model),
+        repo_label(&entry.repo_path),
+    ]);
 
     if let Some(preview) = file_preview(&entry.files) {
         ui::secondary(format!(
@@ -86,26 +84,25 @@ pub(crate) fn render_compact_entry(entry: &HistoryEntry) {
 
 pub(crate) fn render_verbose_entry(entry: &HistoryEntry) {
     ui::headline(compact_summary(entry));
-    ui::secondary(format!(
-        "{} | {} | {}/{}",
-        kind_badge(&entry.kind),
+    ui::metadata_row(&[
+        kind_badge(&entry.kind).to_owned(),
         format_timestamp(&entry.timestamp),
-        entry.provider,
-        entry.model
-    ));
+        format!("{}/{}", entry.provider, entry.model),
+    ]);
     ui::secondary(format!("repo: {}", entry.repo_path));
 
     if !entry.files.is_empty() {
-        ui::secondary("files:");
-        for file in &entry.files {
-            ui::secondary(format!("  {file}"));
+        ui::file_metadata(&entry.files);
+        for line in ui::summarize_files(&entry.files, 4, 3) {
+            ui::bullet(line);
         }
     }
 
     ui::blank_line();
-    if uses_markdown_rendering(&entry.kind) {
-        ui::markdown(&entry.message);
+    let title = if uses_markdown_rendering(&entry.kind) {
+        "Stored markdown"
     } else {
-        ui::commit_message(&entry.message);
-    }
+        "Stored output"
+    };
+    ui::primary_card(title, &entry.message);
 }

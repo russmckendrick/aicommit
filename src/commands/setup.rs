@@ -9,6 +9,7 @@ use crate::{
 };
 
 pub async fn run() -> Result<()> {
+    ui::section("Setup");
     let providers = enabled_providers()
         .iter()
         .map(|provider| provider.to_string())
@@ -43,9 +44,11 @@ pub async fn run() -> Result<()> {
     let paths = ConfigPaths::discover()?;
     set_global_config(&key_values, &paths.global)?;
     let config = Config::load_from(&paths)?;
-    ui::success(format!(
-        "configured {} with model {}",
-        config.ai_provider, config.model
-    ));
+    ui::blank_line();
+    ui::section("Setup complete");
+    ui::metadata_row(&[
+        format!("provider: {}", config.ai_provider),
+        format!("model: {}", config.model),
+    ]);
     Ok(())
 }

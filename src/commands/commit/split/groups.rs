@@ -76,11 +76,12 @@ pub(super) fn render_split_groups(groups: &[SplitPlanGroup], title: &str) {
     ui::blank_line();
     ui::section(title);
     for (index, group) in groups.iter().enumerate() {
+        ui::blank_line();
         ui::headline(format!("Split commit {}: {}", index + 1, group.title));
         ui::secondary(&group.rationale);
-        for file in &group.files {
-            ui::bullet(file);
+        ui::file_metadata(&group.files);
+        for line in ui::summarize_files(&group.files, 4, 3) {
+            ui::bullet(line);
         }
-        ui::blank_line();
     }
 }

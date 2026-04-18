@@ -35,7 +35,7 @@ pub async fn run(provider_override: Option<String>, refresh: bool) -> Result<()>
     }
 
     if is_local_cli_provider(&provider) {
-        ui::info(format!("Available models for {provider}:"));
+        ui::section(format!("Available models for {provider}"));
         println!("* {}", config.model);
         let binary = if provider == "claude-code" {
             "`claude`"
@@ -73,9 +73,9 @@ pub async fn run(provider_override: Option<String>, refresh: bool) -> Result<()>
         }
     };
 
-    ui::info(format!("Available models for {provider}:"));
+    ui::section(format!("Available models for {provider}"));
     if models.is_empty() {
-        ui::info("  no models found");
+        ui::secondary("no models found");
     } else {
         for model in models {
             if model == config.model {

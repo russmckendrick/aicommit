@@ -14,8 +14,11 @@ const CREATE_ONE_COMMIT_OPTION: &str = "Create one commit";
 const SPLIT_INTO_MULTIPLE_COMMITS_OPTION: &str = "Split into multiple commits";
 const ABORT_OPTION: &str = "Abort";
 const CREATE_COMMITS_OPTION: &str = "Create commits";
-const REGENERATE_ALL_MESSAGES_OPTION: &str = "Regenerate all messages";
+const REGENERATE_ALL_MESSAGES_OPTION: &str = "Regenerate messages";
 const EDIT_A_MESSAGE_OPTION: &str = "Edit a message";
+const ACCEPT_OPTION: &str = "Accept";
+const REGENERATE_OPTION: &str = "Regenerate";
+const EDIT_OPTION: &str = "Edit";
 
 pub(crate) fn should_offer_split(
     staged_file_count: usize,
@@ -133,6 +136,10 @@ pub(crate) async fn generate_confirm_and_commit(
     staged_files: &[String],
 ) -> Result<()> {
     loop {
+        ui::session_step(format!(
+            "Sending to {}/{}",
+            config.ai_provider, config.model
+        ));
         let spinner = ui::spinner("Generating commit message");
         let commit_message = generator::generate_commit_message(
             config,
@@ -148,24 +155,23 @@ pub(crate) async fn generate_confirm_and_commit(
             super::super::apply_message_template(config, extra_args, &commit_message?);
 
         ui::blank_line();
-        ui::section("Generated commit message");
-        ui::commit_message(&commit_message);
+        ui::primary_card("Generated commit", &commit_message);
 
         if dry_run {
             return Ok(());
         }
 
         let action = if skip_confirmation {
-            "Yes".to_owned()
+            ACCEPT_OPTION.to_owned()
         } else {
             ui::select(
-                "Confirm the commit message?",
-                vec!["Yes".to_owned(), "No".to_owned(), "Edit".to_owned()],
+                "What would you like to do with this message?",
+                commit_confirmation_options(),
             )?
         };
 
         match action.as_str() {
-            "Yes" => {
+            ACCEPT_OPTION => {
                 return super::super::push::commit_and_maybe_push(
                     config,
                     &commit_message,
@@ -174,7 +180,7 @@ pub(crate) async fn generate_confirm_and_commit(
                     skip_confirmation,
                 );
             }
-            "Edit" => {
+            EDIT_OPTION => {
                 let edited = ui::text("Edit commit message", Some(&commit_message))?;
                 return super::super::push::commit_and_maybe_push(
                     config,
@@ -184,15 +190,24 @@ pub(crate) async fn generate_confirm_and_commit(
                     skip_confirmation,
                 );
             }
-            "No" if ui::confirm("Regenerate the message?", true)? => continue,
+            REGENERATE_OPTION => continue,
             _ => bail!("commit aborted"),
         }
     }
 }
 
+pub(crate) fn commit_confirmation_options() -> Vec<String> {
+    vec![
+        ACCEPT_OPTION.to_owned(),
+        REGENERATE_OPTION.to_owned(),
+        EDIT_OPTION.to_owned(),
+        ABORT_OPTION.to_owned(),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
-    use super::should_offer_split;
+    use super::{commit_confirmation_options, should_offer_split};
 
     #[test]
     fn split_prompt_is_only_offered_for_interactive_multi_file_commits() {
@@ -201,5 +216,18 @@ mod tests {
         assert!(!should_offer_split(2, true, false, false));
         assert!(!should_offer_split(2, false, true, false));
         assert!(!should_offer_split(2, false, false, true));
+    }
+
+    #[test]
+    fn commit_confirmation_options_use_transcript_actions() {
+        assert_eq!(
+            commit_confirmation_options(),
+            vec![
+                "Accept".to_owned(),
+                "Regenerate".to_owned(),
+                "Edit".to_owned(),
+                "Abort".to_owned()
+            ]
+        );
     }
 }

@@ -56,6 +56,6 @@ pub async fn run(
     git::reword_commits(commits.len(), &new_messages)?;
     spinner.finish_and_clear();
 
-    ui::success(format!("rewrote {} commit messages", commits.len()));
+    ui::success(format!("Rewrote {} commit messages", commits.len()));
     Ok(())
 }

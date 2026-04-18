@@ -8,7 +8,8 @@ pub fn set() -> Result<()> {
     git::assert_git_repo()?;
     let binary = current_binary()?;
     let path = git::write_hook(&binary)?;
-    ui::success(format!("hook set at {}", path.display()));
+    ui::section("Hook installed");
+    ui::secondary(format!("path: {}", path.display()));
     Ok(())
 }
 
@@ -16,7 +17,10 @@ pub fn unset() -> Result<()> {
     git::assert_git_repo()?;
     let binary = current_binary()?;
     match git::remove_hook_if_owned(&binary)? {
-        Some(path) => ui::success(format!("hook removed from {}", path.display())),
+        Some(path) => {
+            ui::section("Hook removed");
+            ui::secondary(format!("path: {}", path.display()));
+        }
         None => ui::info("no aic hook was set"),
     }
     Ok(())

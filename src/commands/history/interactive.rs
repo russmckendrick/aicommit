@@ -141,28 +141,29 @@ fn show_entry_detail(entry: &HistoryEntry) -> Result<bool> {
         kind_badge(&entry.kind),
         compact_summary(entry)
     ));
-    ui::secondary(format!(
-        "{} | {} | {} | {}",
+    ui::metadata_row(&[
         format_timestamp(&entry.timestamp),
-        entry.provider,
-        entry.model,
-        repo_label(&entry.repo_path)
-    ));
+        entry.provider.clone(),
+        entry.model.clone(),
+        repo_label(&entry.repo_path),
+    ]);
     ui::secondary(format!("repo: {}", entry.repo_path));
     ui::secondary(format!("files: {}", file_count_label(entry.files.len())));
 
     if !entry.files.is_empty() {
-        for file in &entry.files {
-            ui::secondary(format!("  {file}"));
+        ui::file_metadata(&entry.files);
+        for line in ui::summarize_files(&entry.files, 4, 3) {
+            ui::bullet(line);
         }
     }
 
     ui::blank_line();
-    if uses_markdown_rendering(&entry.kind) {
-        ui::markdown(&entry.message);
+    let title = if uses_markdown_rendering(&entry.kind) {
+        "Stored markdown"
     } else {
-        ui::commit_message(&entry.message);
-    }
+        "Stored output"
+    };
+    ui::primary_card(title, &entry.message);
 
     ui::blank_line();
     let action = match ui::select(

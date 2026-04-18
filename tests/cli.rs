@@ -192,7 +192,10 @@ fn commits_staged_file_with_test_provider() {
         .arg("--yes")
         .assert()
         .success()
-        .stdout(predicate::str::contains("committed changes"));
+        .stdout(predicate::str::contains("Commit session"))
+        .stdout(predicate::str::contains("Reading staged diff (1 file,"))
+        .stdout(predicate::str::contains("Generated commit"))
+        .stdout(predicate::str::contains("Commit created"));
 
     let output = Command::new("git")
         .args(["log", "--format=%s", "-1"])
@@ -217,8 +220,8 @@ fn yes_stages_all_changed_files_before_committing() {
         .arg("--yes")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Staged files (1)"))
-        .stdout(predicate::str::contains("committed changes"));
+        .stdout(predicate::str::contains("Staged changes (1 file)"))
+        .stdout(predicate::str::contains("Commit created"));
 
     assert_eq!(
         git_stdout(repo.path(), ["log", "--format=%s", "-1"]),
@@ -243,8 +246,8 @@ fn yes_does_not_push_when_push_is_disabled() {
         .arg("--yes")
         .assert()
         .success()
-        .stdout(predicate::str::contains("committed changes"))
-        .stdout(predicate::str::contains("pushed to").not());
+        .stdout(predicate::str::contains("Commit created"))
+        .stdout(predicate::str::contains("Pushed to").not());
 
     assert_eq!(
         git_stdout(remote.path(), ["rev-list", "--count", "--all"]),
@@ -269,8 +272,8 @@ fn yes_pushes_to_the_only_remote() {
         .arg("--yes")
         .assert()
         .success()
-        .stdout(predicate::str::contains("committed changes"))
-        .stdout(predicate::str::contains("pushed to origin"));
+        .stdout(predicate::str::contains("Commit created"))
+        .stdout(predicate::str::contains("Pushed to origin"));
 
     assert_eq!(
         git_stdout(remote.path(), ["rev-list", "--count", "--all"]),
@@ -368,7 +371,7 @@ fn provider_override_uses_claude_code_binary() {
         .arg("--yes")
         .assert()
         .success()
-        .stdout(predicate::str::contains("committed changes"));
+        .stdout(predicate::str::contains("Commit created"));
 
     let output = Command::new("git")
         .args(["log", "--format=%B", "-1"])
@@ -396,6 +399,7 @@ fn review_honors_codex_provider_override() {
         .arg("codex")
         .assert()
         .success()
+        .stdout(predicate::str::contains("Review session"))
         .stdout(predicate::str::contains("P1: stub review from codex"));
 }
 
@@ -432,11 +436,12 @@ fn pr_honors_codex_provider_override_and_writes_history() {
         .arg("codex")
         .assert()
         .success()
+        .stdout(predicate::str::contains("Pull request session"))
         .stdout(predicate::str::contains(
             "feat(cli): generate pull request drafts",
         ))
         .stdout(predicate::str::contains("## Summary"))
-        .stdout(predicate::str::contains("generated pull request draft"));
+        .stdout(predicate::str::contains("Generated pull request draft"));
 
     let history = fs::read_to_string(home.path().join(".aicommit-history.json")).unwrap();
     assert!(history.contains("\"kind\": \"pr\""));
@@ -473,6 +478,7 @@ fn pr_honors_claude_code_provider_override() {
         .arg("claude-code")
         .assert()
         .success()
+        .stdout(predicate::str::contains("Pull request session"))
         .stdout(predicate::str::contains(
             "feat(cli): describe branch changes",
         ))
@@ -523,7 +529,7 @@ fn log_honors_codex_provider_override() {
         .arg("codex")
         .assert()
         .success()
-        .stdout(predicate::str::contains("rewrote 1 commit messages"));
+        .stdout(predicate::str::contains("Rewrote 1 commit messages"));
 
     let output = Command::new("git")
         .args(["log", "--format=%s", "-1"])
@@ -548,9 +554,7 @@ fn models_command_shows_local_provider_note_for_override() {
         .arg("claude-code")
         .assert()
         .success()
-        .stdout(predicate::str::contains(
-            "Available models for claude-code:",
-        ))
+        .stdout(predicate::str::contains("Available models for claude-code"))
         .stdout(predicate::str::contains("* default"))
         .stdout(predicate::str::contains("installed `claude` CLI"));
 }
@@ -568,7 +572,7 @@ fn models_command_supports_anthropic_provider_override() {
         .arg("anthropic")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Available models for anthropic:"))
+        .stdout(predicate::str::contains("Available models for anthropic"))
         .stdout(predicate::str::contains("* claude-sonnet-4-20250514"))
         .stdout(predicate::str::contains("claude-opus-4-20250514"));
 }
@@ -586,7 +590,7 @@ fn models_command_supports_groq_provider_override() {
         .arg("groq")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Available models for groq:"))
+        .stdout(predicate::str::contains("Available models for groq"))
         .stdout(predicate::str::contains("* llama-3.1-8b-instant"))
         .stdout(predicate::str::contains("llama-3.3-70b-versatile"));
 }
@@ -604,7 +608,7 @@ fn models_command_supports_ollama_provider_override() {
         .arg("ollama")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Available models for ollama:"))
+        .stdout(predicate::str::contains("Available models for ollama"))
         .stdout(predicate::str::contains("* llama3.2"))
         .stdout(predicate::str::contains("qwen3-coder"));
 }
@@ -649,7 +653,7 @@ fn history_hides_temp_entries_by_default_and_shows_compact_view() {
         .stdout(predicate::str::contains("Recent entries"))
         .stdout(predicate::str::contains("feat(history): improve timeline"))
         .stdout(predicate::str::contains(
-            "commit | 2024-01-15 14:30 | openai/gpt-5.4-mini | aicommit",
+            "commit  \u{2022}  2024-01-15 14:30  \u{2022}  openai/gpt-5.4-mini  \u{2022}  aicommit",
         ))
         .stdout(predicate::str::contains(
             "src/cli.rs, src/history.rs +1 more (3 files)",

@@ -2,9 +2,9 @@ use anyhow::{Result, bail};
 
 use crate::{errors::AicError, git, ui};
 
-const STAGE_ALL_FILES_OPTION: &str = "Stage all files";
+const STAGE_ALL_FILES_OPTION: &str = "Stage all";
 const CHOOSE_FILES_OPTION: &str = "Choose files";
-const CANCEL_STAGE_OPTION: &str = "Cancel";
+const ABORT_STAGE_OPTION: &str = "Abort";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum StagingState {
@@ -17,7 +17,7 @@ enum StagingState {
 enum StageSelectionAction {
     StageAll,
     ChooseFiles,
-    Cancel,
+    Abort,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -78,21 +78,29 @@ fn resolve_staging_state(
 }
 
 fn prompt_for_stage_selection() -> Result<StageSelectionAction> {
+    ui::section("Commit session");
+    ui::session_step("No files are staged yet");
+    ui::file_list("Changed files", &git::changed_files()?);
+
     let selection = ui::select(
         "No files are staged. What would you like to do?",
-        vec![
-            STAGE_ALL_FILES_OPTION.to_owned(),
-            CHOOSE_FILES_OPTION.to_owned(),
-            CANCEL_STAGE_OPTION.to_owned(),
-        ],
+        stage_selection_options(),
     )?;
 
     match selection.as_str() {
         STAGE_ALL_FILES_OPTION => Ok(StageSelectionAction::StageAll),
         CHOOSE_FILES_OPTION => Ok(StageSelectionAction::ChooseFiles),
-        CANCEL_STAGE_OPTION => Ok(StageSelectionAction::Cancel),
+        ABORT_STAGE_OPTION => Ok(StageSelectionAction::Abort),
         _ => bail!("invalid staging selection"),
     }
+}
+
+pub(crate) fn stage_selection_options() -> Vec<String> {
+    vec![
+        STAGE_ALL_FILES_OPTION.to_owned(),
+        CHOOSE_FILES_OPTION.to_owned(),
+        ABORT_STAGE_OPTION.to_owned(),
+    ]
 }
 
 fn build_staging_plan(
@@ -108,7 +116,7 @@ fn build_staging_plan(
             }
             Ok(StagingPlan::AddFiles(selected_files))
         }
-        StageSelectionAction::Cancel => Ok(StagingPlan::Abort),
+        StageSelectionAction::Abort => Ok(StagingPlan::Abort),
     }
 }
 
@@ -194,12 +202,24 @@ mod tests {
     fn staging_plan_aborts_when_user_cancels() {
         assert_eq!(
             build_staging_plan(
-                StageSelectionAction::Cancel,
+                StageSelectionAction::Abort,
                 vec!["src/main.rs".to_owned()],
                 vec!["src/main.rs".to_owned()],
             )
             .unwrap(),
             StagingPlan::Abort
+        );
+    }
+
+    #[test]
+    fn stage_selection_options_use_explicit_action_labels() {
+        assert_eq!(
+            stage_selection_options(),
+            vec![
+                "Stage all".to_owned(),
+                "Choose files".to_owned(),
+                "Abort".to_owned()
+            ]
         );
     }
 }

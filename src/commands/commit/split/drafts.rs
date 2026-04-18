@@ -47,13 +47,14 @@ pub(super) fn render_split_commit_preview(drafts: &[SplitCommitDraft]) {
     ui::blank_line();
     ui::section(format!("Split commit preview ({})", drafts.len()));
     for (index, draft) in drafts.iter().enumerate() {
+        ui::blank_line();
         ui::headline(format!("Commit {}: {}", index + 1, draft.group.title));
         ui::secondary(&draft.group.rationale);
-        ui::commit_message(&draft.message);
-        for file in &draft.group.files {
-            ui::bullet(file);
+        ui::file_metadata(&draft.group.files);
+        for line in ui::summarize_files(&draft.group.files, 4, 3) {
+            ui::bullet(line);
         }
-        ui::blank_line();
+        ui::primary_card("Commit message", &draft.message);
     }
 }
 
@@ -108,14 +109,12 @@ pub(crate) fn create_split_commits(
                     )
                 }
             })?;
-        ui::success(format!(
-            "created split commit {}/{}",
+        ui::section(format!(
+            "Split commit {}/{} created",
             index + 1,
             drafts.len()
         ));
-        if !output.stdout.is_empty() {
-            ui::secondary(output.stdout);
-        }
+        ui::headline(draft.message.lines().next().unwrap_or(&draft.message));
         if !output.stderr.is_empty() {
             ui::secondary(output.stderr);
         }
@@ -123,7 +122,7 @@ pub(crate) fn create_split_commits(
         append_commit_history(config, &draft.message, &draft.group.files);
     }
 
-    execute_push_plan(push_plan)
+    execute_push_plan(push_plan).map(|_| ())
 }
 
 #[cfg(test)]

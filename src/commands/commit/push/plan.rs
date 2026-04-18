@@ -14,10 +14,7 @@ pub(crate) struct PushRemoteOption {
 pub(crate) enum PushPlan {
     Skip,
     AutoPush(PushRemoteOption),
-    ConfirmSingle {
-        remote: PushRemoteOption,
-        default: bool,
-    },
+    ConfirmSingle { remote: PushRemoteOption },
     SelectRemote(Vec<PushRemoteOption>),
 }
 
@@ -48,7 +45,6 @@ pub(crate) fn build_push_plan(
         [remote] if skip_confirmation => Ok(PushPlan::AutoPush(remote.clone())),
         [remote] => Ok(PushPlan::ConfirmSingle {
             remote: remote.clone(),
-            default: true,
         }),
         _ if skip_confirmation => bail!(MULTI_REMOTE_AUTO_PUSH_ERROR),
         _ => Ok(PushPlan::SelectRemote(remotes)),
@@ -105,8 +101,7 @@ mod tests {
                 remote: PushRemoteOption {
                     name: "origin".to_owned(),
                     label: "origin".to_owned(),
-                },
-                default: true,
+                }
             }
         );
     }

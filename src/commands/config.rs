@@ -22,7 +22,8 @@ pub fn set(key_values: Vec<String>) -> Result<()> {
 
     let paths = ConfigPaths::discover()?;
     set_global_config(&parsed, &paths.global)?;
-    ui::success(format!("config saved to {}", paths.global.display()));
+    ui::section("Config updated");
+    ui::secondary(format!("path: {}", paths.global.display()));
     Ok(())
 }
 

@@ -5,7 +5,7 @@ use crate::{
     config::Config,
     errors::AicError,
     git, history_store,
-    prompt::{build_review_messages, review_system_prompt},
+    prompt::{build_review_messages, detect_scope_hints, review_system_prompt},
     token::{count_messages, count_tokens, split_diff},
     ui,
 };
@@ -31,19 +31,43 @@ pub async fn run(context: String, provider_override: Option<String>) -> Result<(
         bail!("no diff content available after applying ignore and binary filters");
     }
 
-    ui::section(format!("Reviewing staged files ({})", staged.len()));
-    for file in &staged {
-        ui::bullet(file);
+    ui::section("Review session");
+    ui::session_step(format!(
+        "Reading staged diff ({}, {} lines)",
+        ui::file_count_label(staged.len()),
+        diff.lines().count()
+    ));
+    let mut context_items = Vec::new();
+    if let Some(branch) = git::current_branch() {
+        context_items.push(format!("branch: {branch}"));
     }
-
+    if let Some(ticket) = git::ticket_from_branch() {
+        context_items.push(format!("ticket: {ticket}"));
+    }
+    let scopes = detect_scope_hints(&staged);
+    if !scopes.is_empty() {
+        context_items.push(format!("scopes: {}", scopes.join(", ")));
+    }
+    if !context.trim().is_empty() {
+        context_items.push("extra context provided".to_owned());
+    }
+    ui::metadata_row(&context_items);
+    ui::metadata_row(&[
+        format!("provider: {}", config.ai_provider),
+        format!("model: {}", config.model),
+    ]);
+    ui::file_list("Staged changes", &staged);
+    ui::session_step(format!(
+        "Sending to {}/{}",
+        config.ai_provider, config.model
+    ));
     let spinner = ui::spinner("Analyzing changes");
     let review = generate_review(&config, &diff, &context).await;
     spinner.finish_and_clear();
 
     let review = review?;
     ui::blank_line();
-    ui::section("Review");
-    ui::markdown(&review);
+    ui::primary_card("AI review", &review);
 
     if let Err(e) = history_store::append_entry(&history_store::HistoryEntry {
         timestamp: history_store::now_iso8601(),
