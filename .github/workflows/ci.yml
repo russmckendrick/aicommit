@@ -150,123 +150,16 @@ jobs:
     name: Update Homebrew Tap
     needs: release
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Set release version
-        id: version
-        run: |
-          echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          echo "Using version: ${GITHUB_REF_NAME}"
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-
-      - name: Read macOS checksums
-        id: checksums
-        run: |
-          AMD64_SHA_FILE=$(find artifacts -name 'aic-darwin-amd64.sha256' -print -quit)
-          ARM64_SHA_FILE=$(find artifacts -name 'aic-darwin-arm64.sha256' -print -quit)
-
-          if [ -z "${AMD64_SHA_FILE}" ] || [ -z "${ARM64_SHA_FILE}" ]; then
-            echo "Unable to locate macOS checksum files in downloaded artifacts" >&2
-            exit 1
-          fi
-
-          AMD64_SHA=$(cut -d' ' -f1 "${AMD64_SHA_FILE}")
-          ARM64_SHA=$(cut -d' ' -f1 "${ARM64_SHA_FILE}")
-
-          echo "amd64_sha=${AMD64_SHA}" >> "$GITHUB_OUTPUT"
-          echo "arm64_sha=${ARM64_SHA}" >> "$GITHUB_OUTPUT"
-          echo "Loaded checksum files from workflow artifacts"
-
-      - name: Checkout homebrew-tap
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ github.repository_owner }}/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          path: homebrew-tap
-
-      - name: Update formula file
-        run: |
-          VERSION=${{ steps.version.outputs.version }}
-          AMD64_SHA=${{ steps.checksums.outputs.amd64_sha }}
-          ARM64_SHA=${{ steps.checksums.outputs.arm64_sha }}
-
-          cd homebrew-tap
-          mkdir -p Formula
-
-          cat > Formula/aicommit.rb << EOF
-          class Aicommit < Formula
-            desc "AI-assisted Git commit messages"
-            homepage "https://github.com/${{ github.repository }}"
-            version "${VERSION#v}"
-
-            on_macos do
-              if Hardware::CPU.arm?
-                url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/aic-darwin-arm64"
-                sha256 "${ARM64_SHA}"
-              else
-                url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/aic-darwin-amd64"
-                sha256 "${AMD64_SHA}"
-              end
-            end
-
-            def install
-              if Hardware::CPU.arm?
-                bin.install "aic-darwin-arm64" => "aic"
-              else
-                bin.install "aic-darwin-amd64" => "aic"
-              end
-            end
-
-            test do
-              system "#{bin}/aic", "--version"
-            end
-          end
-          EOF
-
-      - name: Commit and push tap update
-        run: |
-          VERSION=${{ steps.version.outputs.version }}
-
-          cd homebrew-tap
-          git config user.name "GitHub Action"
-          git config user.email "action@github.com"
-          git add Formula/aicommit.rb
-
-          if git diff --cached --quiet; then
-            echo "Formula already up to date"
-            exit 0
-          fi
-
-          git commit -m "Update aicommit to ${VERSION}"
-          git push
+    uses: ./.github/workflows/update-tap.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit
 
   update-winget:
     name: Update WinGet package
     needs: release
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: windows-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      INSTALLER_NAME: aic-windows-amd64.exe
-      PACKAGE_IDENTIFIER: RussMckendrick.Aicommit
-      PACKAGE_MANIFEST_PATH: manifests/r/RussMckendrick/Aicommit
-      RELEASE_TAG: ${{ github.ref_name }}
-      WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install .NET runtime
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 6.0.x
-
-      - name: Submit WinGet package update
-        shell: pwsh
-        run: .\.github\scripts\update-winget.ps1
+    uses: ./.github/workflows/update-winget.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit
