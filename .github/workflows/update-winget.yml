@@ -22,6 +22,33 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      - name: Validate WinGet token
+        shell: pwsh
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
+        run: |
+          if (-not $env:WINGET_TOKEN) {
+            throw "Missing WINGET_CREATE_GITHUB_TOKEN secret."
+          }
+
+          $headers = @{
+            Authorization = "Bearer $env:WINGET_TOKEN"
+            "X-GitHub-Api-Version" = "2022-11-28"
+          }
+
+          $response = Invoke-WebRequest -Headers $headers -Uri "https://api.github.com/user"
+          $scopes = $response.Headers["X-OAuth-Scopes"]
+
+          if (-not $scopes) {
+            throw "WINGET_CREATE_GITHUB_TOKEN must be a classic PAT with public_repo scope. Fine-grained PATs are not supported by vedantmgoyal9/winget-releaser."
+          }
+
+          if ($scopes -notmatch '(^|,\s*)(public_repo|repo)(,|$)') {
+            throw "WINGET_CREATE_GITHUB_TOKEN must include public_repo scope. Current scopes: $scopes"
+          }
+
+          Write-Host "Validated classic PAT scopes for WinGet submission: $scopes"
+
       - name: Resolve release tag
         id: version
         shell: pwsh
@@ -49,6 +76,7 @@ jobs:
         uses: vedantmgoyal9/winget-releaser@v2
         with:
           identifier: RussMckendrick.Aicommit
+          fork-user: ${{ github.repository_owner }}
           installers-regex: '\.exe$'
           release-tag: ${{ steps.version.outputs.tag }}
           token: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
