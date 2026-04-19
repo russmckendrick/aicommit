@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{Result, bail};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GitOutput {
     pub stdout: String,
     pub stderr: String,

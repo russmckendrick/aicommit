@@ -7,6 +7,8 @@
 ## Commit workflow
 
 - Fall back to staged Git change metadata when every staged file is filtered from the readable diff, so `aic` can still draft commit messages for binary-only or asset-only changes without inspecting file contents.
+- Add a push-aware upstream sync guard before commit creation, so `aic` now stops early when the tracked branch is behind or diverged instead of creating a new local commit and failing later at push time.
+- Add AI-assisted Git recovery guidance for sync failures, rejected pushes, and rebase problems, while keeping Git itself as the source of truth for fetch, rebase, and conflict detection.
 
 ## Release automation
 

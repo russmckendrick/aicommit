@@ -1,4 +1,5 @@
 mod commit;
+mod git_guidance;
 mod pr;
 mod review;
 mod sanitize;
@@ -7,6 +8,7 @@ mod split;
 pub use commit::{
     SplitPlanGroup, build_messages, detect_scope_hints, initial_messages, system_prompt,
 };
+pub use git_guidance::{build_git_guidance_messages, git_guidance_system_prompt};
 pub use pr::{
     PullRequestDraft, build_pr_chunk_summary_messages, build_pr_messages,
     build_pr_synthesis_messages, parse_pull_request_response, pr_system_prompt,

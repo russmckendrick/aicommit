@@ -11,6 +11,7 @@ mod hooks;
 mod remote;
 mod repo;
 pub mod stats;
+mod sync;
 
 pub use branch::{
     commits_since, current_branch, diff_since, files_since, head_short_hash, merge_base_with_head,
@@ -27,4 +28,9 @@ pub use repo::{
     ChangeSummary, add_files, assert_clean_worktree, assert_git_repo, changed_files, clear_index,
     partially_staged_files, repo_root, staged_change_summaries, staged_diff, staged_files,
     unstage_files,
+};
+pub use sync::{
+    GitRecoveryScenario, GitSyncSnapshot, GitSyncState, PullRebaseOutcome, fetch_sync_snapshot,
+    fetch_tracking_remote, has_unmerged_paths, is_clean_for_pull_rebase, pull_rebase,
+    sync_snapshot, tracking_remote, tracking_upstream,
 };

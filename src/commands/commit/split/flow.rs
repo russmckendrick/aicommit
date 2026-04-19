@@ -104,7 +104,7 @@ pub(crate) async fn maybe_execute_split_flow(
 
         match selection.as_str() {
             CREATE_COMMITS_OPTION => {
-                create_split_commits(config, &drafts, extra_args)?;
+                create_split_commits(config, &drafts, extra_args).await?;
                 return Ok(true);
             }
             REGENERATE_ALL_MESSAGES_OPTION => {
@@ -178,7 +178,8 @@ pub(crate) async fn generate_confirm_and_commit(
                     extra_args,
                     staged_files,
                     skip_confirmation,
-                );
+                )
+                .await;
             }
             EDIT_OPTION => {
                 let edited = ui::text("Edit commit message", Some(&commit_message))?;
@@ -188,7 +189,8 @@ pub(crate) async fn generate_confirm_and_commit(
                     extra_args,
                     staged_files,
                     skip_confirmation,
-                );
+                )
+                .await;
             }
             REGENERATE_OPTION => continue,
             _ => bail!("commit aborted"),

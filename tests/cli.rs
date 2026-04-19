@@ -22,6 +22,28 @@ fn init_bare_repo() -> TempDir {
     temp
 }
 
+fn clone_repo(source: &Path) -> TempDir {
+    let temp = TempDir::new().unwrap();
+    let status = Command::new("git")
+        .args([
+            "clone",
+            source.to_str().unwrap(),
+            temp.path().to_str().unwrap(),
+        ])
+        .status()
+        .unwrap();
+    assert!(status.success());
+    run_git(temp.path(), ["config", "user.email", "test@example.com"]);
+    run_git(temp.path(), ["config", "user.name", "Test User"]);
+    temp
+}
+
+fn commit_file(repo: &Path, file: &str, content: &str, message: &str) {
+    fs::write(repo.join(file), content).unwrap();
+    run_git(repo, ["add", file]);
+    run_git(repo, ["commit", "-m", message]);
+}
+
 fn run_git<I, S>(cwd: &std::path::Path, args: I)
 where
     I: IntoIterator<Item = S>,
@@ -302,6 +324,79 @@ fn yes_pushes_to_the_only_remote() {
     assert_eq!(
         git_stdout(remote.path(), ["rev-list", "--count", "--all"]),
         "1"
+    );
+}
+
+#[test]
+fn yes_with_push_enabled_stops_before_commit_when_upstream_is_behind() {
+    let remote = init_bare_repo();
+    let repo = clone_repo(remote.path());
+    commit_file(repo.path(), "src.txt", "base\n", "feat: base");
+    run_git(repo.path(), ["push", "-u", "origin", "HEAD"]);
+
+    let peer = clone_repo(remote.path());
+    commit_file(
+        peer.path(),
+        "src.txt",
+        "base\nremote\n",
+        "feat: remote change",
+    );
+    run_git(peer.path(), ["push"]);
+
+    fs::write(repo.path().join("local.txt"), "hello\n").unwrap();
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "test")
+        .env("AIC_GITPUSH", "true")
+        .arg("--yes")
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("Branch sync required"))
+        .stdout(predicate::str::contains("git pull --rebase"))
+        .stderr(predicate::str::contains("branch is behind its upstream"));
+
+    assert_eq!(
+        git_stdout(repo.path(), ["rev-list", "--count", "HEAD"]),
+        "1"
+    );
+}
+
+#[test]
+fn yes_with_push_disabled_still_commits_when_upstream_is_behind() {
+    let remote = init_bare_repo();
+    let repo = clone_repo(remote.path());
+    commit_file(repo.path(), "src.txt", "base\n", "feat: base");
+    run_git(repo.path(), ["push", "-u", "origin", "HEAD"]);
+
+    let peer = clone_repo(remote.path());
+    commit_file(
+        peer.path(),
+        "src.txt",
+        "base\nremote\n",
+        "feat: remote change",
+    );
+    run_git(peer.path(), ["push"]);
+
+    fs::write(repo.path().join("local.txt"), "hello\n").unwrap();
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "test")
+        .env("AIC_GITPUSH", "false")
+        .arg("--yes")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Commit created"))
+        .stdout(predicate::str::contains("Pushed to").not());
+
+    assert_eq!(
+        git_stdout(repo.path(), ["log", "--format=%s", "-1"]),
+        "feat: add generated commit message"
+    );
+    assert_eq!(
+        git_stdout(repo.path(), ["rev-list", "--count", "HEAD"]),
+        "2"
     );
 }
 

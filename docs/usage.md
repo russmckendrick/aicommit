@@ -21,6 +21,8 @@ aic --yes
 
 If multiple remotes are configured, `aic --yes` stops with a clear error instead of guessing where to push.
 
+When push-after-commit is enabled and the current branch tracks an upstream, `aic` fetches that upstream before it starts the commit session. If the branch is behind or has diverged, `aic` stops before creating a new commit and shows recovery guidance so you can sync safely first.
+
 Add extra context for the generated message:
 
 ```sh
@@ -60,6 +62,8 @@ aic "issue-123: $msg"
 The placeholder defaults to `$msg` and can be changed with `AIC_MESSAGE_TEMPLATE_PLACEHOLDER`.
 
 Tune the system prompt without recompiling by setting `AIC_PROMPT_FILE` to a custom prompt-template path.
+
+If a push is rejected after the commit has already been created locally, `aic` now treats that as a recovery flow instead of dumping raw Git output only. In interactive clean-tree cases it can offer a `pull --rebase` retry; otherwise it explains what happened and leaves the commit in your local history for you to push after syncing manually.
 
 ## Interactive Diff Splitting
 

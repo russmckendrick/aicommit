@@ -3,10 +3,12 @@ use anyhow::{Result, bail};
 use crate::{config::Config, errors::AicError, git, prompt::detect_scope_hints, ui};
 
 use self::{
+    git_sync::enforce_pre_commit_sync_guard,
     helpers::{CommitInput, CommitInputSource, amend_commit_input, enrich_context_with_branch},
     split::{generate_confirm_and_commit, maybe_execute_split_flow, should_offer_split},
 };
 
+mod git_sync;
 mod helpers;
 mod push;
 mod split;
@@ -27,6 +29,8 @@ pub async fn run(
     if config.provider_needs_api_key() && config.api_key.is_none() {
         bail!(AicError::MissingApiKey(config.ai_provider));
     }
+
+    enforce_pre_commit_sync_guard(&config, dry_run).await?;
 
     let (files, commit_input) = if amend {
         let files = git::last_commit_files()?;

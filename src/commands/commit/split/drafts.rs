@@ -82,7 +82,7 @@ pub(super) fn edit_split_commit_message(drafts: &mut [SplitCommitDraft]) -> Resu
     Ok(())
 }
 
-pub(crate) fn create_split_commits(
+pub(crate) async fn create_split_commits(
     config: &Config,
     drafts: &[SplitCommitDraft],
     extra_args: &[String],
@@ -122,7 +122,9 @@ pub(crate) fn create_split_commits(
         append_commit_history(config, &draft.message, &draft.group.files);
     }
 
-    execute_push_plan(push_plan).map(|_| ())
+    execute_push_plan(push_plan, config, false)
+        .await
+        .map(|_| ())
 }
 
 #[cfg(test)]
@@ -180,8 +182,9 @@ mod tests {
         assert_eq!(drafts[1].message, "feat: update library");
     }
 
-    #[test]
-    fn create_split_commits_creates_multiple_commits() {
+    #[allow(clippy::await_holding_lock)]
+    #[tokio::test]
+    async fn create_split_commits_creates_multiple_commits() {
         let _cwd = hold_cwd_for_test();
         let repo = init_repo();
         std::fs::create_dir_all(repo.path().join("src")).unwrap();
@@ -217,6 +220,7 @@ mod tests {
             ],
             &[],
         )
+        .await
         .unwrap();
 
         let subjects = git_stdout(repo.path(), ["log", "--format=%s", "-2"]);

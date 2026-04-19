@@ -85,6 +85,20 @@ impl AiEngine for TestEngine {
             return Ok(test_split_plan_response(&files));
         }
 
+        if system.contains("Git recovery guidance") {
+            if user.contains("commit_created: true") {
+                return Ok(
+                    "The commit is local, but the branch needs to be rebased before you push.\n\n1. `git pull --rebase`\n2. `git push`"
+                        .to_owned(),
+                );
+            }
+
+            return Ok(
+                "The branch needs to be synced before `aic` can continue.\n\n1. `git pull --rebase`\n2. `aic`"
+                    .to_owned(),
+            );
+        }
+
         if user.contains("README.md") {
             return Ok("docs: update readme".to_owned());
         }
