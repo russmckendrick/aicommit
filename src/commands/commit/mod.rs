@@ -3,7 +3,7 @@ use anyhow::{Result, bail};
 use crate::{config::Config, errors::AicError, git, prompt::detect_scope_hints, ui};
 
 use self::{
-    helpers::enrich_context_with_branch,
+    helpers::{CommitInput, CommitInputSource, amend_commit_input, enrich_context_with_branch},
     split::{generate_confirm_and_commit, maybe_execute_split_flow, should_offer_split},
 };
 
@@ -28,28 +28,28 @@ pub async fn run(
         bail!(AicError::MissingApiKey(config.ai_provider));
     }
 
-    let (files, diff) = if amend {
+    let (files, commit_input) = if amend {
         let files = git::last_commit_files()?;
         if files.is_empty() {
             bail!("no files in the last commit to amend");
         }
-        let diff = git::last_commit_diff()?;
-        (files, diff)
+        let commit_input = amend_commit_input(&files)?;
+        (files, commit_input)
     } else {
         ensure_staged_files(skip_confirmation, "Commit session", true).await?;
         let staged = git::staged_files()?;
         if staged.is_empty() {
             bail!(AicError::NoChanges);
         }
-        let diff = git::staged_diff(&staged)?;
-        (staged, diff)
+        let commit_input = staged_commit_input(&staged)?;
+        (staged, commit_input)
     };
 
-    if diff.trim().is_empty() {
-        bail!("no diff content available after applying ignore and binary filters");
+    if commit_input.content.trim().is_empty() {
+        bail!("no commit context available after applying ignore and binary filters");
     }
 
-    render_commit_session(&config, &files, &diff, amend, &context);
+    render_commit_session(&config, &files, &commit_input, amend, &context);
 
     let mut effective_args = extra_args;
     if amend && !effective_args.iter().any(|a| a == "--amend") {
@@ -58,10 +58,11 @@ pub async fn run(
 
     let context = enrich_context_with_branch(&context);
 
-    if should_offer_split(files.len(), skip_confirmation, dry_run, amend)
+    if commit_input.source == CommitInputSource::Diff
+        && should_offer_split(files.len(), skip_confirmation, dry_run, amend)
         && maybe_execute_split_flow(
             &config,
-            &diff,
+            &commit_input.content,
             &effective_args,
             &context,
             full_gitmoji_spec,
@@ -74,7 +75,7 @@ pub async fn run(
 
     generate_confirm_and_commit(
         &config,
-        &diff,
+        &commit_input.content,
         &effective_args,
         &context,
         full_gitmoji_spec,
@@ -88,25 +89,44 @@ pub async fn run(
 fn render_commit_session(
     config: &Config,
     files: &[String],
-    diff: &str,
+    commit_input: &CommitInput,
     amend: bool,
     context: &str,
 ) {
-    let change_target = if amend {
-        "last commit diff"
-    } else {
-        "staged diff"
-    };
     ui::section(if amend {
         "Amend session"
     } else {
         "Commit session"
     });
-    ui::session_step(format!(
-        "Reading {change_target} ({}, {} lines)",
-        ui::file_count_label(files.len()),
-        diff.lines().count()
-    ));
+
+    match commit_input.source {
+        CommitInputSource::Diff => {
+            let change_target = if amend {
+                "last commit diff"
+            } else {
+                "staged diff"
+            };
+            ui::session_step(format!(
+                "Reading {change_target} ({}, {} lines)",
+                ui::file_count_label(files.len()),
+                commit_input.content.lines().count()
+            ));
+        }
+        CommitInputSource::Metadata => {
+            let change_target = if amend {
+                "last commit change metadata"
+            } else {
+                "staged change metadata"
+            };
+            ui::session_step(format!(
+                "Reading {change_target} ({})",
+                ui::file_count_label(files.len())
+            ));
+            ui::secondary(
+                "No readable diff content was available, so aic is using file paths and Git change types instead of file contents.",
+            );
+        }
+    }
 
     let mut context_items = Vec::new();
     if let Some(branch) = git::current_branch() {
@@ -137,5 +157,5 @@ fn render_commit_session(
     );
 }
 
-pub(crate) use helpers::{apply_message_template, filtered_extra_args};
+pub(crate) use helpers::{apply_message_template, filtered_extra_args, staged_commit_input};
 pub(crate) use staging::ensure_staged_files;

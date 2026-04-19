@@ -313,4 +313,51 @@ mod tests {
         assert!(error.contains("claude-code provider failed"));
         assert!(error.contains("boom"));
     }
+
+    #[tokio::test]
+    async fn copilot_command_engine_reports_missing_binary() {
+        let engine = CommandEngine::with_command(
+            Config {
+                ai_provider: "copilot".to_owned(),
+                model: "default".to_owned(),
+                ..Config::default()
+            },
+            "__missing_binary__",
+            ["-s", "--no-ask-user"],
+            std::env::temp_dir(),
+        );
+
+        let error = engine
+            .generate_commit_message(&test_messages())
+            .await
+            .unwrap_err()
+            .to_string();
+
+        assert!(error.contains("copilot provider requires `__missing_binary__` on PATH"));
+    }
+
+    #[tokio::test]
+    async fn copilot_command_engine_reports_non_zero_exit() {
+        let temp = TempDir::new().unwrap();
+        let command = install_test_command(temp.path(), "copilot-fail", "", "boom", 9);
+        let engine = CommandEngine::with_command(
+            Config {
+                ai_provider: "copilot".to_owned(),
+                model: "default".to_owned(),
+                ..Config::default()
+            },
+            command.program,
+            command.args,
+            std::env::temp_dir(),
+        );
+
+        let error = engine
+            .generate_commit_message(&test_messages())
+            .await
+            .unwrap_err()
+            .to_string();
+
+        assert!(error.contains("copilot provider failed"));
+        assert!(error.contains("boom"));
+    }
 }

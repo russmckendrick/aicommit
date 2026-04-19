@@ -1,5 +1,13 @@
 # aicommit Unreleased
 
+## Providers
+
+- Add `copilot` as a supported local CLI provider alongside `claude-code` and `codex`, so commit generation, review, PR drafting, log rewriting, setup, and model listing can all reuse an installed GitHub Copilot CLI without configuring `AIC_API_KEY`.
+
+## Commit workflow
+
+- Fall back to staged Git change metadata when every staged file is filtered from the readable diff, so `aic` can still draft commit messages for binary-only or asset-only changes without inspecting file contents.
+
 ## Release automation
 
 - Convert the tap and WinGet updater workflows into reusable workflows that can still be run manually, so `ci.yml` can call them after a release without duplicating the update logic.

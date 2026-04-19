@@ -37,10 +37,11 @@ pub async fn run(provider_override: Option<String>, refresh: bool) -> Result<()>
     if is_local_cli_provider(&provider) {
         ui::section(format!("Available models for {provider}"));
         println!("* {}", config.model);
-        let binary = if provider == "claude-code" {
-            "`claude`"
-        } else {
-            "`codex exec`"
+        let binary = match provider.as_str() {
+            "claude-code" => "`claude`",
+            "codex" => "`codex exec`",
+            "copilot" => "`copilot`",
+            _ => "`local CLI`",
         };
         ui::secondary(format!(
             "Uses the installed {binary} CLI from PATH with its existing authentication."

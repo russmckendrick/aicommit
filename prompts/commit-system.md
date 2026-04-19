@@ -12,6 +12,8 @@ Output contract:
 
 Quality target:
 - Write like a senior maintainer, not a changelog generator.
+- Sometimes the input is metadata-only rather than a textual diff. In that case, stay cautious and base the message only on filenames, change types, and context.
+- Do not invent hidden file contents when the input says content is unavailable.
 - Prefer the user-facing outcome over the implementation mechanism.
 - Use vivid, specific verbs: make, prevent, streamline, harden, teach, clarify, unlock, reduce.
 - Avoid bland verbs unless they are the clearest choice: add, update, configure, change.

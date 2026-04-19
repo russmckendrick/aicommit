@@ -6,12 +6,13 @@ const SUPPORTED_PROVIDERS: &[&str] = &[
     "ollama",
     "claude-code",
     "codex",
+    "copilot",
 ];
-const LOCAL_CLI_PROVIDERS: &[&str] = &["claude-code", "codex"];
+const LOCAL_CLI_PROVIDERS: &[&str] = &["claude-code", "codex", "copilot"];
 
 pub fn default_model_for_provider(provider: &str) -> &'static str {
     match provider {
-        "claude-code" | "codex" => "default",
+        "claude-code" | "codex" | "copilot" => "default",
         "anthropic" => "claude-sonnet-4-20250514",
         "groq" => "llama-3.1-8b-instant",
         "ollama" => "llama3.2",
@@ -39,7 +40,7 @@ pub fn enabled_providers() -> &'static [&'static str] {
 
 pub fn model_list(provider: &str) -> &'static [&'static str] {
     match provider {
-        "claude-code" | "codex" => &["default"],
+        "claude-code" | "codex" | "copilot" => &["default"],
         "anthropic" => &[
             "claude-sonnet-4-20250514",
             "claude-opus-4-20250514",
@@ -67,10 +68,17 @@ pub fn provider_needs_api_key(provider: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::provider_needs_api_key;
+    use super::{is_local_cli_provider, provider_needs_api_key, supported_providers};
 
     #[test]
     fn ollama_does_not_need_api_key() {
         assert!(!provider_needs_api_key("ollama"));
+    }
+
+    #[test]
+    fn copilot_is_a_supported_local_cli_provider() {
+        assert!(supported_providers().contains(&"copilot"));
+        assert!(is_local_cli_provider("copilot"));
+        assert!(!provider_needs_api_key("copilot"));
     }
 }

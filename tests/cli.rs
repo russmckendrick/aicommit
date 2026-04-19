@@ -230,6 +230,30 @@ fn yes_stages_all_changed_files_before_committing() {
 }
 
 #[test]
+fn yes_commits_binary_only_changes_from_metadata() {
+    let repo = init_repo();
+    fs::write(repo.path().join("cover.png"), b"not-a-real-png").unwrap();
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "test")
+        .env("AIC_GITPUSH", "false")
+        .arg("--yes")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "Reading staged change metadata (1 file)",
+        ))
+        .stdout(predicate::str::contains("Generated commit"))
+        .stdout(predicate::str::contains("Commit created"));
+
+    assert_eq!(
+        git_stdout(repo.path(), ["log", "--format=%s", "-1"]),
+        "feat: add generated commit message"
+    );
+}
+
+#[test]
 fn yes_does_not_push_when_push_is_disabled() {
     let repo = init_repo();
     let remote = init_bare_repo();
@@ -382,6 +406,39 @@ fn provider_override_uses_claude_code_binary() {
 }
 
 #[test]
+fn provider_override_uses_copilot_binary() {
+    let repo = init_repo();
+    let bin_dir = TempDir::new().unwrap();
+    install_fake_binary(
+        bin_dir.path(),
+        "copilot",
+        "feat(cli): use copilot override\n\n- route commit generation through GitHub Copilot CLI",
+    );
+
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "openai")
+        .env("AIC_GITPUSH", "false")
+        .env("PATH", path_with_fake_bin(bin_dir.path()))
+        .arg("--provider")
+        .arg("copilot")
+        .arg("--yes")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Commit created"));
+
+    let output = Command::new("git")
+        .args(["log", "--format=%B", "-1"])
+        .current_dir(repo.path())
+        .output()
+        .unwrap();
+    assert!(String::from_utf8_lossy(&output.stdout).starts_with("feat(cli): use copilot override"));
+}
+
+#[test]
 fn review_honors_codex_provider_override() {
     let repo = init_repo();
     let bin_dir = TempDir::new().unwrap();
@@ -402,6 +459,29 @@ fn review_honors_codex_provider_override() {
         .stdout(predicate::str::contains("Review session"))
         .stdout(predicate::str::contains("Review complete"))
         .stdout(predicate::str::contains("P1: stub review from codex"));
+}
+
+#[test]
+fn review_honors_copilot_provider_override() {
+    let repo = init_repo();
+    let bin_dir = TempDir::new().unwrap();
+    install_fake_binary(bin_dir.path(), "copilot", "P1: stub review from copilot");
+
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "openai")
+        .env("PATH", path_with_fake_bin(bin_dir.path()))
+        .arg("review")
+        .arg("--provider")
+        .arg("copilot")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Review session"))
+        .stdout(predicate::str::contains("Review complete"))
+        .stdout(predicate::str::contains("P1: stub review from copilot"));
 }
 
 #[test]
@@ -447,6 +527,51 @@ fn pr_honors_codex_provider_override_and_writes_history() {
     let history = fs::read_to_string(home.path().join(".aicommit-history.json")).unwrap();
     assert!(history.contains("\"kind\": \"pr\""));
     assert!(history.contains("feat(cli): generate pull request drafts"));
+}
+
+#[test]
+fn pr_honors_copilot_provider_override_and_writes_history() {
+    let repo = init_repo();
+    let home = TempDir::new().unwrap();
+    let bin_dir = TempDir::new().unwrap();
+    install_fake_binary(
+        bin_dir.path(),
+        "copilot",
+        "feat(cli): draft pull request with copilot\n\n## Summary\n- Summarize the feature branch with GitHub Copilot CLI\n\n## Testing\n- cargo test",
+    );
+
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+    run_git(repo.path(), ["commit", "-m", "chore: initial"]);
+
+    fs::write(repo.path().join("src.txt"), "hello\nfeature\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+    run_git(repo.path(), ["commit", "-m", "feat(cli): add PR workflow"]);
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("HOME", home.path())
+        .env("USERPROFILE", home.path())
+        .env("AIC_AI_PROVIDER", "openai")
+        .env("PATH", path_with_fake_bin(bin_dir.path()))
+        .arg("pr")
+        .arg("--base")
+        .arg("HEAD~1")
+        .arg("--yes")
+        .arg("--provider")
+        .arg("copilot")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Pull request session"))
+        .stdout(predicate::str::contains(
+            "feat(cli): draft pull request with copilot",
+        ))
+        .stdout(predicate::str::contains("Summary"))
+        .stdout(predicate::str::contains("Generated pull request draft"));
+
+    let history = fs::read_to_string(home.path().join(".aicommit-history.json")).unwrap();
+    assert!(history.contains("\"kind\": \"pr\""));
+    assert!(history.contains("feat(cli): draft pull request with copilot"));
 }
 
 #[test]
@@ -544,6 +669,44 @@ fn log_honors_codex_provider_override() {
 }
 
 #[test]
+fn log_honors_copilot_provider_override() {
+    let repo = init_repo();
+    let bin_dir = TempDir::new().unwrap();
+    install_fake_binary(bin_dir.path(), "copilot", "feat(log): rewrite via copilot");
+
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+    run_git(repo.path(), ["commit", "-m", "initial message"]);
+    fs::write(repo.path().join("src.txt"), "hello again\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+    run_git(repo.path(), ["commit", "-m", "old message"]);
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "openai")
+        .env("PATH", path_with_fake_bin(bin_dir.path()))
+        .arg("log")
+        .arg("-n")
+        .arg("1")
+        .arg("--yes")
+        .arg("--provider")
+        .arg("copilot")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Rewrote 1 commit messages"));
+
+    let output = Command::new("git")
+        .args(["log", "--format=%s", "-1"])
+        .current_dir(repo.path())
+        .output()
+        .unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        "feat(log): rewrite via copilot"
+    );
+}
+
+#[test]
 fn models_command_shows_local_provider_note_for_override() {
     let repo = init_repo();
 
@@ -558,6 +721,23 @@ fn models_command_shows_local_provider_note_for_override() {
         .stdout(predicate::str::contains("Available models for claude-code"))
         .stdout(predicate::str::contains("* default"))
         .stdout(predicate::str::contains("installed `claude` CLI"));
+}
+
+#[test]
+fn models_command_shows_copilot_provider_note_for_override() {
+    let repo = init_repo();
+
+    let mut cmd = Command::cargo_bin("aic").unwrap();
+    cmd.current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "openai")
+        .arg("models")
+        .arg("--provider")
+        .arg("copilot")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Available models for copilot"))
+        .stdout(predicate::str::contains("* default"))
+        .stdout(predicate::str::contains("installed `copilot` CLI"));
 }
 
 #[test]

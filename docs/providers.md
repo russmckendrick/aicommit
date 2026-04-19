@@ -10,13 +10,14 @@ groq
 ollama
 claude-code
 codex
+copilot
 ```
 
 `openai`, `azure-openai`, `groq`, and `ollama` use the OpenAI chat-completions wire format.
 
 `anthropic` uses Anthropic's Messages API directly.
 
-`claude-code` and `codex` are experimental local-binary providers. They use the installed `claude` and `codex` CLIs from your `PATH`, so authentication is managed by those tools rather than `aic`.
+`claude-code`, `codex`, and `copilot` are experimental local-binary providers. They use the installed `claude`, `codex`, and `copilot` CLIs from your `PATH`, so authentication is managed by those tools rather than `aic`.
 
 ```mermaid
 flowchart TD
@@ -28,6 +29,7 @@ flowchart TD
     Provider -->|ollama| Ollama["Local Ollama OpenAI-compatible API"]
     Provider -->|claude-code| Claude["Local claude CLI"]
     Provider -->|codex| Codex["Local codex exec CLI"]
+    Provider -->|copilot| Copilot["Local GitHub Copilot CLI"]
     OpenAI --> Chat["Chat completions request"]
     Azure --> Chat
     Groq --> Chat
@@ -35,6 +37,7 @@ flowchart TD
     Anthropic --> Messages["Messages request"]
     Claude --> Prompt["Flattened prompt over stdin"]
     Codex --> Prompt
+    Copilot --> Prompt
     Chat --> Result["Generated commit message"]
     Messages --> Result
     Prompt --> Result
@@ -100,6 +103,12 @@ Configure Codex:
 aic config set AIC_AI_PROVIDER=codex AIC_MODEL=default
 ```
 
+Configure GitHub Copilot CLI:
+
+```sh
+aic config set AIC_AI_PROVIDER=copilot AIC_MODEL=default
+```
+
 For local CLI providers, `AIC_MODEL=default` means "use the CLI's own default model". `aic` does not pass a model flag through in v1.
 
 Use `--provider` to override the configured provider for a single run:
@@ -110,6 +119,7 @@ aic review --provider groq
 aic --provider ollama
 aic --provider claude-code
 aic review --provider codex
+aic review --provider copilot
 aic log --provider codex --yes
 aic models --provider ollama
 ```
@@ -126,6 +136,7 @@ aic models --provider groq
 aic models --provider ollama
 aic models --provider azure-openai
 aic models --provider claude-code
+aic models --provider copilot
 ```
 
 API-provider model responses are cached at `~/.aicommit-models.json` with a 7-day TTL. Local CLI providers report the static `default` model and a note about the installed binary instead of calling a remote models endpoint.

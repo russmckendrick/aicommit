@@ -98,6 +98,22 @@ mod tests {
     }
 
     #[test]
+    fn accepts_copilot_as_local_cli_provider() {
+        let temp = TempDir::new().unwrap();
+        let global = temp.path().join(".aicommit");
+        std::fs::write(
+            &global,
+            "AIC_AI_PROVIDER = \"copilot\"\nAIC_MODEL = \"default\"\n",
+        )
+        .unwrap();
+
+        let config = Config::load_from(&ConfigPaths { global }).unwrap();
+
+        assert_eq!(config.ai_provider, "copilot");
+        assert_eq!(config.model, "default");
+    }
+
+    #[test]
     fn accepts_new_remote_providers() {
         let temp = TempDir::new().unwrap();
         let global = temp.path().join(".aicommit");
@@ -121,6 +137,7 @@ mod tests {
 
         assert!(!config.provider_needs_api_key());
         assert!(!provider_needs_api_key("codex"));
+        assert!(!provider_needs_api_key("copilot"));
     }
 
     #[test]
@@ -156,6 +173,24 @@ mod tests {
                 .unwrap();
 
         assert_eq!(config.ai_provider, "codex");
+        assert_eq!(config.model, "default");
+    }
+
+    #[test]
+    fn provider_override_switches_copilot_model_to_default() {
+        let temp = TempDir::new().unwrap();
+        let global = temp.path().join(".aicommit");
+        std::fs::write(
+            &global,
+            "AIC_AI_PROVIDER = \"openai\"\nAIC_MODEL = \"gpt-5.4\"\n",
+        )
+        .unwrap();
+
+        let config =
+            Config::load_from_with_provider_override(&ConfigPaths { global }, Some("copilot"))
+                .unwrap();
+
+        assert_eq!(config.ai_provider, "copilot");
         assert_eq!(config.model, "default");
     }
 

@@ -10,6 +10,13 @@ use crate::{config::REPO_IGNORE_FILE, errors::AicError};
 
 use super::exec::{run_git, run_git_dynamic_in, run_git_in};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChangeSummary {
+    pub status: String,
+    pub path: String,
+    pub previous_path: Option<String>,
+}
+
 pub fn assert_git_repo() -> Result<()> {
     run_git(["rev-parse"])?;
     Ok(())
@@ -100,6 +107,21 @@ pub fn staged_diff(files: &[String]) -> Result<String> {
     Ok(run_git_dynamic_in(&root, args)?.stdout)
 }
 
+pub fn staged_change_summaries(files: &[String]) -> Result<Vec<ChangeSummary>> {
+    let root = repo_root()?;
+    change_summaries_from_args(
+        &root,
+        vec![
+            "diff".to_owned(),
+            "--cached".to_owned(),
+            "--name-status".to_owned(),
+            "--find-renames".to_owned(),
+            "--".to_owned(),
+        ],
+        files,
+    )
+}
+
 pub fn partially_staged_files(staged_files: &[String]) -> Result<Vec<String>> {
     if staged_files.is_empty() {
         return Ok(Vec::new());
@@ -155,6 +177,19 @@ pub(crate) fn filter_ignored(root: &Path, files: Vec<String>) -> Result<Vec<Stri
         .collect())
 }
 
+pub(crate) fn change_summaries_from_args(
+    root: &Path,
+    mut args: Vec<String>,
+    files: &[String],
+) -> Result<Vec<ChangeSummary>> {
+    if files.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    args.extend(files.iter().cloned());
+    Ok(parse_name_status(&run_git_dynamic_in(root, args)?.stdout))
+}
+
 fn is_excluded_from_diff(file: &str) -> bool {
     let lower = file.to_lowercase();
     lower.contains(".lock")
@@ -165,6 +200,42 @@ fn is_excluded_from_diff(file: &str) -> bool {
         || lower.ends_with(".jpeg")
         || lower.ends_with(".webp")
         || lower.ends_with(".gif")
+}
+
+pub(crate) fn parse_name_status(input: &str) -> Vec<ChangeSummary> {
+    input
+        .lines()
+        .filter_map(|line| {
+            let mut fields = line.split('\t');
+            let raw_status = fields.next()?.trim();
+            let first_path = fields.next()?.trim();
+            let second_path = fields.next().map(str::trim);
+            let status = match raw_status.chars().next().unwrap_or('M') {
+                'A' => "added",
+                'M' => "modified",
+                'D' => "deleted",
+                'R' => "renamed",
+                'C' => "copied",
+                'T' => "type-changed",
+                'U' => "unmerged",
+                _ => "changed",
+            }
+            .to_owned();
+
+            match raw_status.chars().next().unwrap_or('M') {
+                'R' | 'C' => Some(ChangeSummary {
+                    status,
+                    path: second_path.unwrap_or(first_path).to_owned(),
+                    previous_path: Some(first_path.to_owned()),
+                }),
+                _ => Some(ChangeSummary {
+                    status,
+                    path: first_path.to_owned(),
+                    previous_path: None,
+                }),
+            }
+        })
+        .collect()
 }
 
 fn head_exists(root: &Path) -> Result<bool> {
@@ -269,6 +340,27 @@ mod tests {
             "hello\n"
         );
         assert!(changed_files().unwrap().contains(&"extra.txt".to_owned()));
+    }
+
+    #[test]
+    fn parse_name_status_tracks_rename_metadata() {
+        let parsed = parse_name_status("A\tassets/image.png\nR100\told.png\tnew.png\n");
+
+        assert_eq!(
+            parsed,
+            vec![
+                ChangeSummary {
+                    status: "added".to_owned(),
+                    path: "assets/image.png".to_owned(),
+                    previous_path: None,
+                },
+                ChangeSummary {
+                    status: "renamed".to_owned(),
+                    path: "new.png".to_owned(),
+                    previous_path: Some("old.png".to_owned()),
+                },
+            ]
+        );
     }
 
     fn init_repo() -> TempDir {

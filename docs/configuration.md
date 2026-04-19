@@ -87,7 +87,7 @@ For Groq, set `AIC_AI_PROVIDER=groq` and `AIC_API_KEY`, then optionally override
 
 For Ollama, set `AIC_AI_PROVIDER=ollama` and optionally override the default `llama3.2` model with `AIC_MODEL`. `AIC_API_KEY` is not required for the default local Ollama server.
 
-For local CLI providers, set `AIC_AI_PROVIDER=claude-code` or `AIC_AI_PROVIDER=codex` and leave `AIC_MODEL=default`. These providers use the installed `claude` or `codex` binary from `PATH` and rely on that CLI's existing login state instead of `AIC_API_KEY`.
+For local CLI providers, set `AIC_AI_PROVIDER=claude-code`, `AIC_AI_PROVIDER=codex`, or `AIC_AI_PROVIDER=copilot` and leave `AIC_MODEL=default`. These providers use the installed `claude`, `codex`, or `copilot` binary from `PATH` and rely on that CLI's existing login state instead of `AIC_API_KEY`.
 
 Use `--provider <name>` to override the configured provider for a single run:
 
@@ -97,6 +97,7 @@ aic review --provider groq
 aic --provider ollama
 aic --provider claude-code
 aic review --provider codex
+aic review --provider copilot
 aic log --provider codex --yes
 aic models --provider ollama
 ```

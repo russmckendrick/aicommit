@@ -9,6 +9,7 @@ aic
 
 In an interactive terminal, if files are already staged, `aic` first shows a lightweight preflight where you can continue, unstage selected files, or abort.
 If no files are staged, `aic` shows a menu that lets you stage all changed files, choose files interactively, or cancel.
+When the staged change set only contains filtered or binary files such as images, SVGs, or lockfiles, `aic` falls back to Git change metadata so it can still draft a cautious high-level commit message without reading file contents.
 
 When at least two files are staged in the normal interactive flow, `aic` can also split the change set into multiple file-group commits. It first suggests commit groups with AI, then lets you accept the groups, rebuild them manually, or fall back to one commit.
 

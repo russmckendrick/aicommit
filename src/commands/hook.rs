@@ -2,7 +2,9 @@ use std::{env, fs, path::PathBuf};
 
 use anyhow::Result;
 
-use crate::{config::Config, errors::AicError, generator, git, ui};
+use crate::{
+    commands::commit::staged_commit_input, config::Config, errors::AicError, generator, git, ui,
+};
 
 pub fn set() -> Result<()> {
     git::assert_git_repo()?;
@@ -41,12 +43,14 @@ pub async fn run_hook(message_file: String, commit_source: Option<String>) -> Re
         return Ok(());
     }
 
-    let diff = git::staged_diff(&staged)?;
-    if diff.trim().is_empty() {
+    let commit_input = staged_commit_input(&staged)?;
+    if commit_input.content.trim().is_empty() {
         return Ok(());
     }
 
-    let message = generator::generate_commit_message(&config, &diff, false, "", &staged).await?;
+    let message =
+        generator::generate_commit_message(&config, &commit_input.content, false, "", &staged)
+            .await?;
     let existing = fs::read_to_string(&message_file)?;
     let content = if config.hook_auto_uncomment {
         format!("{message}\n\n{existing}")

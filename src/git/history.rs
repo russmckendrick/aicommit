@@ -2,13 +2,14 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use anyhow::{Result, bail};
 
 use super::{
     exec::run_git_in,
-    repo::{filter_ignored, repo_root},
+    repo::{ChangeSummary, change_summaries_from_args, filter_ignored, repo_root},
 };
 
 #[derive(Debug, Clone)]
@@ -28,6 +29,22 @@ pub fn last_commit_files() -> Result<Vec<String>> {
 pub fn last_commit_diff() -> Result<String> {
     let root = repo_root()?;
     Ok(run_git_in(&root, ["diff", "HEAD~1", "HEAD"])?.stdout)
+}
+
+pub fn last_commit_change_summaries(files: &[String]) -> Result<Vec<ChangeSummary>> {
+    let root = repo_root()?;
+    change_summaries_from_args(
+        &root,
+        vec![
+            "diff".to_owned(),
+            "--name-status".to_owned(),
+            "--find-renames".to_owned(),
+            "HEAD~1".to_owned(),
+            "HEAD".to_owned(),
+            "--".to_owned(),
+        ],
+        files,
+    )
 }
 
 pub fn last_n_commits(n: usize) -> Result<Vec<CommitInfo>> {
@@ -74,17 +91,19 @@ pub fn assert_no_merges(n: usize) -> Result<()> {
 
 pub fn reword_commits(n: usize, new_messages: &[String]) -> Result<()> {
     let root = repo_root()?;
-    let tmp_dir = std::env::temp_dir().join("aic-reword");
-    fs::create_dir_all(&tmp_dir)?;
+    let unique_suffix = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
+    let tmp_path =
+        std::env::temp_dir().join(format!("aic-reword-{}-{unique_suffix}", std::process::id()));
+    fs::create_dir_all(&tmp_path)?;
 
-    let _cleanup = RewordCleanup(tmp_dir.clone());
+    let _cleanup = RewordCleanup(tmp_path.clone());
 
     for (i, msg) in new_messages.iter().enumerate() {
-        fs::write(tmp_dir.join(format!("{i}.txt")), msg)?;
+        fs::write(tmp_path.join(format!("{i}.txt")), msg)?;
     }
-    fs::write(tmp_dir.join("counter"), "0")?;
+    fs::write(tmp_path.join("counter"), "0")?;
 
-    let tmp_dir_str = tmp_dir.display().to_string();
+    let tmp_dir_str = tmp_path.display().to_string();
     let seq_editor = r#"#!/bin/sh
 TODO_FILE="$1"
 awk '{sub(/^pick /, "reword ")} 1' "$TODO_FILE" > "$TODO_FILE.tmp" && mv "$TODO_FILE.tmp" "$TODO_FILE"
@@ -97,9 +116,9 @@ echo $((N + 1)) > "{tmp_dir_str}/counter"
 "#
     );
 
-    let sequence_editor_script = tmp_dir.join("sequence-editor.sh");
+    let sequence_editor_script = tmp_path.join("sequence-editor.sh");
     write_executable_script(&sequence_editor_script, seq_editor)?;
-    let editor_script = tmp_dir.join("editor.sh");
+    let editor_script = tmp_path.join("editor.sh");
     write_executable_script(&editor_script, &msg_editor)?;
 
     let output = Command::new("git")

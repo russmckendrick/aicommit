@@ -119,7 +119,7 @@ aic completions zsh        # Generate shell completions
 - **Custom prompts** - swap the system prompt without recompiling
 - **Split commits** - turn one staged change set into multiple file-group commits when concerns are separate
 - **Visualization** - generate SVG treemaps, timelines, heatmaps, and activity graphs with `aic map`
-- **Provider choice** - OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, and custom OpenAI-compatible endpoints
+- **Provider choice** - OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, GitHub Copilot CLI, and custom OpenAI-compatible endpoints
 
 ## Configuration
 
@@ -139,7 +139,7 @@ Detailed docs live in [`docs/`](docs/):
 - [Installation](docs/installation.md) - Homebrew, WinGet, GitHub Releases, from source
 - [Usage](docs/usage.md) - commit workflow, review, flags, hooks
 - [Configuration](docs/configuration.md) - keys, prompt templates, ignore files
-- [Providers](docs/providers.md) - OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, custom endpoints
+- [Providers](docs/providers.md) - OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, GitHub Copilot CLI, custom endpoints
 - [Architecture](docs/architecture.md) - module layout and data flow
 - [Roadmap](docs/roadmap.md) - planned and completed features
 
