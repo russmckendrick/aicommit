@@ -66,11 +66,20 @@ AIC_OMIT_SCOPE
 AIC_GITPUSH
 AIC_REMOTE_ICON_STYLE
 AIC_HOOK_AUTO_UNCOMMENT
+AIC_TUI
+AIC_THEME
+AIC_ICONS
 ```
 
 `AIC_TOKENS_MAX_INPUT` defaults to `128000` for new configs. The `apple` provider caps it at `6000` at load time to fit the on-device model's context window; the cap is not written back to your config file.
 
 `AIC_HTTP_TIMEOUT` caps each API request to the HTTP providers (`openai`, `azure-openai`, `anthropic`, `groq`, `ollama`) in seconds. It defaults to `120`; set it to `0` to disable the timeout entirely, or raise it if a slow local model (for example Ollama on a large prompt) needs more time. Local CLI providers (`claude-code`, `codex`, `copilot`, `apple`) are not affected.
+
+`AIC_TUI` (default `false`) makes plain `aic` open the [terminal UI](tui.md), as if `--tui` were passed. It is ignored when stdin or stdout is not a terminal, and with `--yes`, `--dry-run`, `--amend`, `--json`, or `--quiet`.
+
+`AIC_THEME` sets the terminal UI colours. `auto` (the default) picks `github-dark` or `github-light` from the terminal background (via `COLORFGBG`, falling back to dark). Any `aic map` theme name also works: `github-dark`, `github-light`, `classic-dark`, `classic-light`, `solarized-dark`, `solarized-light`, `monokai`, or `dracula`.
+
+`AIC_ICONS` is `unicode` (the default) or `nerd` to use Nerd Font glyphs in the terminal UI.
 
 ## Large diffs
 

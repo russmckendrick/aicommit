@@ -1,5 +1,14 @@
 # aicommit Unreleased
 
+## Terminal UI
+
+- New `aic --tui` opens a full-screen terminal UI built with `ratatui`. Set `AIC_TUI=true` to open it by default. See [Terminal UI](../tui.md).
+- Commit screen: a staged/unstaged tree where `space` stages or unstages individual hunks, a syntax-highlighted diff with word-level changes, and a message panel that starts writing as soon as the TUI opens, streaming where the provider supports it.
+- Split screen: proposed commits appear as columns; move hunks between them with `←`/`→` or by dragging with the mouse, add or merge commits, and messages for changed commits are rewritten automatically.
+- Command palette (`ctrl-k`), help overlay (`?`), live theme switching (`t`), subject-length counter, stale-message warning, mouse support, and a layout that adapts to the terminal width.
+- New config keys: `AIC_TUI`, `AIC_THEME` (`auto` or any `aic map` theme), and `AIC_ICONS` (`unicode` or `nerd`).
+- The TUI never commits by itself: the normal flow creates the commit, records history, and offers to push.
+
 ## Streaming
 
 - `openai`, `azure-openai`, `groq`, `ollama`, custom OpenAI-compatible endpoints, and `anthropic` now stream the final commit-message request. While it is written, the status spinner previews the subject line instead of a rotating status message.

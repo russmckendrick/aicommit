@@ -32,6 +32,14 @@ If nothing is staged, `aic` lets you stage all changed files, choose files inter
 With `--yes`, it stages all changed files automatically.
 In the normal interactive flow, `aic` can also split one staged change set into multiple file-group commits when the work clearly spans separate concerns.
 
+### Terminal UI
+
+```sh
+aic --tui
+```
+
+Opens a full-screen terminal UI: stage individual hunks, watch the message stream in, edit it, and split the staged set into several commits by moving hunks between columns. Set `AIC_TUI=true` to make it the default. See [docs/tui.md](docs/tui.md).
+
 ### Flags
 
 | Flag | Description |
@@ -41,6 +49,8 @@ In the normal interactive flow, `aic` can also split one staged change set into 
 | `-d`, `--dry-run` | Print the message without committing |
 | `--amend` | Regenerate and amend the last commit |
 | `--fgm` | Use the full GitMoji specification |
+| `--tui` | Open the interactive terminal UI |
+| `--json` / `-q`, `--quiet` | Print only the result (JSON or plain text) for scripts and agents |
 
 ### Review staged changes
 
@@ -117,7 +127,10 @@ aic completions zsh        # Generate shell completions
 - **History** - browse past generated messages, PR drafts, and reviews
 - **Large diff handling** - automatic chunking and synthesis
 - **Custom prompts** - swap the system prompt without recompiling
-- **Split commits** - turn one staged change set into multiple file-group commits when concerns are separate
+- **Terminal UI** - stage hunks, stream messages, and split commits in a full-screen UI (`aic --tui`)
+- **Split commits** - turn one staged change set into multiple commits, hunk by hunk, when concerns are separate
+- **Streaming** - see the message as it is written with OpenAI-compatible and Anthropic providers
+- **Automation** - `--json` and `--quiet` output for scripts, CI, and coding agents
 - **Visualization** - generate SVG treemaps, timelines, heatmaps, and activity graphs with `aic map`
 - **Provider choice** - OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, GitHub Copilot CLI, and custom OpenAI-compatible endpoints
 

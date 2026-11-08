@@ -75,6 +75,16 @@ Tune the system prompt without recompiling by setting `AIC_PROMPT_FILE` to a cus
 
 If a push is rejected after the commit has already been created locally, `aic` now treats that as a recovery flow instead of dumping raw Git output only. In interactive clean-tree cases it can offer a `pull --rebase` retry; otherwise it explains what happened and leaves the commit in your local history for you to push after syncing manually.
 
+## Terminal UI
+
+Open a full-screen terminal UI to stage hunks, watch the message being written, edit it, and split commits:
+
+```sh
+aic --tui
+```
+
+Set `AIC_TUI=true` to make it the default. See [Terminal UI](tui.md) for screens and key bindings.
+
 ## Interactive Diff Splitting
 
 Use the normal commit flow and choose `Split into multiple commits` when prompted:
