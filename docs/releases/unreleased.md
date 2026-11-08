@@ -47,6 +47,12 @@
 | `ollama` | `llama3.2` | `gpt-oss:20b` |
 
 - `aic setup` and `aic models` suggest current models: GPT-6 Luna, Sol, and Astra; Claude Sonnet, Haiku, and Opus 5.5 and Fable 5.1; GPT-OSS on Groq and Ollama.
-- Existing configs keep the model they have. To move to the new default, run `aic setup` or `aic config set AIC_MODEL=<model>`.
+- Existing configs keep the model they have. To move to the new default, run `aic setup` or `aic config set AIC_MODEL=<model>`, or pick it in the terminal UI's settings.
+
+## Config file keeps only your changes
+
+- `~/.aicommit` now stores only settings that differ from the defaults. Previously `aic setup` and `aic config set` wrote every key, which froze each default at the value it had on the day you ran them, so later default changes (such as the new models) never reached you.
+- The next time `aic` writes the file, values equal to the current defaults are removed. Values you changed are kept, and a model that was an older default is kept too, since `aic` can't tell whether you chose it.
+- With no model stored, the model is the default for the configured provider.
 - `--provider` still swaps in the new provider's default when your configured model is any current or earlier default.
 - GPT-6 models get the same request parameters as GPT-5 (`max_completion_tokens`, no sampling parameters).

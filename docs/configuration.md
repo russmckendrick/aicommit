@@ -14,6 +14,8 @@ flowchart LR
     Flags --> Runtime["Resolved runtime config"]
 ```
 
+`~/.aicommit` only stores settings that differ from the built-in defaults. `aic config set`, `aic setup`, and the terminal UI's settings screen rewrite the file that way, and drop any value that matches its default. A setting you never changed therefore follows the defaults of whichever `aic` version you run, including the default model. When no model is stored, the model is the default for the configured provider.
+
 Set global values:
 
 ```sh

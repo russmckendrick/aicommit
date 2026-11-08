@@ -48,7 +48,18 @@ pub fn apply_value(config: &mut Config, key: &str, value: &str) -> Result<()> {
     }
 
     match key {
-        "AIC_AI_PROVIDER" => config.ai_provider = crate::config::parse::normalize_provider(value),
+        "AIC_AI_PROVIDER" => {
+            let provider = crate::config::parse::normalize_provider(value);
+            // The config file omits a model equal to the provider default,
+            // so a model still at the old provider's default follows the
+            // new provider. AIC_MODEL is applied after this key and wins.
+            if config.model == crate::config::model::default_model_for_provider(&config.ai_provider)
+            {
+                config.model =
+                    crate::config::model::default_model_for_provider(&provider).to_owned();
+            }
+            config.ai_provider = provider;
+        }
         "AIC_API_KEY" => config.api_key = optional_string(value),
         "AIC_API_URL" => config.api_url = optional_string(value),
         "AIC_API_CUSTOM_HEADERS" => {
