@@ -2,6 +2,8 @@
 
 The v1 priority is a reliable Rust CLI for local commit generation through `aic`.
 
+The next release is planned in [plans/0.1.0.md](plans/0.1.0.md): an interactive terminal UI, hunk-level split commits, streaming, `--json`/`--quiet`, config profiles, and repo style inference.
+
 ## High Impact
 
 - ~~**`aic log` - rewrite past commit messages**~~ - ✅ clean up the last N commit messages on a branch using AI before opening a PR.

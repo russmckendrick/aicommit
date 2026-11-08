@@ -13,6 +13,7 @@ This folder is the detailed documentation entry point for `aic`, the Rust CLI fo
 - [Architecture](architecture.md): understand the Rust modules and data flow.
 - [Testing](testing.md): run the verification suite.
 - [Roadmap](roadmap.md): see deferred v1 items.
+- [Plan - 0.1.0](plans/0.1.0.md): draft plan for the terminal UI, hunk-level splits, streaming, and the design bar.
 - [Release Notes - Unreleased](releases/unreleased.md): upcoming changes not yet shipped in a tagged release.
 - [Release Notes - 0.0.10](releases/0.0.10.md): latest release notes.
 - [Release Notes - 0.0.9](releases/0.0.9.md): previous release notes.

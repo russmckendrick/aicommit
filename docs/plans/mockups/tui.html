@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aic TUI mockups</title>
+<style>
+:root{--page:#f6f8fa;--ink:#1f2328;--muted:#59636e}
+@media (prefers-color-scheme: dark){:root{--page:#010409;--ink:#e6edf3;--muted:#9198a1}}
+body{margin:0;padding:32px 16px;background:var(--page);color:var(--ink);font-family:system-ui,-apple-system,sans-serif}
+main{max-width:760px;margin:0 auto}
+h1{font-size:22px;font-weight:500;margin:0 0 4px}
+h2{font-size:16px;font-weight:500;margin:32px 0 10px}
+p{color:var(--muted);margin:0 0 8px;font-size:14px;line-height:1.6}
+.term{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.55;color:#c9d1d9;background:#0d1117;border-radius:10px;padding:10px 12px;border:1px solid #30363d;overflow-x:auto}
+.b{border:1px solid #30363d;border-radius:8px}
+.mu{color:#7d8590}.ac{color:#58a6ff}.gr{color:#3fb950}.rd{color:#f85149}.yl{color:#d29922}.pu{color:#bc8cff}.or{color:#ffa657}
+.add{background:rgba(46,160,67,.15)}.del{background:rgba(248,81,73,.12)}.addw{background:rgba(46,160,67,.4);border-radius:2px}
+.sel{background:#1f2a3a;border-left:2px solid #58a6ff;padding-left:4px}
+.k{background:#21262d;border:1px solid #30363d;border-radius:4px;padding:0 5px;color:#e6edf3}
+.h{border:1px solid #30363d;border-radius:6px;padding:3px 6px;margin-top:5px;background:#161b22}
+.hs{border-color:#58a6ff;background:#1f2a3a}
+.ghost{border:1px dashed #58a6ff;border-radius:6px;padding:3px 6px;margin-top:5px;color:#58a6ff}
+.m{margin-top:8px;padding-top:6px;border-top:1px solid #30363d;color:#e6edf3}
+.row{display:flex;justify-content:space-between;align-items:center;padding:2px 2px 8px;gap:12px}
+.hints{display:flex;gap:12px;flex-wrap:wrap;padding:8px 2px 0}
+.d{padding:0 10px;white-space:pre}
+@keyframes bl{50%{opacity:0}}.cur{display:inline-block;width:7px;height:14px;background:#58a6ff;vertical-align:-2px;animation:bl 1s steps(1) infinite}
+@media (prefers-reduced-motion: reduce){.cur{animation:none}}
+.cols3{display:grid;grid-template-columns:repeat(3,minmax(170px,1fr));gap:8px}
+.cols2{display:grid;grid-template-columns:minmax(170px,200px) minmax(320px,1fr);gap:8px}
+</style>
+</head>
+<body>
+<main>
+<h1>aic 0.1.0 TUI mockups</h1>
+<p>Design reference for <a href="../0.1.0.md">the 0.1.0 plan</a>. These mockups use the github-dark theme. They are HTML, not ratatui output, but every element maps to a terminal widget.</p>
+
+<h2>Commit screen</h2>
+<div class="term">
+<div class="row">
+<span><span class="ac">◇ aic</span> <span class="mu">·</span> commit <span class="mu">·</span> <span class="pu"> main</span> <span class="mu">·</span> <span class="mu">ticket</span> #42</span>
+<span class="mu">anthropic/claude-sonnet-5-5 · 3.1k tok · ~$0.004</span>
+</div>
+<div class="cols2">
+<div class="b" style="padding:6px 8px">
+<div class="mu" style="margin-bottom:4px">Staged · 3 files · 5 hunks</div>
+<div><span class="gr">●</span> src/ai/mod.rs</div>
+<div class="sel"><span class="gr">  ✓</span> #1 trait AiEngine</div>
+<div><span class="gr">  ✓</span> #2 engine_from_config</div>
+<div><span class="yl">◐</span> src/ai/anthropic.rs</div>
+<div><span class="gr">  ✓</span> #1 SSE deltas</div>
+<div class="mu">  ○ #2 debug logging</div>
+<div><span class="gr">●</span> docs/providers.md</div>
+<div><span class="gr">  ✓</span> #1 streaming table</div>
+<div class="mu" style="margin-top:8px">Unstaged · 1 file</div>
+<div class="mu">○ Cargo.lock</div>
+</div>
+<div class="b" style="padding:6px 0;overflow:hidden">
+<div class="mu" style="padding:0 10px 4px;display:flex;justify-content:space-between"><span>src/ai/mod.rs</span><span>@@ -46,7 +46,15 @@</span></div>
+<div class="d"><span class="mu">46</span>  <span class="pu">#[async_trait]</span></div>
+<div class="d"><span class="mu">47</span>  <span class="rd">pub trait</span> <span class="or">AiEngine</span>: Send + Sync {</div>
+<div class="d del"><span class="rd">-</span>     <span class="rd">async fn</span> <span class="ac" style="background:rgba(248,81,73,.35);border-radius:2px">generate_commit_message</span>(&amp;self, …)</div>
+<div class="d add"><span class="gr">+</span>     <span class="rd">async fn</span> <span class="ac addw">complete</span>(&amp;self, m: &amp;[<span class="or">ChatMessage</span>])</div>
+<div class="d add"><span class="gr">+</span>         -&gt; <span class="or">Result</span>&lt;<span class="or">String</span>&gt;;</div>
+<div class="d add"><span class="gr">+</span></div>
+<div class="d add"><span class="gr">+</span>     <span class="mu">/// Default: one chunk from complete()</span></div>
+<div class="d add"><span class="gr">+</span>     <span class="rd">async fn</span> <span class="ac">stream</span>(&amp;self, m: &amp;[<span class="or">ChatMessage</span>])</div>
+<div class="d add"><span class="gr">+</span>         -&gt; <span class="or">Result</span>&lt;<span class="or">TokenStream</span>&lt;'_&gt;&gt; {</div>
+<div class="d add"><span class="gr">+</span>         <span class="or">Ok</span>(once(<span class="rd">self</span>.complete(m).<span class="rd">await</span>))</div>
+<div class="d add"><span class="gr">+</span>     }</div>
+<div class="d"><span class="mu">55</span>  }</div>
+</div>
+</div>
+<div class="b" style="margin-top:8px;padding:6px 10px;border-color:#58a6ff">
+<div class="mu" style="display:flex;justify-content:space-between"><span>Message</span><span><span class="ac">━━━━━━━━━━━━━━━</span>━━━━━ Synthesising</span></div>
+<div style="color:#e6edf3;margin-top:2px">✨ feat(ai): stream completions from anthropic and openai providers</div>
+<div style="margin-top:4px">- rename AiEngine::generate_commit_message to complete</div>
+<div>- add a default stream() so providers can opt in one at a time<span class="cur"></span></div>
+</div>
+<div class="hints mu">
+<span><span class="k">space</span> stage</span><span><span class="k">g</span> generate</span><span><span class="k">e</span> edit</span><span><span class="k">s</span> split</span><span><span class="k">c</span> commit</span><span><span class="k">^k</span> palette</span><span><span class="k">esc</span> cancel</span><span><span class="k">?</span> help</span>
+</div>
+</div>
+
+<h2>Split screen</h2>
+<div class="term">
+<div class="row">
+<span><span class="ac">◇ aic</span> <span class="mu">·</span> split <span class="mu">·</span> <span class="pu"> main</span></span>
+<span class="mu">7 hunks · 4 files → 3 commits</span>
+</div>
+<div class="cols3">
+<div class="b" style="padding:7px 8px">
+<div><span class="gr">1</span> Streaming trait</div>
+<div class="mu">Engine API change</div>
+<div class="h">src/ai/mod.rs <span class="mu">#1</span></div>
+<div class="h">src/ai/mod.rs <span class="mu">#2</span></div>
+<div class="h">src/ai/anthropic.rs <span class="mu">#1</span></div>
+<div class="m">✨ feat(ai): add streaming to the engine trait</div>
+</div>
+<div class="b" style="padding:7px 8px;border-color:#58a6ff">
+<div><span class="gr">2</span> UI tidy-up</div>
+<div class="mu">Spinner copy only</div>
+<div class="h">src/ui.rs <span class="mu">#1</span></div>
+<div class="h hs">src/ui.rs <span class="mu">#3</span> <span class="ac" style="float:right">→</span></div>
+<div class="ghost">drop here</div>
+<div class="m">💄 style(ui): shorten progress stage labels</div>
+</div>
+<div class="b" style="padding:7px 8px">
+<div><span class="gr">3</span> Docs</div>
+<div class="mu">Provider table</div>
+<div class="h">docs/providers.md <span class="mu">#1</span></div>
+<div class="h">src/ui.rs <span class="mu">#2</span> <span class="yl" style="float:right">same file</span></div>
+<div class="m">📝 docs(providers): note which engines stream</div>
+</div>
+</div>
+<div class="b" style="margin-top:8px;padding:6px 10px">
+<div class="mu" style="display:flex;justify-content:space-between"><span>src/ui.rs #3</span><span>moving 2 → 3</span></div>
+<div style="background:rgba(46,160,67,.15);padding:0 4px;white-space:pre"><span class="gr">+</span>     <span class="ac">Synthesizing</span> =&gt; <span style="color:#a5d6ff">"Synthesising"</span>,</div>
+</div>
+<div class="hints mu">
+<span><span class="k">←→</span> move hunk</span><span><span class="k">n</span> new group</span><span><span class="k">m</span> merge</span><span><span class="k">r</span> regen message</span><span><span class="k">enter</span> commit all</span><span><span class="k">esc</span> one commit</span>
+</div>
+</div>
+</main>
+</body>
+</html>
