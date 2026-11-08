@@ -30,6 +30,12 @@ pub struct RecentEntries {
 }
 
 pub fn history_path() -> Result<PathBuf> {
+    // Unit tests must never touch the real history file.
+    if cfg!(test) {
+        return Ok(
+            env::temp_dir().join(format!("aicommit-test-history-{}.json", std::process::id()))
+        );
+    }
     let home = BaseDirs::new()
         .map(|base| base.home_dir().to_path_buf())
         .or_else(|| env::var_os("HOME").map(PathBuf::from))
@@ -39,10 +45,36 @@ pub fn history_path() -> Result<PathBuf> {
 
 pub fn append_entry(entry: &HistoryEntry) -> Result<()> {
     let path = history_path()?;
-    let mut entries = load_entries()?;
+    let mut entries = match load_entries() {
+        Ok(entries) => entries,
+        Err(_) => {
+            // Keep the unreadable file for inspection and start a new one,
+            // rather than refusing to record anything ever again.
+            let aside = path.with_extension(format!(
+                "json.corrupt-{}",
+                Utc::now().format("%Y%m%dT%H%M%S")
+            ));
+            fs::rename(&path, &aside).with_context(|| {
+                format!(
+                    "history at {} is unreadable and could not be moved aside",
+                    path.display()
+                )
+            })?;
+            Vec::new()
+        }
+    };
     entries.push(entry.clone());
-    let json = serde_json::to_string_pretty(&entries)?;
-    fs::write(path, json)?;
+    write_atomically(&path, &serde_json::to_string_pretty(&entries)?)
+}
+
+/// Write to a sibling temp file and rename it into place, so a reader or a
+/// second `aic` process never sees a half-written file.
+fn write_atomically(path: &Path, content: &str) -> Result<()> {
+    let tmp = path.with_extension(format!("json.tmp-{}", std::process::id()));
+    fs::write(&tmp, content)?;
+    fs::rename(&tmp, path).inspect_err(|_| {
+        let _ = fs::remove_file(&tmp);
+    })?;
     Ok(())
 }
 
@@ -52,9 +84,22 @@ pub fn load_entries() -> Result<Vec<HistoryEntry>> {
         return Ok(Vec::new());
     }
     let content = fs::read_to_string(&path)?;
-    let entries: Vec<HistoryEntry> = serde_json::from_str(&content)
-        .with_context(|| format!("failed to parse history from {}", path.display()))?;
-    Ok(entries)
+    parse_entries(&content)
+        .with_context(|| format!("failed to parse history from {}", path.display()))
+}
+
+/// Parse the history list, tolerating trailing garbage after a valid list
+/// (left behind by older versions that wrote the file non-atomically).
+fn parse_entries(content: &str) -> Result<Vec<HistoryEntry>> {
+    if content.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut stream = serde_json::Deserializer::from_str(content).into_iter::<Vec<HistoryEntry>>();
+    match stream.next() {
+        Some(Ok(entries)) => Ok(entries),
+        Some(Err(error)) => Err(error.into()),
+        None => Ok(Vec::new()),
+    }
 }
 
 pub fn recent_entries(n: usize, kind: Option<&str>) -> Result<RecentEntries> {
@@ -135,6 +180,42 @@ mod tests {
             provider: provider.to_string(),
             model: "default".to_string(),
         }
+    }
+
+    #[test]
+    fn parses_history_with_trailing_garbage_and_empty_files() {
+        let valid = r#"[{"timestamp":"t","kind":"commit","message":"m","repo_path":"/r","files":[],"provider":"p","model":"x"}]"#;
+        assert_eq!(parse_entries(valid).unwrap().len(), 1);
+        assert_eq!(parse_entries(&format!("{valid}}}\n]")).unwrap().len(), 1);
+        assert!(parse_entries("").unwrap().is_empty());
+        assert!(parse_entries("{not json").is_err());
+    }
+
+    #[test]
+    fn append_recovers_from_an_unreadable_file() {
+        let path = history_path().unwrap();
+        fs::write(&path, "{not json").unwrap();
+        append_entry(&entry("/repo", "openai")).unwrap();
+        assert_eq!(load_entries().unwrap().len(), 1);
+        let dir = path.parent().unwrap();
+        let name = path.file_name().unwrap().to_string_lossy().to_string();
+        let moved = fs::read_dir(dir)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .starts_with(&format!("{name}.corrupt-"))
+                    || e.file_name()
+                        .to_string_lossy()
+                        .starts_with(&name.replace(".json", ".json.corrupt-"))
+            })
+            .collect::<Vec<_>>();
+        assert!(!moved.is_empty());
+        for file in moved {
+            let _ = fs::remove_file(file.path());
+        }
+        let _ = fs::remove_file(path);
     }
 
     #[test]

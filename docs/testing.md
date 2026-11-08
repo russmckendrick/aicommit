@@ -33,3 +33,5 @@ The terminal UI is tested by rendering frames to `ratatui`'s `TestBackend` again
 ```sh
 cargo test tui::tests -- --nocapture
 ```
+
+The suite never touches your real configuration or history: CLI tests run `aic` with a throwaway `HOME` and without inherited `AIC_*` variables, and unit tests write history to a per-process file in the system temp directory.

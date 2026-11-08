@@ -56,3 +56,8 @@
 - With no model stored, the model is the default for the configured provider.
 - `--provider` still swaps in the new provider's default when your configured model is any current or earlier default.
 - GPT-6 models get the same request parameters as GPT-5 (`max_completion_tokens`, no sampling parameters).
+
+## History file reliability
+
+- `~/.aicommit-history.json` is now written to a temporary file and renamed into place, so two `aic` processes writing at once can no longer leave it half-written.
+- A history file with stray characters after the entry list (left by such a race) is read normally again. A file that cannot be read at all is moved aside to `.aicommit-history.json.corrupt-<time>` and a new one is started, instead of every later commit failing to save history with a warning.

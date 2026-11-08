@@ -8,6 +8,21 @@ use predicates::prelude::*;
 use serde_json::json;
 use tempfile::TempDir;
 
+/// `aic` with a throwaway HOME, so tests never read or write the real
+/// ~/.aicommit, history, or model cache. Tests that need a specific home set
+/// HOME again, which overrides this.
+fn aic_command() -> Command {
+    let home = TempDir::new().unwrap().keep();
+    let mut command = Command::cargo_bin("aic").unwrap();
+    command.env("HOME", &home).env("USERPROFILE", &home);
+    for (key, _) in env::vars() {
+        if key.starts_with("AIC_") {
+            command.env_remove(key);
+        }
+    }
+    command
+}
+
 fn init_repo() -> TempDir {
     let temp = TempDir::new().unwrap();
     run_git(temp.path(), ["init"]);
@@ -133,7 +148,7 @@ fn write_history(home: &Path, entries: &[serde_json::Value]) {
 }
 
 fn history_command(repo: &Path, home: &Path) -> Command {
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo)
         .env("HOME", home)
         .env("USERPROFILE", home);
@@ -144,7 +159,7 @@ fn history_command(repo: &Path, home: &Path) -> Command {
 fn reports_no_changes() {
     let repo = init_repo();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .assert()
@@ -156,7 +171,7 @@ fn reports_no_changes() {
 fn top_level_help_describes_all_visible_commands() {
     let repo = init_repo();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .arg("--help")
         .assert()
@@ -185,7 +200,7 @@ fn top_level_help_describes_all_visible_commands() {
 fn config_help_describes_nested_subcommands() {
     let repo = init_repo();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .args(["config", "--help"])
         .assert()
@@ -207,7 +222,7 @@ fn commits_staged_file_with_test_provider() {
     fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
     run_git(repo.path(), ["add", "src.txt"]);
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .env("AIC_GITPUSH", "false")
@@ -235,7 +250,7 @@ fn yes_stages_all_changed_files_before_committing() {
     let repo = init_repo();
     fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .env("AIC_GITPUSH", "false")
@@ -256,7 +271,7 @@ fn yes_commits_binary_only_changes_from_metadata() {
     let repo = init_repo();
     fs::write(repo.path().join("cover.png"), b"not-a-real-png").unwrap();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .env("AIC_GITPUSH", "false")
@@ -285,7 +300,7 @@ fn yes_does_not_push_when_push_is_disabled() {
         ["remote", "add", "origin", remote.path().to_str().unwrap()],
     );
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .env("AIC_GITPUSH", "false")
@@ -311,7 +326,7 @@ fn yes_pushes_to_the_only_remote() {
         ["remote", "add", "origin", remote.path().to_str().unwrap()],
     );
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .env("AIC_GITPUSH", "true")
@@ -345,7 +360,7 @@ fn yes_with_push_enabled_stops_before_commit_when_upstream_is_behind() {
 
     fs::write(repo.path().join("local.txt"), "hello\n").unwrap();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .env("AIC_GITPUSH", "true")
@@ -380,7 +395,7 @@ fn yes_with_push_disabled_still_commits_when_upstream_is_behind() {
 
     fs::write(repo.path().join("local.txt"), "hello\n").unwrap();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .env("AIC_GITPUSH", "false")
@@ -425,7 +440,7 @@ fn yes_fails_when_multiple_remotes_are_configured_for_push() {
         ],
     );
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .env("AIC_GITPUSH", "true")
@@ -454,7 +469,7 @@ fn hook_run_writes_commented_message() {
     let message_file = repo.path().join("COMMIT_EDITMSG");
     fs::write(&message_file, "\n").unwrap();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .arg("hookrun")
@@ -480,7 +495,7 @@ fn provider_override_uses_claude_code_binary() {
     fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
     run_git(repo.path(), ["add", "src.txt"]);
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("AIC_GITPUSH", "false")
@@ -513,7 +528,7 @@ fn provider_override_uses_copilot_binary() {
     fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
     run_git(repo.path(), ["add", "src.txt"]);
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("AIC_GITPUSH", "false")
@@ -550,7 +565,7 @@ fn provider_override_uses_apple_fm_binary() {
     fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
     run_git(repo.path(), ["add", "src.txt"]);
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("AIC_GITPUSH", "false")
@@ -579,7 +594,7 @@ fn review_honors_codex_provider_override() {
     fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
     run_git(repo.path(), ["add", "src.txt"]);
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("PATH", path_with_fake_bin(bin_dir.path()))
@@ -602,7 +617,7 @@ fn review_honors_copilot_provider_override() {
     fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
     run_git(repo.path(), ["add", "src.txt"]);
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("PATH", path_with_fake_bin(bin_dir.path()))
@@ -635,7 +650,7 @@ fn pr_honors_codex_provider_override_and_writes_history() {
     run_git(repo.path(), ["add", "src.txt"]);
     run_git(repo.path(), ["commit", "-m", "feat(cli): add PR workflow"]);
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("HOME", home.path())
         .env("USERPROFILE", home.path())
@@ -680,7 +695,7 @@ fn pr_honors_copilot_provider_override_and_writes_history() {
     run_git(repo.path(), ["add", "src.txt"]);
     run_git(repo.path(), ["commit", "-m", "feat(cli): add PR workflow"]);
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("HOME", home.path())
         .env("USERPROFILE", home.path())
@@ -724,7 +739,7 @@ fn pr_honors_claude_code_provider_override() {
     run_git(repo.path(), ["add", "src.txt"]);
     run_git(repo.path(), ["commit", "-m", "feat(cli): add PR workflow"]);
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("PATH", path_with_fake_bin(bin_dir.path()))
@@ -750,7 +765,7 @@ fn pr_reports_missing_explicit_base() {
     run_git(repo.path(), ["add", "src.txt"]);
     run_git(repo.path(), ["commit", "-m", "feat(cli): add PR workflow"]);
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .arg("pr")
@@ -775,7 +790,7 @@ fn log_honors_codex_provider_override() {
     run_git(repo.path(), ["add", "src.txt"]);
     run_git(repo.path(), ["commit", "-m", "old message"]);
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("PATH", path_with_fake_bin(bin_dir.path()))
@@ -814,7 +829,7 @@ fn log_honors_copilot_provider_override() {
     run_git(repo.path(), ["add", "src.txt"]);
     run_git(repo.path(), ["commit", "-m", "old message"]);
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("PATH", path_with_fake_bin(bin_dir.path()))
@@ -844,7 +859,7 @@ fn log_honors_copilot_provider_override() {
 fn models_command_shows_local_provider_note_for_override() {
     let repo = init_repo();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .arg("models")
@@ -861,7 +876,7 @@ fn models_command_shows_local_provider_note_for_override() {
 fn models_command_shows_copilot_provider_note_for_override() {
     let repo = init_repo();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .arg("models")
@@ -878,7 +893,7 @@ fn models_command_shows_copilot_provider_note_for_override() {
 fn models_command_supports_anthropic_provider_override() {
     let repo = init_repo();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("AIC_MODEL", "gpt-5.4-mini")
@@ -898,7 +913,7 @@ fn models_command_supports_anthropic_provider_override() {
 fn models_command_supports_groq_provider_override() {
     let repo = init_repo();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("AIC_MODEL", "gpt-5.4-mini")
@@ -918,7 +933,7 @@ fn models_command_supports_groq_provider_override() {
 fn models_command_supports_ollama_provider_override() {
     let repo = init_repo();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("AIC_MODEL", "gpt-5.4-mini")
@@ -1207,7 +1222,7 @@ fn history_invalid_timestamp_falls_back_to_raw_value() {
 fn models_command_shows_apple_provider_note_for_override() {
     let repo = init_repo();
 
-    let mut cmd = Command::cargo_bin("aic").unwrap();
+    let mut cmd = aic_command();
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .arg("models")
@@ -1228,8 +1243,7 @@ fn json_prints_message_without_committing() {
     run_git(repo.path(), ["add", "src.txt"]);
     let head_before = git_stdout(repo.path(), ["rev-list", "--all", "--count"]);
 
-    let output = Command::cargo_bin("aic")
-        .unwrap()
+    let output = aic_command()
         .current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .env("AIC_GITPUSH", "false")
@@ -1256,8 +1270,7 @@ fn json_with_yes_commits_and_reports_the_hash() {
     let repo = init_repo();
     fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
 
-    let output = Command::cargo_bin("aic")
-        .unwrap()
+    let output = aic_command()
         .current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .env("AIC_GITPUSH", "false")
@@ -1280,8 +1293,7 @@ fn quiet_prints_only_the_message() {
     fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
     run_git(repo.path(), ["add", "src.txt"]);
 
-    Command::cargo_bin("aic")
-        .unwrap()
+    aic_command()
         .current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .arg("--quiet")
@@ -1295,8 +1307,7 @@ fn json_without_staged_changes_fails_instead_of_prompting() {
     let repo = init_repo();
     fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
 
-    Command::cargo_bin("aic")
-        .unwrap()
+    aic_command()
         .current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "test")
         .arg("--json")
@@ -1307,9 +1318,5 @@ fn json_without_staged_changes_fails_instead_of_prompting() {
 
 #[test]
 fn json_and_quiet_conflict() {
-    Command::cargo_bin("aic")
-        .unwrap()
-        .args(["--json", "--quiet"])
-        .assert()
-        .failure();
+    aic_command().args(["--json", "--quiet"]).assert().failure();
 }
