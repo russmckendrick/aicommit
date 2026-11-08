@@ -69,6 +69,7 @@ AIC_HOOK_AUTO_UNCOMMENT
 AIC_TUI
 AIC_THEME
 AIC_ICONS
+AIC_REPO_STYLE
 ```
 
 `AIC_TOKENS_MAX_INPUT` defaults to `128000` for new configs. The `apple` provider caps it at `6000` at load time to fit the on-device model's context window; the cap is not written back to your config file.
@@ -143,7 +144,7 @@ When `AIC_GITPUSH=true`, `aic` now fetches the tracked upstream before starting 
 
 ## Prompt Template
 
-The default system prompt template lives at `prompts/commit-system.md`. The `apple` provider uses the shorter `prompts/commit-system-apple.md` instead, which supports the same placeholders except `{{style_examples}}`. `AIC_PROMPT_FILE` overrides both.
+The default system prompt template lives at `prompts/commit-system.md`. The `apple` provider uses the shorter `prompts/commit-system-apple.md` instead, which supports the same placeholders except `{{style_examples}}` and `{{repo_style}}`. `AIC_PROMPT_FILE` overrides both.
 
 Use a custom prompt template without recompiling:
 
@@ -159,9 +160,12 @@ Prompt templates can use these placeholders:
 {{line_mode_instruction}}
 {{scope_instruction}}
 {{style_examples}}
+{{repo_style}}
 {{language}}
 {{context_instruction}}
 ```
+
+`{{repo_style}}` is filled from the current repository's last 50 non-merge commit subjects when there are at least 8 of them: scopes already in use, whether descriptions start with a lowercase or capital letter, whether subjects end with a full stop, and the typical subject length. It never overrides `AIC_EMOJI` or the commit convention. Set `AIC_REPO_STYLE=false` to leave it empty.
 
 Use `.aicommitignore` in a repository to exclude files from AI diff input:
 

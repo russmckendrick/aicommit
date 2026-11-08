@@ -62,6 +62,19 @@ pub fn last_n_commits(n: usize) -> Result<Vec<CommitInfo>> {
     Ok(commits)
 }
 
+/// Subjects of the most recent non-merge commits, newest first. Empty in a
+/// repository without commits.
+pub fn recent_subjects(limit: usize) -> Result<Vec<String>> {
+    let root = repo_root()?;
+    match run_git_in(
+        &root,
+        ["log", "--no-merges", &format!("-{limit}"), "--format=%s"],
+    ) {
+        Ok(output) => Ok(crate::git::repo::parse_lines(&output.stdout)),
+        Err(_) => Ok(Vec::new()),
+    }
+}
+
 pub fn commit_diff(hash: &str) -> Result<String> {
     let root = repo_root()?;
     let output = run_git_in(&root, ["diff", &format!("{hash}^"), hash]);

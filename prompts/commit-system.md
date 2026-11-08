@@ -28,6 +28,7 @@ Good style examples:
 Convention:
 {{commit_convention}}
 {{scope_instruction}}
+{{repo_style}}
 
 Body:
 {{body_instruction}}

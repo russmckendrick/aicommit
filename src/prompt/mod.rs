@@ -4,6 +4,7 @@ mod pr;
 mod review;
 mod sanitize;
 mod split;
+mod style;
 
 pub use commit::{
     SplitPlanGroup, build_messages, compact_diff_for_small_model, detect_scope_hints,
@@ -20,3 +21,4 @@ pub use split::{
     build_split_chunk_summary_messages, build_split_plan_messages, build_split_synthesis_messages,
     split_system_prompt,
 };
+pub use style::infer_repo_style;

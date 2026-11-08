@@ -28,3 +28,8 @@
 - If a split commit fails part-way, the remaining changes are restored to the index instead of being left unstaged.
 - Files hidden by `.aicommitignore` now stay staged after a split, instead of being unstaged.
 - A single file with two or more staged hunks can now be split.
+
+## Repository style matching
+
+- Generated commit messages now follow the habits of the repository they land in. `aic` reads the last 50 non-merge commit subjects and tells the model which scopes are already in use, how descriptions are cased, whether subjects end with a full stop, and how long subjects usually are.
+- Needs at least 8 commits of history, and never overrides `AIC_EMOJI` or the commit convention. Turn it off with `AIC_REPO_STYLE=false`. Custom prompt files opt in with the new `{{repo_style}}` placeholder.

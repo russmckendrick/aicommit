@@ -50,6 +50,7 @@ pub const CONFIG_KEYS: &[&str] = &[
     "AIC_TUI",
     "AIC_THEME",
     "AIC_ICONS",
+    "AIC_REPO_STYLE",
 ];
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -76,6 +77,7 @@ pub struct Config {
     pub tui: bool,
     pub theme: String,
     pub icons: String,
+    pub repo_style: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -108,6 +110,7 @@ impl Default for Config {
             tui: false,
             theme: "auto".to_owned(),
             icons: "unicode".to_owned(),
+            repo_style: true,
         }
     }
 }
@@ -181,6 +184,7 @@ impl Config {
             ("AIC_TUI", self.tui.to_string()),
             ("AIC_THEME", self.theme.clone()),
             ("AIC_ICONS", self.icons.clone()),
+            ("AIC_REPO_STYLE", self.repo_style.to_string()),
         ]
     }
 

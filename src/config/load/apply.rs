@@ -84,6 +84,7 @@ pub fn apply_value(config: &mut Config, key: &str, value: &str) -> Result<()> {
         "AIC_TUI" => config.tui = crate::config::parse::parse_bool(key, value)?,
         "AIC_THEME" => config.theme = crate::config::parse::normalize_theme(value)?,
         "AIC_ICONS" => config.icons = crate::config::parse::normalize_icons(value)?,
+        "AIC_REPO_STYLE" => config.repo_style = crate::config::parse::parse_bool(key, value)?,
         _ => unreachable!("all config keys are handled"),
     }
     Ok(())

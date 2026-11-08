@@ -115,8 +115,41 @@ pub fn system_prompt(
         .replace("{{line_mode_instruction}}", line_mode_instruction)
         .replace("{{scope_instruction}}", &scope_instruction)
         .replace("{{style_examples}}", &style_examples(config))
+        .replace("{{repo_style}}", &repo_style_instruction(config))
         .replace("{{language}}", &config.language)
         .replace("{{context_instruction}}", &context_instruction))
+}
+
+const REPO_STYLE_SAMPLE: usize = 50;
+
+/// Style hints inferred from the current repository's recent subjects,
+/// cached per repository for the life of the process.
+fn repo_style_instruction(config: &Config) -> String {
+    use std::{
+        collections::HashMap,
+        path::PathBuf,
+        sync::{Mutex, OnceLock},
+    };
+
+    if !config.repo_style {
+        return String::new();
+    }
+    static CACHE: OnceLock<Mutex<HashMap<PathBuf, String>>> = OnceLock::new();
+    let Ok(root) = crate::git::repo_root() else {
+        return String::new();
+    };
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Some(hit) = cache.lock().ok().and_then(|map| map.get(&root).cloned()) {
+        return hit;
+    }
+    let style = crate::git::recent_subjects(REPO_STYLE_SAMPLE)
+        .ok()
+        .and_then(|subjects| super::infer_repo_style(&subjects))
+        .unwrap_or_default();
+    if let Ok(mut map) = cache.lock() {
+        map.insert(root, style.clone());
+    }
+    style
 }
 
 pub fn detect_scope_hints(files: &[String]) -> Vec<String> {
