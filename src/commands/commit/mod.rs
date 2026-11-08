@@ -12,7 +12,10 @@ use crate::{
 use self::{
     git_sync::enforce_pre_commit_sync_guard,
     helpers::{CommitInput, CommitInputSource, amend_commit_input, enrich_context_with_branch},
-    split::{generate_confirm_and_commit, maybe_execute_split_flow, should_offer_split},
+    split::{
+        SplitCommitDraft, create_split_commits, generate_confirm_and_commit,
+        maybe_execute_split_flow, should_offer_split,
+    },
 };
 
 mod git_sync;
@@ -31,6 +34,7 @@ pub async fn run(
     amend: bool,
     provider_override: Option<String>,
     output_mode: OutputMode,
+    tui_requested: bool,
 ) -> Result<()> {
     git::assert_git_repo()?;
     let config = Config::load_with_provider_override(provider_override.as_deref())?;
@@ -53,7 +57,19 @@ pub async fn run(
         .await;
     }
 
+    let wants_tui = tui_requested || config.tui;
+    let tui_allowed = !skip_confirmation && !dry_run && !amend && crate::tui::available();
+    if tui_requested && !tui_allowed {
+        ui::warn(
+            "the terminal UI needs an interactive terminal and can't be combined with --yes, --dry-run, or --amend; using the standard flow",
+        );
+    }
+
     enforce_pre_commit_sync_guard(&config, dry_run).await?;
+
+    if wants_tui && tui_allowed {
+        return run_tui(&config, extra_args, &context, full_gitmoji_spec).await;
+    }
 
     ui::section(if amend {
         "Amend session"
@@ -123,6 +139,46 @@ pub async fn run(
         &files,
     )
     .await
+}
+
+/// Hand the session to the terminal UI, then perform whatever it decided
+/// through the same commit, split, history, and push code as the prompt flow.
+async fn run_tui(
+    config: &Config,
+    extra_args: Vec<String>,
+    context: &str,
+    full_gitmoji_spec: bool,
+) -> Result<()> {
+    if git::staged_files()?.is_empty() && git::changed_files()?.is_empty() {
+        bail!(AicError::NoChanges);
+    }
+    let outcome = crate::tui::run_commit(crate::tui::TuiInput {
+        config: config.clone(),
+        extra_args: extra_args.clone(),
+        context: enrich_context_with_branch(context),
+        full_gitmoji_spec,
+    })
+    .await?;
+
+    match outcome {
+        crate::tui::Outcome::Commit { message, files } => {
+            ui::section("Commit session");
+            ui::primary_card("Commit message", &message);
+            push::commit_and_maybe_push(config, &message, &extra_args, &files, false).await
+        }
+        crate::tui::Outcome::Split { staged, groups } => {
+            ui::section(format!("Creating {} commits", groups.len()));
+            let drafts = groups
+                .into_iter()
+                .map(|(group, message)| SplitCommitDraft { group, message })
+                .collect::<Vec<_>>();
+            create_split_commits(config, &staged, &drafts, &extra_args).await
+        }
+        crate::tui::Outcome::Quit => {
+            ui::info("No commit created. Staging changes made in the terminal UI were kept.");
+            Ok(())
+        }
+    }
 }
 
 /// `--json` / `--quiet`: no prompts, no split flow, and no commit unless

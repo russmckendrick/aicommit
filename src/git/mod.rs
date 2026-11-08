@@ -19,7 +19,8 @@ pub use branch::{
     merge_base_with_head, resolve_base_ref, ticket_from_branch,
 };
 pub use diff::{
-    FileDiff, StagedDiff, apply_to_index, read_tree, reset_index_to_head, staged_patch, write_tree,
+    FileDiff, StagedDiff, apply_to_index, read_tree, reset_index_to_head, staged_patch,
+    unapply_from_index, unstaged_patch, untracked_files, write_tree,
 };
 pub use exec::{GitOutput, run_git, run_git_in};
 pub use history::{

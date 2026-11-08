@@ -81,6 +81,9 @@ pub fn apply_value(config: &mut Config, key: &str, value: &str) -> Result<()> {
         "AIC_HOOK_AUTO_UNCOMMENT" => {
             config.hook_auto_uncomment = crate::config::parse::parse_bool(key, value)?
         }
+        "AIC_TUI" => config.tui = crate::config::parse::parse_bool(key, value)?,
+        "AIC_THEME" => config.theme = crate::config::parse::normalize_theme(value)?,
+        "AIC_ICONS" => config.icons = crate::config::parse::normalize_icons(value)?,
         _ => unreachable!("all config keys are handled"),
     }
     Ok(())

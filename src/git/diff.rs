@@ -439,6 +439,54 @@ pub fn staged_patch() -> Result<StagedDiff> {
     Ok(parse_diff(&text))
 }
 
+/// Unstaged changes to tracked files (working tree against the index), in
+/// the same format as [`staged_patch`]. Untracked files are not included.
+pub fn unstaged_patch() -> Result<StagedDiff> {
+    let root = repo_root()?;
+    let text = git_raw(
+        &root,
+        &[
+            "diff",
+            "--binary",
+            "--full-index",
+            "--no-color",
+            "--no-ext-diff",
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
+            "--unified=3",
+        ],
+        None,
+    )?;
+    Ok(parse_diff(&text))
+}
+
+/// Untracked, non-ignored files, relative to the repository root.
+pub fn untracked_files() -> Result<Vec<String>> {
+    let root = repo_root()?;
+    Ok(
+        git_raw(&root, &["ls-files", "--others", "--exclude-standard"], None)?
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(str::to_owned)
+            .collect(),
+    )
+}
+
+/// Remove `patch` (taken from the staged diff) from the index only.
+pub fn unapply_from_index(patch: &str) -> Result<()> {
+    if patch.trim().is_empty() {
+        return Ok(());
+    }
+    let root = repo_root()?;
+    git_raw(
+        &root,
+        &["apply", "--cached", "--reverse", "--whitespace=nowarn", "-"],
+        Some(patch),
+    )?;
+    Ok(())
+}
+
 /// Record the current index as a tree object and return its ID.
 pub fn write_tree() -> Result<String> {
     let root = repo_root()?;

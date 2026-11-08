@@ -47,6 +47,9 @@ pub const CONFIG_KEYS: &[&str] = &[
     "AIC_GITPUSH",
     "AIC_REMOTE_ICON_STYLE",
     "AIC_HOOK_AUTO_UNCOMMENT",
+    "AIC_TUI",
+    "AIC_THEME",
+    "AIC_ICONS",
 ];
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -70,6 +73,9 @@ pub struct Config {
     pub gitpush: bool,
     pub remote_icon_style: String,
     pub hook_auto_uncomment: bool,
+    pub tui: bool,
+    pub theme: String,
+    pub icons: String,
 }
 
 #[derive(Debug, Clone)]
@@ -99,6 +105,9 @@ impl Default for Config {
             gitpush: true,
             remote_icon_style: "auto".to_owned(),
             hook_auto_uncomment: false,
+            tui: false,
+            theme: "auto".to_owned(),
+            icons: "unicode".to_owned(),
         }
     }
 }
@@ -169,6 +178,9 @@ impl Config {
                 "AIC_HOOK_AUTO_UNCOMMENT",
                 self.hook_auto_uncomment.to_string(),
             ),
+            ("AIC_TUI", self.tui.to_string()),
+            ("AIC_THEME", self.theme.clone()),
+            ("AIC_ICONS", self.icons.clone()),
         ]
     }
 

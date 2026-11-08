@@ -11,6 +11,7 @@ pub mod map;
 pub mod output;
 pub mod prompt;
 pub mod token;
+pub mod tui;
 pub mod ui;
 
 pub async fn run() -> anyhow::Result<()> {

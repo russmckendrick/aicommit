@@ -25,6 +25,9 @@ help = "Print the result as JSON; implies non-interactive (commits only with --y
 [root.args.quiet]
 help = "Print only the generated message; implies non-interactive (commits only with --yes)"
 
+[root.args.tui]
+help = "Open the interactive terminal UI to stage hunks, generate, edit, and split commits"
+
 [root.args.git_args]
 help = "Arguments passed through to git commit"
 long_help = """
@@ -279,3 +282,6 @@ AIC_OMIT_SCOPE = "Avoid conventional commit scopes"
 AIC_GITPUSH = "Enable push-after-commit flow and upstream sync checks"
 AIC_REMOTE_ICON_STYLE = "Remote host icon style for push prompts: auto, nerd-font, emoji, or label"
 AIC_HOOK_AUTO_UNCOMMENT = "Write hook-generated messages uncommented"
+AIC_TUI = "Open the interactive terminal UI by default in a terminal (same as --tui)"
+AIC_THEME = "Terminal UI theme: auto (default) or any aic map theme name, such as github-dark or dracula"
+AIC_ICONS = "Terminal UI glyphs: unicode (default) or nerd for Nerd Font icons"

@@ -139,12 +139,14 @@ impl AiEngine for TestEngine {
     }
 }
 
+/// Hunk IDs from the split prompt's "Staged files and their hunk IDs"
+/// section (`- path: path#1, path#2 (whole file)`).
 fn extract_split_files(input: &str) -> Vec<String> {
-    let mut files = Vec::new();
+    let mut hunks = Vec::new();
     let mut in_files = false;
 
     for line in input.lines() {
-        if line.trim() == "Staged files:" {
+        if line.trim() == "Staged files and their hunk IDs:" {
             in_files = true;
             continue;
         }
@@ -153,26 +155,27 @@ fn extract_split_files(input: &str) -> Vec<String> {
             continue;
         }
 
-        if let Some(file) = line.trim().strip_prefix("- ") {
-            files.push(file.to_owned());
+        if let Some(entry) = line.trim().strip_prefix("- ") {
+            let ids = entry.rsplit_once(": ").map_or(entry, |(_, ids)| ids);
+            let ids = ids.split(" (").next().unwrap_or(ids);
+            hunks.extend(ids.split(", ").map(|id| id.trim().to_owned()));
         } else if !line.trim().is_empty() {
             break;
         }
     }
 
-    files
+    hunks
 }
 
-fn test_split_plan_response(files: &[String]) -> String {
-    if files.len() < 2 {
-        return r#"{"groups":[{"title":"one","rationale":"single change","files":["src.txt"]}]}"#
+fn test_split_plan_response(hunks: &[String]) -> String {
+    if hunks.len() < 2 {
+        return r#"{"groups":[{"title":"one","rationale":"single change","hunks":["src.txt#1"]}]}"#
             .to_owned();
     }
 
-    let midpoint = 1.min(files.len() - 1);
-    let first = serde_json::to_string(&files[..midpoint]).unwrap_or_else(|_| "[]".to_owned());
-    let second = serde_json::to_string(&files[midpoint..]).unwrap_or_else(|_| "[]".to_owned());
+    let first = serde_json::to_string(&hunks[..1]).unwrap_or_else(|_| "[]".to_owned());
+    let second = serde_json::to_string(&hunks[1..]).unwrap_or_else(|_| "[]".to_owned());
     format!(
-        r#"{{"groups":[{{"title":"Primary change","rationale":"Keep the first concern separate","files":{first}}},{{"title":"Follow-up change","rationale":"Keep the remaining concern separate","files":{second}}}]}}"#
+        r#"{{"groups":[{{"title":"Primary change","rationale":"Keep the first concern separate","hunks":{first}}},{{"title":"Follow-up change","rationale":"Keep the remaining concern separate","hunks":{second}}}]}}"#
     )
 }

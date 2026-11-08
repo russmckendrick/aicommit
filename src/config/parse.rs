@@ -67,6 +67,36 @@ pub fn parse_headers(value: &str) -> Result<BTreeMap<String, String>> {
     })
 }
 
+/// `auto` picks github-dark or github-light from the terminal background;
+/// any `aic map` theme name is also accepted.
+pub fn normalize_theme(value: &str) -> Result<String> {
+    let key = value.trim().to_lowercase().replace(' ', "-");
+    if key.is_empty() || key == "auto" {
+        return Ok("auto".to_owned());
+    }
+    crate::map::theme::load_theme(&key)
+        .map(|_| key)
+        .map_err(|error| {
+            AicError::InvalidConfigValue {
+                key: "AIC_THEME".to_owned(),
+                message: format!("expected auto or a theme name ({error})"),
+            }
+            .into()
+        })
+}
+
+pub fn normalize_icons(value: &str) -> Result<String> {
+    match value.trim().to_lowercase().as_str() {
+        "" | "unicode" | "default" => Ok("unicode".to_owned()),
+        "nerd" | "nerd-font" | "nerdfont" => Ok("nerd".to_owned()),
+        _ => Err(AicError::InvalidConfigValue {
+            key: "AIC_ICONS".to_owned(),
+            message: "expected unicode or nerd".to_owned(),
+        }
+        .into()),
+    }
+}
+
 pub fn normalize_remote_icon_style(value: &str) -> Result<String> {
     match value.trim().to_lowercase().as_str() {
         "auto" | "" => Ok("auto".to_owned()),

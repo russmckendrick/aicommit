@@ -49,7 +49,8 @@ pub fn write_global_config(config: &Config, global_path: &Path) -> Result<()> {
             | "AIC_ONE_LINE_COMMIT"
             | "AIC_OMIT_SCOPE"
             | "AIC_GITPUSH"
-            | "AIC_HOOK_AUTO_UNCOMMENT" => value.parse::<bool>()?.into(),
+            | "AIC_HOOK_AUTO_UNCOMMENT"
+            | "AIC_TUI" => value.parse::<bool>()?.into(),
             _ => value.into(),
         };
     }
