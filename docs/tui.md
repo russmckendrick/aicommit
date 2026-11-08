@@ -85,7 +85,7 @@ Being behind the upstream no longer stops `aic` from starting in the terminal UI
 
 ## Icons
 
-With `AIC_ICONS=auto` (the default) the terminal UI uses Nerd Font icons whenever `AIC_REMOTE_ICON_STYLE` does, which is also its default: file-type icons in the tree, git icons for branches and commits, provider icons in brand colours in the header, and the Git host icon (GitHub, GitLab, and others) in push prompts. Set `AIC_ICONS=unicode` if your terminal font is not a Nerd Font, or `AIC_ICONS=nerd` to force them.
+With `AIC_ICONS=auto` (the default) the terminal UI uses Nerd Font icons whenever `AIC_REMOTE_ICON_STYLE` does, which is also its default: file-type icons in the tree, git icons for branches and commits, provider logos in the header (OpenAI, Claude, GitHub Copilot, Azure, and Apple; Ollama and Groq, which have no Nerd Font logo, get a generic icon in their brand colour), and the Git host icon (GitHub, GitLab, and others) in push prompts. The OpenAI and Claude logos need Nerd Fonts 3.5 or later; older Nerd Fonts show a placeholder box for them. Set `AIC_ICONS=unicode` if your terminal font is not a Nerd Font, or `AIC_ICONS=nerd` to force them.
 
 ## Settings screen
 

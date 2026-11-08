@@ -92,13 +92,18 @@ fn rgb_color(rgb: u32) -> Color {
 }
 
 /// Display name, glyph, and brand colour for an AI provider.
+///
+/// Nerd Fonts 3.5 has real logos for OpenAI (`cod-openai`, also used for
+/// Codex), Claude (`cod-claude`, for Anthropic and Claude Code), GitHub
+/// Copilot, Azure, and Apple. It has none for Ollama or Groq, which use a
+/// generic glyph in their brand colour.
 pub fn provider(icons: Icons, provider: &str) -> (&'static str, &'static str, Color) {
     let (name, nerd, plain, rgb) = match provider {
-        "openai" => ("OpenAI", "\u{f06a9}", "◎", 0x10a37f),
+        "openai" => ("OpenAI", "\u{ec81}", "◎", 0x10a37f),
         "azure-openai" => ("Azure OpenAI", "\u{ebd8}", "◎", 0x0078d4),
-        "anthropic" => ("Anthropic", "✻", "✻", 0xd97757),
-        "claude-code" => ("Claude Code", "✻", "✻", 0xd97757),
-        "codex" => ("Codex", "\u{ea85}", "◎", 0x10a37f),
+        "anthropic" => ("Anthropic", "\u{ec82}", "✻", 0xd97757),
+        "claude-code" => ("Claude Code", "\u{ec82}", "✻", 0xd97757),
+        "codex" => ("Codex", "\u{ec81}", "◎", 0x10a37f),
         "copilot" => ("GitHub Copilot", "\u{f4b8}", "◉", 0x8957e5),
         "groq" => ("Groq", "\u{f0e7}", "⚡", 0xf55036),
         "ollama" => ("Ollama", "\u{f233}", "◉", 0xc9d1d9),
@@ -136,6 +141,8 @@ mod tests {
     #[test]
     fn providers_have_names_and_fallback_glyphs() {
         let plain = Icons { nerd: false };
+        assert_eq!(provider(Icons { nerd: true }, "openai").1, "\u{ec81}");
+        assert_eq!(provider(Icons { nerd: true }, "anthropic").1, "\u{ec82}");
         assert_eq!(provider(plain, "anthropic").0, "Anthropic");
         assert_eq!(provider(plain, "openai").1, "◎");
         assert_eq!(provider(plain, "unknown").0, "Custom");

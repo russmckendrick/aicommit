@@ -14,7 +14,7 @@
 - Split commits are created inside the TUI too, with progress, and pushed from the same result screen.
 - The header shows the branch's sync state with its upstream (ahead, behind, or diverged), checked in the background. Being behind no longer stops the TUI from opening.
 - The first message starts writing itself a moment after you stage something, if nothing was staged when the TUI opened.
-- Nerd Font icons by default (`AIC_ICONS=auto`): file-type icons in the tree, provider icons in brand colours, and git icons, with a plain Unicode fallback.
+- Nerd Font icons by default (`AIC_ICONS=auto`): file-type icons in the tree, provider logos in the header (OpenAI, Claude, GitHub Copilot, Azure, Apple; needs Nerd Fonts 3.5+ for OpenAI and Claude), and git icons, with a plain Unicode fallback.
 
 ## Streaming
 
