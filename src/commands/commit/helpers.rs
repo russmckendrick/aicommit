@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::{config::Config, git, history_store, ui};
+use crate::{config::Config, git};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CommitInputSource {
@@ -61,26 +61,6 @@ pub(crate) fn enrich_context_with_branch(context: &str) -> String {
         }
     } else {
         context.to_owned()
-    }
-}
-
-pub(crate) fn append_commit_history(config: &Config, message: &str, files: &[String]) {
-    if config.ai_provider == "test" {
-        return;
-    }
-
-    if let Err(e) = history_store::append_entry(&history_store::HistoryEntry {
-        timestamp: history_store::now_iso8601(),
-        kind: "commit".to_owned(),
-        message: message.to_owned(),
-        repo_path: git::repo_root()
-            .map(|p| p.display().to_string())
-            .unwrap_or_default(),
-        files: files.to_vec(),
-        provider: config.ai_provider.clone(),
-        model: config.model.clone(),
-    }) {
-        ui::warn(format!("failed to save history: {e}"));
     }
 }
 

@@ -125,7 +125,7 @@ pub const FIELDS: &[Field] = &[
         label: "Icons",
         group: "Appearance",
         kind: FieldKind::Choice,
-        help: "nerd uses Nerd Font glyphs; unicode works in any font.",
+        help: "auto uses Nerd Font icons when AIC_REMOTE_ICON_STYLE does (the default); unicode works in any font.",
     },
 ];
 
@@ -188,7 +188,7 @@ pub fn choices(key: &str, config: &Config) -> Vec<String> {
             themes.extend(crate::map::theme::available_theme_names());
             themes
         }
-        "AIC_ICONS" => vec!["unicode".to_owned(), "nerd".to_owned()],
+        "AIC_ICONS" => vec!["auto".to_owned(), "nerd".to_owned(), "unicode".to_owned()],
         _ => Vec::new(),
     }
 }
@@ -261,7 +261,7 @@ mod tests {
             icons: "unicode".to_owned(),
             ..Config::default()
         };
-        assert_eq!(cycle("AIC_ICONS", &config, 1).as_deref(), Some("nerd"));
+        assert_eq!(cycle("AIC_ICONS", &config, 1).as_deref(), Some("auto"));
         assert_eq!(cycle("AIC_ICONS", &config, -1).as_deref(), Some("nerd"));
         assert_eq!(cycle("AIC_EMOJI", &config, 1), None);
     }

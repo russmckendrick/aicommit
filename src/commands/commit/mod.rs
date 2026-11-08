@@ -12,15 +12,13 @@ use crate::{
 use self::{
     git_sync::enforce_pre_commit_sync_guard,
     helpers::{CommitInput, CommitInputSource, amend_commit_input, enrich_context_with_branch},
-    split::{
-        SplitCommitDraft, create_split_commits, generate_confirm_and_commit,
-        maybe_execute_split_flow, should_offer_split,
-    },
+    split::{generate_confirm_and_commit, maybe_execute_split_flow, should_offer_split},
 };
 
 mod git_sync;
 mod helpers;
-mod push;
+pub(crate) mod push;
+pub(crate) mod session;
 mod split;
 mod staging;
 
@@ -79,16 +77,13 @@ pub async fn run(
     }
 
     if use_tui {
-        if !key_missing {
-            enforce_pre_commit_sync_guard(&config, dry_run).await?;
-        }
+        // The terminal UI checks the upstream itself and shows the result.
         return run_tui(
             &config,
             extra_args,
             &context,
             full_gitmoji_spec,
             key_missing,
-            provider_override.as_deref(),
         )
         .await;
     }
@@ -176,50 +171,59 @@ pub enum Interface {
     Fast,
 }
 
-/// Hand the session to the terminal UI, then perform whatever it decided
-/// through the same commit, split, history, and push code as the prompt flow.
+/// Run the terminal UI, which commits and pushes itself, then leave a
+/// short record of what happened in the normal scrollback.
 async fn run_tui(
     config: &Config,
     extra_args: Vec<String>,
     context: &str,
     full_gitmoji_spec: bool,
     first_run: bool,
-    provider_override: Option<&str>,
 ) -> Result<()> {
     if git::staged_files()?.is_empty() && git::changed_files()?.is_empty() {
         bail!(AicError::NoChanges);
     }
-    let outcome = crate::tui::run_commit(crate::tui::TuiInput {
+    let commits = crate::tui::run_commit(crate::tui::TuiInput {
         config: config.clone(),
         first_run,
-        extra_args: extra_args.clone(),
+        extra_args,
         context: enrich_context_with_branch(context),
         full_gitmoji_spec,
     })
     .await?;
-    // Settings may have changed inside the TUI.
-    let config =
-        &Config::load_with_provider_override(provider_override).unwrap_or_else(|_| config.clone());
 
-    match outcome {
-        crate::tui::Outcome::Commit { message, files } => {
-            ui::section("Commit session");
-            ui::primary_card("Commit message", &message);
-            push::commit_and_maybe_push(config, &message, &extra_args, &files, false).await
+    if commits.is_empty() {
+        ui::info("No commit created. Staging changes made in the terminal UI were kept.");
+        return Ok(());
+    }
+    ui::section(if commits.len() == 1 {
+        "Commit created".to_owned()
+    } else {
+        format!("{} commits created", commits.len())
+    });
+    for commit in &commits {
+        let record = &commit.record;
+        let mut items = vec![match &commit.url {
+            Some(url) => ui::hyperlink(&record.short_hash, url),
+            None => record.short_hash.clone(),
+        }];
+        if let Some(branch) = &record.branch {
+            items.push(branch.clone());
         }
-        crate::tui::Outcome::Split { staged, groups } => {
-            ui::section(format!("Creating {} commits", groups.len()));
-            let drafts = groups
-                .into_iter()
-                .map(|(group, message)| SplitCommitDraft { group, message })
-                .collect::<Vec<_>>();
-            create_split_commits(config, &staged, &drafts, &extra_args).await
+        items.push(match &commit.pushed_to {
+            Some(remote) => format!("pushed to {remote}"),
+            None => "not pushed".to_owned(),
+        });
+        if let Some(diffstat) = record.diffstat() {
+            items.push(diffstat);
         }
-        crate::tui::Outcome::Quit => {
-            ui::info("No commit created. Staging changes made in the terminal UI were kept.");
-            Ok(())
+        ui::metadata_row(&items);
+        ui::headline(record.subject());
+        if let Some(error) = &record.history_error {
+            ui::warn(format!("failed to save history: {error}"));
         }
     }
+    Ok(())
 }
 
 /// `--json` / `--quiet`: no prompts, no split flow, and no commit unless

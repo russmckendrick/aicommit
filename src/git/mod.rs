@@ -25,7 +25,8 @@ pub use diff::{
 pub use exec::{GitOutput, run_git, run_git_in};
 pub use history::{
     CommitInfo, assert_no_merges, commit_diff, commit_files, last_commit_change_summaries,
-    last_commit_diff, last_commit_files, last_n_commits, recent_subjects, reword_commits,
+    last_commit_diff, last_commit_files, last_n_commits, recent_hashes, recent_subjects,
+    reword_commits,
 };
 pub use hooks::{hooks_path, remove_hook_if_owned, write_hook};
 pub use remote::{GitProvider, GitRemoteMetadata, commit, push, remote_metadata, remotes};

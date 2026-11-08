@@ -3,8 +3,7 @@ use anyhow::{Result, bail};
 use crate::{config::Config, generator, git, prompt::SplitPlanGroup, ui};
 
 use super::super::{
-    apply_message_template, filtered_extra_args,
-    helpers::append_commit_history,
+    apply_message_template,
     push::{build_push_plan, execute_push_plan},
 };
 
@@ -115,55 +114,27 @@ pub(crate) async fn create_split_commits(
         &config.remote_icon_style,
     )?;
 
-    let snapshot = git::write_tree()?;
-    let result = commit_groups(config, staged, drafts, extra_args);
-    let restored = git::read_tree(&snapshot);
-    result?;
-    restored.map_err(|error| {
-        anyhow::anyhow!(
-            "split commits were created, but restoring the index snapshot {snapshot} failed: {error}"
-        )
-    })?;
+    let groups = drafts
+        .iter()
+        .map(|draft| (draft.group.clone(), draft.message.clone()))
+        .collect::<Vec<_>>();
+    super::super::session::commit_split_groups(
+        config,
+        staged,
+        &groups,
+        extra_args,
+        |index, total, record| {
+            ui::section(format!("Split commit {}/{} created", index + 1, total));
+            ui::headline(record.subject());
+            if let Some(error) = &record.history_error {
+                ui::warn(format!("failed to save history: {error}"));
+            }
+        },
+    )?;
 
     execute_push_plan(push_plan, config, false)
         .await
         .map(|_| ())
-}
-
-fn commit_groups(
-    config: &Config,
-    staged: &git::StagedDiff,
-    drafts: &[SplitCommitDraft],
-    extra_args: &[String],
-) -> Result<()> {
-    for (index, draft) in drafts.iter().enumerate() {
-        let attempt = (|| -> Result<()> {
-            git::reset_index_to_head()?;
-            git::apply_to_index(&staged.patch_for(&draft.group.hunks))?;
-            git::commit(&draft.message, &filtered_extra_args(config, extra_args))?;
-            Ok(())
-        })();
-        attempt.map_err(|error| {
-            if index == 0 {
-                error
-            } else {
-                anyhow::anyhow!(
-                    "split commit {} failed after {} earlier split commits were created; the remaining changes are still staged: {error}",
-                    index + 1,
-                    index
-                )
-            }
-        })?;
-        ui::section(format!(
-            "Split commit {}/{} created",
-            index + 1,
-            drafts.len()
-        ));
-        ui::headline(draft.message.lines().next().unwrap_or(&draft.message));
-
-        append_commit_history(config, &draft.message, &draft.group.files);
-    }
-    Ok(())
 }
 
 #[cfg(test)]

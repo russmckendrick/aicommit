@@ -84,7 +84,7 @@ Most keys can also be changed from the terminal UI's settings screen (`,`), whic
 
 `AIC_THEME` sets the terminal UI colours. `auto` (the default) picks `github-dark` or `github-light` from the terminal background (via `COLORFGBG`, falling back to dark). Any `aic map` theme name also works: `github-dark`, `github-light`, `classic-dark`, `classic-light`, `solarized-dark`, `solarized-light`, `monokai`, or `dracula`.
 
-`AIC_ICONS` is `unicode` (the default) or `nerd` to use Nerd Font glyphs in the terminal UI.
+`AIC_ICONS` is `auto` (the default: Nerd Font icons when `AIC_REMOTE_ICON_STYLE` is `auto` or `nerd-font`), `nerd`, or `unicode` for terminals without a Nerd Font.
 
 ## Large diffs
 

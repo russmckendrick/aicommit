@@ -75,6 +75,22 @@ pub fn recent_subjects(limit: usize) -> Result<Vec<String>> {
     }
 }
 
+/// Full and short hashes of the last `n` commits, oldest first.
+pub fn recent_hashes(n: usize) -> Result<Vec<(String, String)>> {
+    let root = repo_root()?;
+    let output = run_git_in(&root, ["log", &format!("-{n}"), "--format=%H %h"])?;
+    let mut hashes = output
+        .stdout
+        .lines()
+        .filter_map(|line| {
+            let (full, short) = line.split_once(' ')?;
+            Some((full.to_owned(), short.to_owned()))
+        })
+        .collect::<Vec<_>>();
+    hashes.reverse();
+    Ok(hashes)
+}
+
 pub fn commit_diff(hash: &str) -> Result<String> {
     let root = repo_root()?;
     let output = run_git_in(&root, ["diff", &format!("{hash}^"), hash]);

@@ -12,8 +12,12 @@ use ratatui::{
 };
 
 use super::{
-    app::{Action, App, FileMarker, Focus, Gen, Hit, RowKind, Screen, SplitState, SplitStatus},
+    app::{
+        Action, App, DoneState, FileMarker, Focus, Gen, Hit, PushState, RowKind, Screen,
+        SplitState, SplitStatus,
+    },
     highlight::{hunk_lines, hunk_stats},
+    icons::{Icons, provider as provider_icon},
     theme::Palette,
 };
 
@@ -76,8 +80,15 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         Screen::Commit => draw_commit(frame, app, body),
         Screen::Split => draw_split(frame, app, body),
         Screen::Settings => draw_settings(frame, app, body),
+        Screen::Done => {
+            draw_commit(frame, app, body);
+            draw_done(frame, app, body);
+        }
     }
     draw_footer(frame, app, footer);
+    if app.committing.is_some() {
+        draw_committing(frame, app, body);
+    }
 
     if let Some((message, error, at)) = &app.toast {
         draw_toast(frame, &app.palette, body, message, *error, at.elapsed());
@@ -115,14 +126,14 @@ fn draw_too_small(frame: &mut Frame, app: &App, area: Rect) {
     );
 }
 
+fn icons(app: &App) -> Icons {
+    Icons::from_config(&app.input.config.icons, &app.input.config.remote_icon_style)
+}
+
 fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
     let palette = &app.palette;
+    let icons = icons(app);
     let dot = Span::styled(" · ", Style::default().fg(palette.faint));
-    let branch_glyph = if app.input.config.icons == "nerd" {
-        "\u{e725} "
-    } else {
-        "⎇ "
-    };
     let mut left = vec![
         Span::styled(
             "◇ aic",
@@ -133,9 +144,10 @@ fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
         dot.clone(),
         Span::styled(
             match app.screen {
-                Screen::Commit => "commit",
-                Screen::Split => "split",
-                Screen::Settings => "settings",
+                Screen::Commit => format!("{} commit", icons.commit()),
+                Screen::Split => format!("{} split", icons.split()),
+                Screen::Settings => format!("{} settings", icons.settings()),
+                Screen::Done => format!("{} committed", icons.check()),
             },
             Style::default().fg(palette.fg),
         ),
@@ -143,9 +155,30 @@ fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
     if let Some(branch) = &app.branch {
         left.push(dot.clone());
         left.push(Span::styled(
-            format!("{branch_glyph}{branch}"),
+            format!("{} {branch}", icons.branch()),
             Style::default().fg(palette.keyword),
         ));
+        if let Some(sync) = &app.sync {
+            let upstream = sync.upstream_ref.clone().unwrap_or_default();
+            match sync.state {
+                crate::git::GitSyncState::AheadOnly => left.push(Span::styled(
+                    format!(" ↑{}", sync.ahead),
+                    Style::default().fg(palette.muted),
+                )),
+                crate::git::GitSyncState::BehindOnly => left.push(Span::styled(
+                    format!(" ↓{} behind {upstream}", sync.behind),
+                    Style::default().fg(palette.warn),
+                )),
+                crate::git::GitSyncState::Diverged => left.push(Span::styled(
+                    format!(" ↑{} ↓{} diverged from {upstream}", sync.ahead, sync.behind),
+                    Style::default().fg(palette.warn),
+                )),
+                crate::git::GitSyncState::UpToDate => {
+                    left.push(Span::styled(" ✓", Style::default().fg(palette.faint)))
+                }
+                crate::git::GitSyncState::NoUpstream => {}
+            }
+        }
     }
     if let Some(ticket) = &app.ticket {
         left.push(dot.clone());
@@ -160,32 +193,75 @@ fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
         (Screen::Split, Some(split)) => {
             let hunks = split.staged.hunk_ids().len();
             let groups = split.groups.iter().filter(|g| !g.hunks.is_empty()).count();
-            format!(
-                "{hunks} hunks · {} files → {groups} commits",
-                split.staged.files.len()
+            Line::styled(
+                format!(
+                    "{hunks} hunks · {} files → {groups} commits",
+                    split.staged.files.len()
+                ),
+                Style::default().fg(palette.muted),
             )
         }
         _ => {
+            let config = &app.input.config;
+            let (name, glyph, brand) = provider_icon(icons, &config.ai_provider);
             let tokens = if app.prompt_tokens >= 1000 {
                 format!("{:.1}k tok", app.prompt_tokens as f64 / 1000.0)
             } else {
                 format!("{} tok", app.prompt_tokens)
             };
-            format!(
-                "{}/{} · {tokens}",
-                app.input.config.ai_provider, app.input.config.model
-            )
+            let model = if config.model == "default" {
+                String::new()
+            } else {
+                format!(" {}", config.model)
+            };
+            Line::from(vec![
+                Span::styled(format!("{glyph} "), Style::default().fg(brand)),
+                Span::styled(
+                    name,
+                    Style::default().fg(palette.fg).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(model, Style::default().fg(palette.muted)),
+                Span::styled(" · ", Style::default().fg(palette.faint)),
+                Span::styled(tokens, Style::default().fg(palette.faint)),
+            ])
         }
     };
     frame.render_widget(Paragraph::new(Line::from(left)), area);
-    frame.render_widget(
-        Paragraph::new(Line::styled(right, Style::default().fg(palette.muted)))
-            .alignment(Alignment::Right),
-        area,
-    );
+    frame.render_widget(Paragraph::new(right).alignment(Alignment::Right), area);
 }
 
 fn hints_for(app: &App) -> Vec<(&'static str, &'static str)> {
+    if app.committing.is_some() {
+        return vec![("…", "committing")];
+    }
+    if let Some(done) = &app.done
+        && app.screen == Screen::Done
+    {
+        return match &done.push {
+            PushState::Offer if done.targets.len() > 1 => {
+                vec![
+                    ("↑↓", "remote"),
+                    ("enter", "push"),
+                    ("s", "skip"),
+                    ("q", "quit"),
+                ]
+            }
+            PushState::Offer => vec![("enter", "push"), ("s", "skip"), ("q", "quit")],
+            PushState::Running { .. } => vec![("…", "pushing")],
+            PushState::Rejected {
+                can_rebase: true, ..
+            } => vec![
+                ("r", "pull --rebase and push"),
+                ("s", "keep local"),
+                ("q", "quit"),
+            ],
+            PushState::Rejected { .. } => vec![("s", "keep local"), ("q", "quit")],
+            PushState::Failed(_) if !done.targets.is_empty() => {
+                vec![("p", "try again"), ("enter", "continue"), ("q", "quit")]
+            }
+            _ => vec![("enter", "continue"), ("q", "quit")],
+        };
+    }
     if let Some(settings) = &app.settings
         && app.screen == Screen::Settings
     {
@@ -312,7 +388,7 @@ fn draw_tree(frame: &mut Frame, app: &mut App, area: Rect) {
     let mut lines = Vec::new();
     for (index, row) in app.rows.iter().enumerate().skip(offset).take(height) {
         let selected = index == app.selected;
-        let line = tree_line(&palette, row, selected, width);
+        let line = tree_line(&palette, icons(app), row, selected, width);
         app.hits.push((
             Rect::new(inner.x, inner.y + lines.len() as u16, inner.width, 1),
             Hit::TreeRow(index),
@@ -340,7 +416,13 @@ fn truncate_right(text: &str, width: usize) -> String {
     out
 }
 
-fn tree_line(palette: &Palette, row: &RowKind, selected: bool, width: usize) -> Line<'static> {
+fn tree_line(
+    palette: &Palette,
+    icons: Icons,
+    row: &RowKind,
+    selected: bool,
+    width: usize,
+) -> Line<'static> {
     let bar = if selected {
         Span::styled("▌", Style::default().fg(palette.accent))
     } else {
@@ -379,8 +461,16 @@ fn tree_line(palette: &Palette, row: &RowKind, selected: bool, width: usize) -> 
                 format!("{glyph} "),
                 Style::default().fg(color),
             ));
+            let mut used = 3;
+            if let Some((icon, icon_color)) = icons.file(path) {
+                spans.push(Span::styled(
+                    format!("{icon} "),
+                    Style::default().fg(icon_color),
+                ));
+                used += 2;
+            }
             spans.push(Span::styled(
-                truncate_left(path, width.saturating_sub(3)),
+                truncate_left(path, width.saturating_sub(used)),
                 Style::default().fg(palette.fg),
             ));
         }
@@ -1076,6 +1166,17 @@ fn draw_help(frame: &mut Frame, app: &App, area: Rect) {
             ]);
             rows
         }
+        Screen::Done => vec![
+            ("enter / p", "push the commit"),
+            ("↑↓", "choose a remote when there are several"),
+            ("s", "skip pushing"),
+            ("r", "pull --rebase and push again after a rejection"),
+            (
+                "enter",
+                "continue: next commit, or close when nothing is left",
+            ),
+            ("q", "quit"),
+        ],
         Screen::Settings => vec![
             ("↑↓ / j k", "select a setting"),
             ("enter / space", "toggle, or edit text"),
@@ -1335,4 +1436,349 @@ fn home_relative(path: &std::path::Path) -> String {
         Some(rest) => format!("~/{}", rest.display()),
         None => path.display().to_string(),
     }
+}
+
+// ---------------------------------------------------------------------
+// Result screen
+// ---------------------------------------------------------------------
+
+fn draw_committing(frame: &mut Frame, app: &App, area: Rect) {
+    let Some(committing) = &app.committing else {
+        return;
+    };
+    let palette = &app.palette;
+    let rect = centered(area, 52, 7);
+    frame.render_widget(Clear, rect);
+    let (done, total) = committing.progress;
+    let label = if total > 1 {
+        format!("{} · {done}/{total}", committing.label)
+    } else {
+        format!("{}…", committing.label)
+    };
+    let lines = vec![
+        Line::from(vec![
+            Span::styled(
+                format!("{} ", spinner(app)),
+                Style::default().fg(palette.accent),
+            ),
+            Span::styled(
+                label,
+                Style::default()
+                    .fg(palette.bright)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(""),
+        Line::from(shimmer(app, 40)),
+        Line::styled(
+            format!("{}s", committing.started.elapsed().as_secs()),
+            Style::default().fg(palette.faint),
+        ),
+    ];
+    frame.render_widget(block(palette, "", true), rect);
+    frame.render_widget(
+        Paragraph::new(lines).alignment(Alignment::Center),
+        rect.inner(Margin::new(2, 1)),
+    );
+}
+
+fn draw_done(frame: &mut Frame, app: &App, area: Rect) {
+    let Some(done) = &app.done else {
+        return;
+    };
+    let palette = &app.palette;
+    let icons = icons(app);
+    let width = area.width.saturating_sub(8).min(96);
+    let inner_width = width.saturating_sub(4) as usize;
+    let lines = done_lines(app, done, icons, inner_width);
+    let height = (lines.len() as u16 + 2).min(area.height.saturating_sub(2));
+    let rect = centered(area, width, height);
+    frame.render_widget(Clear, rect);
+
+    let count = done.records.len();
+    let title = Line::from(vec![
+        Span::styled(
+            format!(" {} ", icons.check()),
+            Style::default()
+                .fg(palette.add)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            if count == 1 {
+                "Committed ".to_owned()
+            } else {
+                format!("{count} commits created ")
+            },
+            Style::default()
+                .fg(palette.bright)
+                .add_modifier(Modifier::BOLD),
+        ),
+    ]);
+    // The border flashes green, then settles to the accent colour.
+    let border = if done.appeared.elapsed() < Duration::from_millis(700) {
+        palette.add
+    } else {
+        palette.accent
+    };
+    frame.render_widget(
+        Paragraph::new(lines).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(border))
+                .padding(ratatui::widgets::Padding::horizontal(1))
+                .title(title),
+        ),
+        rect,
+    );
+}
+
+fn done_lines(app: &App, done: &DoneState, icons: Icons, width: usize) -> Vec<Line<'static>> {
+    let palette = &app.palette;
+    let mut lines = vec![Line::from("")];
+    let single = done.records.len() == 1;
+    for record in &done.records {
+        let mut meta = vec![
+            Span::styled(
+                format!("{} ", icons.commit()),
+                Style::default().fg(palette.accent),
+            ),
+            Span::styled(
+                record.short_hash.clone(),
+                Style::default()
+                    .fg(palette.bright)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ];
+        if let Some(branch) = &record.branch {
+            meta.push(Span::raw("   "));
+            meta.push(Span::styled(
+                format!("{} {branch}", icons.branch()),
+                Style::default().fg(palette.keyword),
+            ));
+        }
+        if let Some(adds) = record.insertions {
+            meta.push(Span::styled(
+                format!("   +{adds}"),
+                Style::default().fg(palette.add),
+            ));
+        }
+        if let Some(dels) = record.deletions {
+            meta.push(Span::styled(
+                format!(" −{dels}"),
+                Style::default().fg(palette.del),
+            ));
+        }
+        meta.push(Span::styled(
+            format!(
+                "   {} file{}",
+                record.files.len(),
+                if record.files.len() == 1 { "" } else { "s" }
+            ),
+            Style::default().fg(palette.muted),
+        ));
+        lines.push(Line::from(meta));
+        lines.push(Line::styled(
+            format!(
+                "  {}",
+                truncate_right(record.subject(), width.saturating_sub(2))
+            ),
+            Style::default()
+                .fg(palette.bright)
+                .add_modifier(Modifier::BOLD),
+        ));
+        if single {
+            for body in record
+                .message
+                .lines()
+                .skip(1)
+                .filter(|line| !line.trim().is_empty())
+                .take(5)
+            {
+                lines.push(Line::styled(
+                    format!("  {}", truncate_right(body, width.saturating_sub(2))),
+                    Style::default().fg(palette.muted),
+                ));
+            }
+        }
+        lines.push(Line::from(""));
+    }
+    lines.push(Line::styled(
+        "─".repeat(width),
+        Style::default().fg(palette.border),
+    ));
+
+    let branch = done
+        .records
+        .last()
+        .and_then(|record| record.branch.clone())
+        .unwrap_or_else(|| "this branch".to_owned());
+    match &done.push {
+        PushState::Offer => {
+            if done.targets.len() == 1 {
+                lines.push(Line::from(vec![
+                    Span::styled(
+                        format!("{} ", icons.push()),
+                        Style::default().fg(palette.accent),
+                    ),
+                    Span::styled("Push ", Style::default().fg(palette.fg)),
+                    Span::styled(branch.clone(), Style::default().fg(palette.keyword)),
+                    Span::styled(" to ", Style::default().fg(palette.fg)),
+                    Span::styled(
+                        done.targets[0].label.clone(),
+                        Style::default()
+                            .fg(palette.bright)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled("?", Style::default().fg(palette.fg)),
+                ]));
+            } else {
+                lines.push(Line::from(vec![
+                    Span::styled(
+                        format!("{} ", icons.push()),
+                        Style::default().fg(palette.accent),
+                    ),
+                    Span::styled(
+                        format!("Push {branch} to which remote?"),
+                        Style::default().fg(palette.fg),
+                    ),
+                ]));
+                for (index, target) in done.targets.iter().enumerate() {
+                    let selected = index == done.target;
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            if selected { "  ▌ " } else { "    " },
+                            Style::default().fg(palette.accent),
+                        ),
+                        Span::styled(
+                            target.label.clone(),
+                            if selected {
+                                Style::default().fg(palette.bright).bg(palette.selection)
+                            } else {
+                                Style::default().fg(palette.fg)
+                            },
+                        ),
+                    ]));
+                }
+            }
+        }
+        PushState::Running { started, rebasing } => {
+            let target = done
+                .targets
+                .get(done.target)
+                .map_or_else(|| "remote".to_owned(), |t| t.label.clone());
+            let mut spans = vec![
+                Span::styled(
+                    format!("{} ", spinner(app)),
+                    Style::default().fg(palette.accent),
+                ),
+                Span::styled(
+                    if *rebasing {
+                        format!("Pulling with rebase, then pushing to {target}")
+                    } else {
+                        format!("Pushing {branch} to {target}")
+                    },
+                    Style::default().fg(palette.fg),
+                ),
+                Span::styled(
+                    format!("  {}s  ", started.elapsed().as_secs()),
+                    Style::default().fg(palette.faint),
+                ),
+            ];
+            spans.extend(shimmer(app, 16));
+            lines.push(Line::from(spans));
+        }
+        PushState::Pushed { summary, url } => {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    format!("{} ", icons.check()),
+                    Style::default()
+                        .fg(palette.add)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!("Pushed {branch} → {summary}"),
+                    Style::default().fg(palette.add),
+                ),
+            ]));
+            if let Some(url) = url {
+                lines.push(Line::styled(
+                    format!("  {url}"),
+                    Style::default()
+                        .fg(palette.faint)
+                        .add_modifier(Modifier::UNDERLINED),
+                ));
+            }
+        }
+        PushState::Rejected {
+            message,
+            can_rebase,
+        } => {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    format!("{} ", icons.warning()),
+                    Style::default().fg(palette.warn),
+                ),
+                Span::styled(
+                    "The remote has commits this branch doesn't. Your commit is saved locally.",
+                    Style::default().fg(palette.warn),
+                ),
+            ]));
+            for line in message.lines().filter(|l| !l.trim().is_empty()).take(3) {
+                lines.push(Line::styled(
+                    format!("  {}", truncate_right(line.trim(), width.saturating_sub(2))),
+                    Style::default().fg(palette.faint),
+                ));
+            }
+            if !can_rebase {
+                lines.push(Line::styled(
+                    "  Commit or stash other changes, run `git pull --rebase`, then push.",
+                    Style::default().fg(palette.muted),
+                ));
+            }
+        }
+        PushState::Failed(error) => {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    format!("{} ", icons.cross()),
+                    Style::default().fg(palette.del),
+                ),
+                Span::styled(
+                    "Push failed. Your commit is saved locally.",
+                    Style::default().fg(palette.del),
+                ),
+            ]));
+            for line in error.lines().filter(|l| !l.trim().is_empty()).take(3) {
+                lines.push(Line::styled(
+                    format!("  {}", truncate_right(line.trim(), width.saturating_sub(2))),
+                    Style::default().fg(palette.faint),
+                ));
+            }
+        }
+        PushState::Unavailable(reason) => lines.push(Line::styled(
+            format!("{reason}. The commit is on your local {branch}."),
+            Style::default().fg(palette.muted),
+        )),
+        PushState::Skipped => lines.push(Line::styled(
+            format!("Not pushed. The commit is on your local {branch}."),
+            Style::default().fg(palette.muted),
+        )),
+    }
+
+    if done.push_settled() {
+        lines.push(Line::from(""));
+        let left = app.unstaged.files.len() + app.untracked.len() + app.staged.files.len();
+        lines.push(Line::styled(
+            if left > 0 {
+                format!(
+                    "enter  next commit ({left} file{} still changed)   ·   q  quit",
+                    if left == 1 { "" } else { "s" }
+                )
+            } else {
+                "Working tree clean   ·   enter  close".to_owned()
+            },
+            Style::default().fg(palette.faint),
+        ));
+    }
+    lines
 }

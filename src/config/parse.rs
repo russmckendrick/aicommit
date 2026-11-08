@@ -87,11 +87,12 @@ pub fn normalize_theme(value: &str) -> Result<String> {
 
 pub fn normalize_icons(value: &str) -> Result<String> {
     match value.trim().to_lowercase().as_str() {
-        "" | "unicode" | "default" => Ok("unicode".to_owned()),
+        "" | "auto" | "default" => Ok("auto".to_owned()),
+        "unicode" | "plain" => Ok("unicode".to_owned()),
         "nerd" | "nerd-font" | "nerdfont" => Ok("nerd".to_owned()),
         _ => Err(AicError::InvalidConfigValue {
             key: "AIC_ICONS".to_owned(),
-            message: "expected unicode or nerd".to_owned(),
+            message: "expected auto, nerd, or unicode".to_owned(),
         }
         .into()),
     }

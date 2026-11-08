@@ -6,7 +6,7 @@ mod display;
 mod plan;
 
 pub(crate) use plan::build_push_plan;
-use plan::{PushPlan, PushRemoteOption};
+pub(crate) use plan::{PushPlan, PushRemoteOption};
 
 const PUSH_NOW_OPTION: &str = "Push now";
 const SKIP_PUSH_OPTION: &str = "Skip";
@@ -33,11 +33,12 @@ pub(crate) async fn commit_and_maybe_push(
         &config.remote_icon_style,
     )?;
 
-    let output = crate::git::commit(message, &super::filtered_extra_args(config, extra_args))?;
-    let commit_hash = crate::git::head_short_hash().ok();
-    let branch = crate::git::current_branch();
-
-    super::helpers::append_commit_history(config, message, staged_files);
+    let record = super::session::commit_staged(config, message, extra_args, staged_files)?;
+    if let Some(error) = &record.history_error {
+        crate::ui::warn(format!("failed to save history: {error}"));
+    }
+    let commit_hash = Some(record.short_hash.clone()).filter(|hash| !hash.is_empty());
+    let branch = record.branch.clone();
 
     let push_outcome = execute_push_plan(push_plan, config, skip_confirmation).await?;
 
@@ -62,43 +63,13 @@ pub(crate) async fn commit_and_maybe_push(
     if let PushOutcome::Pushed(remote) = &push_outcome {
         items.push(format!("pushed to {}", remote.summary));
     }
-    if let Some(diffstat) = diffstat_summary(&output.stdout) {
+    if let Some(diffstat) = record.diffstat() {
         items.push(diffstat);
     }
     crate::ui::metadata_row(&items);
     crate::ui::headline(message.lines().next().unwrap_or(message));
 
     Ok(())
-}
-
-/// Condense git commit's " 3 files changed, 40 insertions(+), 2 deletions(-)"
-/// stat line into "+40 −2".
-fn diffstat_summary(commit_stdout: &str) -> Option<String> {
-    let stat_line = commit_stdout
-        .lines()
-        .find(|line| line.contains(" changed"))?;
-    let count_before = |marker: &str| -> Option<u64> {
-        let end = stat_line.find(marker)?;
-        stat_line[..end]
-            .rsplit(|c: char| !c.is_ascii_digit())
-            .find(|part| !part.is_empty())?
-            .parse()
-            .ok()
-    };
-
-    let insertions = count_before(" insertion");
-    let deletions = count_before(" deletion");
-    let mut parts = Vec::new();
-    if let Some(insertions) = insertions {
-        parts.push(format!("+{insertions}"));
-    }
-    if let Some(deletions) = deletions {
-        parts.push(format!("−{deletions}"));
-    }
-    if parts.is_empty() {
-        return None;
-    }
-    Some(parts.join(" "))
 }
 
 pub(crate) async fn execute_push_plan(
@@ -204,13 +175,7 @@ fn should_offer_rebase_retry(
     Ok(!skip_confirmation && snapshot.behind > 0 && crate::git::is_clean_for_pull_rebase()?)
 }
 
-fn is_sync_push_rejection(message: &str) -> bool {
-    let lower = message.to_lowercase();
-    lower.contains("failed to push some refs")
-        && (lower.contains("fetch first")
-            || lower.contains("non-fast-forward")
-            || lower.contains("rejected"))
-}
+use super::session::is_sync_push_rejection;
 
 async fn retry_push_after_rebase(
     remote: &PushRemoteOption,
@@ -320,6 +285,11 @@ mod tests {
             options,
             vec!["origin".to_owned(), "backup".to_owned(), "Skip".to_owned()]
         );
+    }
+
+    fn diffstat_summary(stdout: &str) -> Option<String> {
+        let (insertions, deletions) = crate::commands::commit::session::parse_diffstat(stdout);
+        crate::commands::commit::session::format_diffstat(insertions, deletions)
     }
 
     #[test]

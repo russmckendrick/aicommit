@@ -109,7 +109,7 @@ impl Default for Config {
             hook_auto_uncomment: false,
             tui: true,
             theme: "auto".to_owned(),
-            icons: "unicode".to_owned(),
+            icons: "auto".to_owned(),
             repo_style: true,
         }
     }

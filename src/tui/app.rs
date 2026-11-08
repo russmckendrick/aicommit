@@ -13,6 +13,10 @@ use ratatui::layout::{Position, Rect};
 use tokio::{sync::mpsc, task::JoinHandle};
 
 use crate::{
+    commands::commit::{
+        push::PushRemoteOption,
+        session::{self, CommitRecord, PushResult},
+    },
     config::Config,
     generator::{self, GenerationProgress},
     git::{self, StagedDiff, diff::hunk_path},
@@ -29,18 +33,67 @@ pub const MAX_GROUPS: usize = 6;
 const REGENERATE_DEBOUNCE: Duration = Duration::from_millis(700);
 const TOAST_DURATION: Duration = Duration::from_millis(2600);
 
-/// What the user asked for when the TUI closed.
-#[derive(Debug)]
+const AUTO_GENERATE_DELAY: Duration = Duration::from_millis(900);
+
+/// Why the TUI closed. Commits made during the session are in `App::log`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Outcome {
-    Commit {
-        message: String,
-        files: Vec<String>,
-    },
-    Split {
-        staged: StagedDiff,
-        groups: Vec<(SplitPlanGroup, String)>,
-    },
     Quit,
+}
+
+/// A commit made in this session, and where it was pushed.
+#[derive(Debug, Clone)]
+pub struct SessionCommit {
+    pub record: CommitRecord,
+    pub pushed_to: Option<String>,
+    pub url: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub enum PushState {
+    /// Waiting for the user to push or skip.
+    Offer,
+    /// Pushing is off (`AIC_GITPUSH=false`) or there are no remotes.
+    Unavailable(&'static str),
+    Running {
+        started: Instant,
+        rebasing: bool,
+    },
+    Pushed {
+        summary: String,
+        url: Option<String>,
+    },
+    Rejected {
+        message: String,
+        can_rebase: bool,
+    },
+    Failed(String),
+    Skipped,
+}
+
+/// The result screen shown after committing.
+pub struct DoneState {
+    pub records: Vec<CommitRecord>,
+    pub targets: Vec<PushRemoteOption>,
+    pub target: usize,
+    pub push: PushState,
+    pub appeared: Instant,
+}
+
+impl DoneState {
+    pub fn push_settled(&self) -> bool {
+        !matches!(
+            self.push,
+            PushState::Offer | PushState::Running { .. } | PushState::Rejected { .. }
+        )
+    }
+}
+
+/// A commit (or split) running in the background.
+pub struct Committing {
+    pub label: String,
+    pub started: Instant,
+    pub progress: (usize, usize),
 }
 
 pub struct TuiInput {
@@ -63,6 +116,10 @@ pub enum AppEvent {
         group_gen: u64,
         result: Result<String, String>,
     },
+    CommitProgress(usize, usize),
+    Sync(git::GitSyncSnapshot),
+    Committed(Result<Vec<CommitRecord>, String>),
+    PushDone(Result<PushResult, String>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -108,6 +165,7 @@ pub enum Screen {
     Commit,
     Split,
     Settings,
+    Done,
 }
 
 pub enum Gen {
@@ -282,6 +340,13 @@ pub struct App {
     /// changes, or screen switches) so terminals that disagree about emoji
     /// widths never keep stale cells.
     pub needs_clear: bool,
+    pub done: Option<DoneState>,
+    pub committing: Option<Committing>,
+    pub log: Vec<SessionCommit>,
+    /// Generate automatically once staging settles (first message only).
+    pub auto_generate_at: Option<Instant>,
+    /// Upstream comparison, checked in the background when pushing is on.
+    pub sync: Option<git::GitSyncSnapshot>,
     next_id: u64,
     pub tx: mpsc::UnboundedSender<AppEvent>,
 }
@@ -321,11 +386,17 @@ impl App {
                 .map(|paths| paths.global)
                 .unwrap_or_else(|_| std::path::PathBuf::from(".aicommit")),
             needs_clear: false,
+            done: None,
+            committing: None,
+            log: Vec::new(),
+            auto_generate_at: None,
+            sync: None,
             next_id: 0,
             tx,
             input,
         };
         app.reload()?;
+        app.refresh_sync();
         if app.input.first_run {
             app.open_settings(true);
         }
@@ -358,6 +429,12 @@ impl App {
     pub fn animating(&self) -> bool {
         self.animating_work()
             || self.toast.is_some()
+            || self.committing.is_some()
+            || self.auto_generate_at.is_some()
+            || self.done.as_ref().is_some_and(|done| {
+                matches!(done.push, PushState::Running { .. })
+                    || done.appeared.elapsed() < Duration::from_millis(900)
+            })
             || self.split.as_ref().is_some_and(|split| {
                 split.appeared.elapsed() < Duration::from_millis(900) || split.dirty_at.is_some()
             })
@@ -376,8 +453,14 @@ impl App {
         self.staged_files = git::staged_files()?;
         self.rebuild_rows();
         self.restore_selection(previous);
-        if previous_hashes != self.staged.hunk_ids() && !self.message.is_empty() {
-            self.message_stale = true;
+        if previous_hashes != self.staged.hunk_ids() {
+            if !self.message.is_empty() {
+                self.message_stale = true;
+            } else if !self.staged.files.is_empty() && !self.is_generating() {
+                self.auto_generate_at = Some(Instant::now());
+            } else {
+                self.auto_generate_at = None;
+            }
         }
         self.prompt_tokens = if self.staged_files.is_empty() {
             0
@@ -548,6 +631,7 @@ impl App {
     // -----------------------------------------------------------------
 
     pub fn start_generation(&mut self) {
+        self.auto_generate_at = None;
         if self.staged_files.is_empty() {
             self.toast("Stage some changes first (space on a hunk or file)", true);
             return;
@@ -768,6 +852,14 @@ impl App {
                     Err(error) => split.status = SplitStatus::Failed(error),
                 }
             }
+            AppEvent::CommitProgress(done, total) => {
+                if let Some(committing) = self.committing.as_mut() {
+                    committing.progress = (done, total);
+                }
+            }
+            AppEvent::Committed(result) => self.finish_commit(result),
+            AppEvent::Sync(snapshot) => self.sync = Some(snapshot),
+            AppEvent::PushDone(result) => self.finish_push(result),
             AppEvent::GroupMessage { group_gen, result } => {
                 let Some(split) = self.split.as_mut() else {
                     return;
@@ -792,6 +884,19 @@ impl App {
 
     /// Periodic work: expire toasts, regenerate stale split groups.
     pub fn tick(&mut self) {
+        if self
+            .auto_generate_at
+            .is_some_and(|at| at.elapsed() > AUTO_GENERATE_DELAY)
+        {
+            self.auto_generate_at = None;
+            if self.screen == Screen::Commit
+                && self.message.is_empty()
+                && self.focus == Focus::Tree
+                && !self.staged_files.is_empty()
+            {
+                self.start_generation();
+            }
+        }
         if self
             .toast
             .as_ref()
@@ -829,6 +934,10 @@ impl App {
             self.help = false;
             return;
         }
+        if self.committing.is_some() {
+            // Git is writing the commit; keys wait until it finishes.
+            return;
+        }
         if self.palette_overlay.is_some() {
             self.handle_palette_key(key);
             return;
@@ -841,6 +950,7 @@ impl App {
             Screen::Commit => self.handle_commit_key(key),
             Screen::Split => self.handle_split_key(key),
             Screen::Settings => self.handle_settings_key(key),
+            Screen::Done => self.handle_done_key(key),
         }
     }
 
@@ -938,10 +1048,192 @@ impl App {
             self.toast("Write or generate a message first (g)", true);
             return;
         }
-        self.outcome = Some(Outcome::Commit {
-            message: self.message.text(),
-            files: self.staged_files.clone(),
+        let message = self.message.text();
+        let files = self.staged_files.clone();
+        let config = self.input.config.clone();
+        let extra_args = self.input.extra_args.clone();
+        let tx = self.tx.clone();
+        self.committing = Some(Committing {
+            label: "Committing".to_owned(),
+            started: Instant::now(),
+            progress: (0, 1),
         });
+        tokio::task::spawn_blocking(move || {
+            let result = session::commit_staged(&config, &message, &extra_args, &files)
+                .map(|record| vec![record])
+                .map_err(|error| error.to_string());
+            let _ = tx.send(AppEvent::Committed(result));
+        });
+    }
+
+    fn finish_commit(&mut self, result: Result<Vec<CommitRecord>, String>) {
+        self.committing = None;
+        let records = match result {
+            Ok(records) => records,
+            Err(error) => {
+                self.toast(format!("Commit failed: {error}"), true);
+                let _ = self.reload();
+                return;
+            }
+        };
+        for record in &records {
+            self.log.push(SessionCommit {
+                record: record.clone(),
+                pushed_to: None,
+                url: None,
+            });
+        }
+        if let Some(error) = records.iter().find_map(|r| r.history_error.clone()) {
+            self.toast(
+                format!("Committed, but history wasn't saved: {error}"),
+                true,
+            );
+        }
+        let (targets, push) = if !self.input.config.gitpush {
+            (
+                Vec::new(),
+                PushState::Unavailable("Pushing is off (AIC_GITPUSH=false)"),
+            )
+        } else {
+            match session::push_targets(&self.input.config) {
+                Ok(targets) if targets.is_empty() => {
+                    (targets, PushState::Unavailable("No remote to push to"))
+                }
+                Ok(targets) => (targets, PushState::Offer),
+                Err(error) => (Vec::new(), PushState::Failed(error.to_string())),
+            }
+        };
+        self.message.set_text("");
+        self.streamed.clear();
+        self.message_stale = false;
+        self.split = None;
+        let _ = self.reload();
+        self.auto_generate_at = None;
+        self.done = Some(DoneState {
+            records,
+            targets,
+            target: 0,
+            push,
+            appeared: Instant::now(),
+        });
+        self.screen = Screen::Done;
+        self.needs_clear = true;
+    }
+
+    fn start_push(&mut self, rebase: bool) {
+        let Some(done) = self.done.as_mut() else {
+            return;
+        };
+        let Some(remote) = done.targets.get(done.target).map(|t| t.name.clone()) else {
+            return;
+        };
+        done.push = PushState::Running {
+            started: Instant::now(),
+            rebasing: rebase,
+        };
+        let tx = self.tx.clone();
+        tokio::task::spawn_blocking(move || {
+            let result = if rebase {
+                session::rebase_and_push(&remote)
+            } else {
+                session::push_branch(&remote)
+            };
+            let _ = tx.send(AppEvent::PushDone(
+                result.map_err(|error| error.to_string()),
+            ));
+        });
+    }
+
+    fn finish_push(&mut self, result: Result<PushResult, String>) {
+        let Some(done) = self.done.as_mut() else {
+            return;
+        };
+        let remote = done.targets.get(done.target).cloned();
+        let rebased = matches!(done.push, PushState::Running { rebasing: true, .. });
+        done.push = match result {
+            Ok(PushResult::Pushed) => {
+                let remote = remote.expect("push started with a target");
+                if rebased {
+                    session::refresh_hashes(&mut done.records);
+                }
+                let url = done
+                    .records
+                    .last()
+                    .and_then(|record| session::commit_url(&remote, &record.short_hash));
+                let first_new = self.log.len().saturating_sub(done.records.len());
+                for (entry, record) in self.log[first_new..].iter_mut().zip(&done.records) {
+                    entry.record = record.clone();
+                    entry.pushed_to = Some(remote.summary.clone());
+                    entry.url = session::commit_url(&remote, &entry.record.short_hash);
+                }
+                PushState::Pushed {
+                    summary: remote.summary.clone(),
+                    url,
+                }
+            }
+            Ok(PushResult::Rejected {
+                message,
+                can_rebase,
+            }) => PushState::Rejected {
+                message,
+                can_rebase,
+            },
+            Err(error) => PushState::Failed(error),
+        };
+        self.needs_clear = true;
+        self.refresh_sync();
+    }
+
+    /// Leave the result screen: back to the commit screen when there is
+    /// more to commit, otherwise close the TUI.
+    fn leave_done(&mut self) {
+        self.done = None;
+        let _ = self.reload();
+        let anything_left = !self.staged.files.is_empty()
+            || !self.unstaged.files.is_empty()
+            || !self.untracked.is_empty();
+        if anything_left {
+            self.screen = Screen::Commit;
+            self.needs_clear = true;
+            if !self.staged_files.is_empty() {
+                self.start_generation();
+            }
+        } else {
+            self.outcome = Some(Outcome::Quit);
+        }
+    }
+
+    fn handle_done_key(&mut self, key: KeyEvent) {
+        let Some(done) = self.done.as_mut() else {
+            self.screen = Screen::Commit;
+            return;
+        };
+        match (&done.push, key.code) {
+            (PushState::Running { .. }, _) => {}
+            (PushState::Offer, KeyCode::Up | KeyCode::Char('k')) => {
+                done.target = done.target.saturating_sub(1)
+            }
+            (PushState::Offer, KeyCode::Down | KeyCode::Char('j')) => {
+                done.target = (done.target + 1).min(done.targets.len().saturating_sub(1))
+            }
+            (PushState::Offer, KeyCode::Enter | KeyCode::Char('p')) => self.start_push(false),
+            (PushState::Offer, KeyCode::Char('s') | KeyCode::Esc) => done.push = PushState::Skipped,
+            (
+                PushState::Rejected {
+                    can_rebase: true, ..
+                },
+                KeyCode::Char('r'),
+            ) => self.start_push(true),
+            (PushState::Rejected { .. }, KeyCode::Char('s') | KeyCode::Esc | KeyCode::Enter) => {
+                done.push = PushState::Skipped
+            }
+            (PushState::Failed(_), KeyCode::Char('p')) if !done.targets.is_empty() => {
+                self.start_push(false)
+            }
+            (_, KeyCode::Char('q')) => self.outcome = Some(Outcome::Quit),
+            (_, KeyCode::Enter | KeyCode::Esc | KeyCode::Char(' ')) => self.leave_done(),
+            _ => {}
+        }
     }
 
     fn handle_commit_key(&mut self, key: KeyEvent) {
@@ -1082,6 +1374,19 @@ impl App {
             KeyCode::Enter => self.commit_split(),
             _ => {}
         }
+    }
+
+    /// Fetch and compare with the upstream in the background.
+    pub fn refresh_sync(&mut self) {
+        if !self.input.config.gitpush {
+            return;
+        }
+        let tx = self.tx.clone();
+        tokio::task::spawn_blocking(move || {
+            if let Ok(snapshot) = git::fetch_sync_snapshot() {
+                let _ = tx.send(AppEvent::Sync(snapshot));
+            }
+        });
     }
 
     pub fn open_settings(&mut self, first_run: bool) {
@@ -1248,10 +1553,30 @@ impl App {
                     group.message.clone(),
                 )
             })
-            .collect();
-        self.outcome = Some(Outcome::Split {
-            staged: split.staged.clone(),
-            groups,
+            .collect::<Vec<_>>();
+        let staged = split.staged.clone();
+        let config = self.input.config.clone();
+        let extra_args = self.input.extra_args.clone();
+        let tx = self.tx.clone();
+        let total = groups.len();
+        self.committing = Some(Committing {
+            label: format!("Creating {total} commits"),
+            started: Instant::now(),
+            progress: (0, total),
+        });
+        tokio::task::spawn_blocking(move || {
+            let progress_tx = tx.clone();
+            let result = session::commit_split_groups(
+                &config,
+                &staged,
+                &groups,
+                &extra_args,
+                |index, total, _| {
+                    let _ = progress_tx.send(AppEvent::CommitProgress(index + 1, total));
+                },
+            )
+            .map_err(|error| error.to_string());
+            let _ = tx.send(AppEvent::Committed(result));
         });
     }
 

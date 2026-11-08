@@ -9,8 +9,12 @@
 - Commit screen: a staged/unstaged tree where `space` stages or unstages individual hunks, a syntax-highlighted diff with word-level changes, and a message panel that starts writing as soon as the TUI opens, streaming where the provider supports it.
 - Split screen: proposed commits appear as columns; move hunks between them with `←`/`→` or by dragging with the mouse, add or merge commits, and messages for changed commits are rewritten automatically.
 - Command palette (`ctrl-k`), help overlay (`?`), live theme switching (`t`), subject-length counter, stale-message warning, mouse support, and a layout that adapts to the terminal width.
-- New config keys: `AIC_TUI` (default `true`), `AIC_THEME` (`auto` or any `aic map` theme), and `AIC_ICONS` (`unicode` or `nerd`).
-- The TUI never commits by itself: the normal flow creates the commit, records history, and offers to push.
+- New config keys: `AIC_TUI` (default `true`), `AIC_THEME` (`auto` or any `aic map` theme), and `AIC_ICONS` (`auto`, `nerd`, or `unicode`).
+- Committing and pushing happen inside the TUI. After `c`, a result screen shows the hash, branch, line counts, and message, then offers to push to the remote (with its Git host icon); pick a remote when there are several. A rejected push can be rebased and retried with `r`. `enter` goes straight on to the next commit when changes remain. On quit, a summary of the session's commits is left in the scrollback.
+- Split commits are created inside the TUI too, with progress, and pushed from the same result screen.
+- The header shows the branch's sync state with its upstream (ahead, behind, or diverged), checked in the background. Being behind no longer stops the TUI from opening.
+- The first message starts writing itself a moment after you stage something, if nothing was staged when the TUI opened.
+- Nerd Font icons by default (`AIC_ICONS=auto`): file-type icons in the tree, provider icons in brand colours, and git icons, with a plain Unicode fallback.
 
 ## Streaming
 

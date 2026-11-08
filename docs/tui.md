@@ -5,7 +5,7 @@
 - `aic --fast` skips it for one run and uses the quick prompt flow.
 - `AIC_TUI=false` makes the prompt flow the default; `aic --tui` then opens the UI on demand.
 
-It never commits on its own. When you press commit, the TUI closes and the normal `aic` flow creates the commit, records history, and offers to push, exactly as the prompt-based flow does.
+The whole workflow happens inside it: stage, write the message, commit, and push. When you quit, `aic` leaves a short summary of the commits it made (hash, branch, where they were pushed, and line counts) in your normal terminal scrollback.
 
 The TUI is not used when stdin or stdout is not a terminal, or with `--yes`, `--dry-run`, `--amend`, `--json`, or `--quiet`.
 
@@ -29,7 +29,8 @@ The TUI is not used when stdin or stdout is not a terminal, or with `--yes`, `--
 
 - **Tree (left):** staged files with their hunks, then unstaged files and untracked files. `●` is fully staged, `◐` partly staged, `○` unstaged. Each hunk shows its function context (or first changed line) and its added/removed line counts.
 - **Diff (right):** the selected file or hunk with syntax highlighting, add/remove tints, and the changed words inside a modified line highlighted.
-- **Message (bottom):** opens already writing a message when something is staged. With a streaming provider the message appears as it is written. The counter shows the subject length against 72 characters. If you change what is staged afterwards, the panel warns that the message is stale.
+- **Header:** the branch, its sync state with the upstream (`↑2` ahead, `↓1 behind origin/main`, or diverged; checked in the background when `AIC_GITPUSH` is on), and the provider with its icon and model.
+- **Message (bottom):** opens already writing a message when something is staged. If you start with nothing staged, the message starts writing itself a moment after you stage something. With a streaming provider the message appears as it is written. The counter shows the subject length against 72 characters. If you change what is staged afterwards, the panel warns that the message is stale.
 
 On terminals at least 100 columns wide the tree and diff sit side by side; narrower terminals stack them. Below 60×16 the TUI asks for a bigger window.
 
@@ -46,7 +47,7 @@ On terminals at least 100 columns wide the tree and diff sit side by side; narro
 | `e` / `tab` | Edit the message; `esc` or `tab` to finish |
 | `ctrl-s` | Commit while editing |
 | `s` | Split the staged changes into several commits |
-| `c` | Commit |
+| `c` | Commit (then push from the result screen) |
 | `t` | Switch to the next theme for this session |
 | `,` | Settings |
 | `ctrl-k` / `:` | Command palette (type to filter, `enter` to run) |
@@ -54,6 +55,37 @@ On terminals at least 100 columns wide the tree and diff sit side by side; narro
 | `q` / `ctrl-c` | Quit without committing (staging changes are kept) |
 
 The mouse works too: click a row to select it, click it again to stage or unstage it, and scroll the tree or the diff.
+
+## Result screen
+
+Committing (`c`) runs in the background with a progress panel, then shows the result over the commit screen:
+
+```text
+╭  Committed ─────────────────────────────────────────────────────────╮
+│  a7d1032    main   +256 −102   4 files                             │
+│   ✨ feat(explore): make release metadata complete                    │
+│   - Replace round stickers with compact price-gun labels             │
+│ ──────────────────────────────────────────────────────────────────── │
+│  Push main to [ GitHub] origin?                                    │
+╰──────────────────────────────────────────────────────────────────────╯
+ enter push  s skip  q quit
+```
+
+| Key | Action |
+|-----|--------|
+| `enter` / `p` | Push the branch (with several remotes, pick one with `↑` `↓` first) |
+| `s` / `esc` | Skip pushing |
+| `r` | After a rejected push: `git pull --rebase`, then push again |
+| `enter` | Once pushed or skipped: back to the commit screen if anything is still changed, otherwise close |
+| `q` | Quit |
+
+If the remote has commits your branch doesn't, the push is rejected and the screen says so. Press `r` to rebase onto them and push again; the commit hashes shown are updated to the rebased commits. When other uncommitted changes make a rebase unsafe, the screen tells you to commit or stash them and run `git pull --rebase` yourself. Pushing is not offered when `AIC_GITPUSH=false` or the repository has no remotes.
+
+Being behind the upstream no longer stops `aic` from starting in the terminal UI; the header shows it, and the push step handles it. The prompt flow (`--fast`) still checks before committing.
+
+## Icons
+
+With `AIC_ICONS=auto` (the default) the terminal UI uses Nerd Font icons whenever `AIC_REMOTE_ICON_STYLE` does, which is also its default: file-type icons in the tree, git icons for branches and commits, provider icons in brand colours in the header, and the Git host icon (GitHub, GitLab, and others) in push prompts. Set `AIC_ICONS=unicode` if your terminal font is not a Nerd Font, or `AIC_ICONS=nerd` to force them.
 
 ## Settings screen
 
@@ -123,7 +155,7 @@ The TUI uses the same palettes as `aic map`. `AIC_THEME=auto` (the default) pick
 
 The TUI keeps your terminal's own background colour, and uses 24-bit colour when the terminal advertises it (`COLORTERM=truecolor`, iTerm2, WezTerm, Ghostty, VS Code). Otherwise it falls back to the nearest 256-colour values.
 
-Set `AIC_ICONS=nerd` if your terminal font is a Nerd Font, for a Git branch glyph in the header.
+See [Icons](#icons) for Nerd Font icons.
 
 ## Syntax highlighting
 
