@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use crate::{
-    ai::engine_from_config,
+    ai::{AiEngine, ChatMessage, DeltaFn, engine_from_config},
     config::{Config, provider_uses_compact_prompts},
     prompt::{
         build_messages, compact_diff_for_small_model, initial_messages, tidy_small_model_commit,
@@ -26,6 +26,30 @@ pub async fn generate_commit_message(
     context: &str,
     staged_files: &[String],
     progress: Option<ProgressFn<'_>>,
+) -> Result<String> {
+    generate_commit_message_streaming(
+        config,
+        diff,
+        full_gitmoji_spec,
+        context,
+        staged_files,
+        progress,
+        None,
+    )
+    .await
+}
+
+/// Generate a commit message, streaming the final request's text to
+/// `on_delta` as it arrives. Chunk-summary requests never stream: only the
+/// call that produces the message the user will see does.
+pub async fn generate_commit_message_streaming(
+    config: &Config,
+    diff: &str,
+    full_gitmoji_spec: bool,
+    context: &str,
+    staged_files: &[String],
+    progress: Option<ProgressFn<'_>>,
+    on_delta: Option<DeltaFn<'_>>,
 ) -> Result<String> {
     // Budget against the chunk-summary prompt variant - the largest context
     // this function sends. Measuring the bare context under-reserves and can
@@ -65,7 +89,7 @@ pub async fn generate_commit_message(
         );
         let chat_messages =
             build_messages(config, &chunks[0], full_gitmoji_spec, context, staged_files)?;
-        let message = engine.complete(&chat_messages).await?;
+        let message = final_call(engine.as_ref(), &chat_messages, on_delta).await?;
         return Ok(finish_message(config, full_gitmoji_spec, message));
     }
 
@@ -109,8 +133,19 @@ pub async fn generate_commit_message(
         &synthesis_context,
         staged_files,
     )?;
-    let message = engine.complete(&chat_messages).await?;
+    let message = final_call(engine.as_ref(), &chat_messages, on_delta).await?;
     Ok(finish_message(config, full_gitmoji_spec, message))
+}
+
+async fn final_call(
+    engine: &dyn AiEngine,
+    messages: &[ChatMessage],
+    on_delta: Option<DeltaFn<'_>>,
+) -> Result<String> {
+    match on_delta {
+        Some(on_delta) => engine.complete_streaming(messages, on_delta).await,
+        None => engine.complete(messages).await,
+    }
 }
 
 fn finish_message(config: &Config, full_gitmoji_spec: bool, message: String) -> String {

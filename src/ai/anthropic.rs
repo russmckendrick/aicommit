@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use reqwest::{Client, Proxy};
+use reqwest::{Client, Proxy, RequestBuilder, Response};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ai::{AiEngine, ChatMessage},
+    ai::{AiEngine, ChatMessage, DeltaFn, sse::SseParser},
     config::{Config, default_api_url_for_provider},
     errors::normalize_provider_error,
     prompt::sanitize_model_output,
@@ -28,6 +28,24 @@ struct MessagesRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     system: Option<String>,
     messages: Vec<AnthropicMessage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct StreamEvent {
+    #[serde(rename = "type")]
+    kind: String,
+    #[serde(default)]
+    delta: Option<StreamDelta>,
+}
+
+#[derive(Debug, Deserialize)]
+struct StreamDelta {
+    #[serde(rename = "type", default)]
+    kind: String,
+    #[serde(default)]
+    text: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -113,13 +131,13 @@ impl AnthropicEngine {
             max_tokens: self.config.tokens_max_output,
             system: (!system_messages.is_empty()).then(|| system_messages.join("\n\n")),
             messages: anthropic_messages,
+            stream: None,
         }
     }
 }
 
-#[async_trait]
-impl AiEngine for AnthropicEngine {
-    async fn complete(&self, messages: &[ChatMessage]) -> Result<String> {
+impl AnthropicEngine {
+    fn request(&self, messages: &[ChatMessage], stream: bool) -> Result<RequestBuilder> {
         let request_tokens = count_messages(messages);
         if request_tokens
             > self
@@ -130,7 +148,8 @@ impl AiEngine for AnthropicEngine {
             return Err(crate::errors::AicError::TooManyTokens.into());
         }
 
-        let payload = self.build_request(messages);
+        let mut payload = self.build_request(messages);
+        payload.stream = stream.then_some(true);
         let mut request = self
             .client
             .post(self.messages_url())
@@ -142,21 +161,17 @@ impl AiEngine for AnthropicEngine {
             request = request.header(key, value);
         }
 
-        let response = request.send().await.map_err(|error| {
-            if error.is_timeout() {
-                anyhow::anyhow!(
-                    "request to {} timed out after {}s - raise AIC_HTTP_TIMEOUT or reduce the staged diff",
-                    self.config.ai_provider,
-                    self.config.http_timeout
-                )
-            } else {
-                anyhow::Error::new(error).context("failed to call AI provider")
-            }
-        })?;
-        let status = response.status();
-        let body = response.text().await?;
+        Ok(request)
+    }
 
+    async fn send(&self, request: RequestBuilder) -> Result<Response> {
+        let response = request
+            .send()
+            .await
+            .map_err(|error| self.transport_error(error))?;
+        let status = response.status();
         if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
             return Err(normalize_provider_error(
                 &self.config.ai_provider,
                 &self.config.model,
@@ -165,6 +180,27 @@ impl AiEngine for AnthropicEngine {
             )
             .into());
         }
+        Ok(response)
+    }
+
+    fn transport_error(&self, error: reqwest::Error) -> anyhow::Error {
+        if error.is_timeout() {
+            anyhow::anyhow!(
+                "request to {} timed out after {}s - raise AIC_HTTP_TIMEOUT or reduce the staged diff",
+                self.config.ai_provider,
+                self.config.http_timeout
+            )
+        } else {
+            anyhow::Error::new(error).context("failed to call AI provider")
+        }
+    }
+}
+
+#[async_trait]
+impl AiEngine for AnthropicEngine {
+    async fn complete(&self, messages: &[ChatMessage]) -> Result<String> {
+        let response = self.send(self.request(messages, false)?).await?;
+        let body = response.text().await?;
 
         let response: MessagesResponse = serde_json::from_str(&body)
             .with_context(|| format!("failed to parse AI response: {body}"))?;
@@ -185,6 +221,72 @@ impl AiEngine for AnthropicEngine {
         }
 
         Ok(content)
+    }
+
+    async fn complete_streaming(
+        &self,
+        messages: &[ChatMessage],
+        on_delta: DeltaFn<'_>,
+    ) -> Result<String> {
+        let mut response = self.send(self.request(messages, true)?).await?;
+        let mut parser = SseParser::default();
+        let mut text = String::new();
+        let mut done = false;
+
+        while !done {
+            let events = match response
+                .chunk()
+                .await
+                .map_err(|error| self.transport_error(error))?
+            {
+                Some(chunk) => parser.push(&chunk),
+                None => {
+                    done = true;
+                    parser.finish()
+                }
+            };
+            for data in events {
+                let event: StreamEvent = serde_json::from_str(&data)
+                    .with_context(|| format!("failed to parse AI stream event: {data}"))?;
+                match event.kind.as_str() {
+                    "content_block_delta" => {
+                        if let Some(delta) = event
+                            .delta
+                            .filter(|delta| delta.kind == "text_delta")
+                            .and_then(|delta| delta.text)
+                            .filter(|delta| !delta.is_empty())
+                        {
+                            text.push_str(&delta);
+                            on_delta(&delta);
+                        }
+                    }
+                    "error" => {
+                        return Err(normalize_provider_error(
+                            &self.config.ai_provider,
+                            &self.config.model,
+                            None,
+                            &data,
+                        )
+                        .into());
+                    }
+                    "message_stop" => {
+                        done = true;
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        let content = sanitize_model_output(&text);
+        if content.is_empty() {
+            return Err(crate::errors::AicError::EmptyMessage.into());
+        }
+        Ok(content)
+    }
+
+    fn streams(&self) -> bool {
+        true
     }
 }
 

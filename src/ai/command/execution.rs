@@ -356,10 +356,7 @@ mod tests {
             std::env::temp_dir(),
         );
 
-        let response = engine
-            .complete(&test_messages())
-            .await
-            .unwrap();
+        let response = engine.complete(&test_messages()).await.unwrap();
 
         assert_eq!(response, "feat: add cli");
     }

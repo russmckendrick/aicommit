@@ -249,6 +249,7 @@ struct StatusState {
     stage: String,
     pool: StatusPool,
     seed: u64,
+    streamed: String,
 }
 
 impl StatusState {
@@ -286,6 +287,7 @@ impl StatusSpinner {
             stage: stage.into(),
             pool,
             seed: status_seed(),
+            streamed: String::new(),
         }));
         let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         Self::render(&bar, &state);
@@ -357,6 +359,15 @@ impl StatusSpinner {
         }
     }
 
+    /// Append streamed model output; the spinner then previews the first
+    /// line being written instead of a rotating status detail.
+    pub fn push_delta(&self, delta: &str) {
+        if let Ok(mut state) = self.state.lock() {
+            state.streamed.push_str(delta);
+        }
+        Self::render(&self.bar, &self.state);
+    }
+
     /// Print a dim one-liner above the spinner without disturbing it.
     pub fn note(&self, message: impl AsRef<str>) {
         self.bar.println(format!(
@@ -375,12 +386,32 @@ impl StatusSpinner {
         let Ok(state) = state.lock() else {
             return;
         };
+        if let Some(preview) = streamed_preview(&state.streamed, STREAM_PREVIEW_CHARS) {
+            bar.set_message(format!("{} {}", state.stage, style(preview).cyan()));
+            return;
+        }
         let message = match state.detail(bar.elapsed().as_secs()) {
             Some(detail) => format!("{} - {}", state.stage, detail),
             None => state.stage.clone(),
         };
         bar.set_message(message);
     }
+}
+
+const STREAM_PREVIEW_CHARS: usize = 72;
+
+/// First non-empty line of streamed text, truncated with an ellipsis.
+fn streamed_preview(streamed: &str, max_chars: usize) -> Option<String> {
+    let line = streamed
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())?;
+    if line.chars().count() <= max_chars {
+        return Some(line.to_owned());
+    }
+    let mut truncated: String = line.chars().take(max_chars.saturating_sub(1)).collect();
+    truncated.push('…');
+    Some(truncated)
 }
 
 impl Drop for StatusSpinner {
@@ -676,11 +707,25 @@ mod tests {
     }
 
     #[test]
+    fn streamed_preview_shows_first_line_truncated() {
+        assert_eq!(streamed_preview("", 10), None);
+        assert_eq!(
+            streamed_preview("\n✨ feat(ai): stream\n\nbody", 40).as_deref(),
+            Some("✨ feat(ai): stream")
+        );
+        assert_eq!(
+            streamed_preview("abcdefghijkl", 6).as_deref(),
+            Some("abcde…")
+        );
+    }
+
+    #[test]
     fn status_detail_rotates_through_pool_and_rare_lines() {
         let state = StatusState {
             stage: "Generating".to_owned(),
             pool: StatusPool::Waiting,
             seed: 7,
+            streamed: String::new(),
         };
         let mut seen = std::collections::BTreeSet::new();
         for step in 0..40 {

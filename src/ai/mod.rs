@@ -10,6 +10,7 @@ use crate::{
 pub mod anthropic;
 pub mod command;
 pub mod openai_compat;
+pub mod sse;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ChatMessage {
@@ -40,11 +41,37 @@ impl ChatMessage {
     }
 }
 
+/// Callback that receives each streamed text fragment as it arrives.
+pub type DeltaFn<'a> = &'a (dyn Fn(&str) + Send + Sync);
+
 #[async_trait]
 pub trait AiEngine: Send + Sync {
     /// Send chat messages and return the model's text response.
     /// Used for commit generation, review, and any other text completion task.
     async fn complete(&self, messages: &[ChatMessage]) -> Result<String>;
+
+    /// Like [`AiEngine::complete`], but reports text fragments to `on_delta`
+    /// as they arrive. The returned string is the full, sanitized response,
+    /// which can differ from the concatenated fragments (for example after
+    /// `<think>` blocks are stripped), so callers should prefer it once done.
+    ///
+    /// The default implementation does not stream: it calls `complete` and
+    /// reports the whole response as one fragment. Providers opt in by
+    /// overriding it.
+    async fn complete_streaming(
+        &self,
+        messages: &[ChatMessage],
+        on_delta: DeltaFn<'_>,
+    ) -> Result<String> {
+        let response = self.complete(messages).await?;
+        on_delta(&response);
+        Ok(response)
+    }
+
+    /// Whether `complete_streaming` delivers real incremental fragments.
+    fn streams(&self) -> bool {
+        false
+    }
 }
 
 pub fn engine_from_config(config: &Config) -> Result<Box<dyn AiEngine>> {

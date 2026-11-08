@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use reqwest::{Client, Proxy};
+use reqwest::{Client, Proxy, RequestBuilder, Response};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ai::{AiEngine, ChatMessage},
+    ai::{AiEngine, ChatMessage, DeltaFn, sse::SseParser},
     config::{Config, default_api_url_for_provider},
     errors::normalize_provider_error,
     prompt::sanitize_model_output,
@@ -32,6 +32,8 @@ struct ChatRequest<'a> {
     max_tokens: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_completion_tokens: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -46,6 +48,25 @@ struct Choice {
 
 #[derive(Debug, Deserialize)]
 struct ResponseMessage {
+    content: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct StreamChunk {
+    #[serde(default)]
+    choices: Vec<StreamChoice>,
+    #[serde(default)]
+    error: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+struct StreamChoice {
+    #[serde(default)]
+    delta: StreamDelta,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct StreamDelta {
     content: Option<String>,
 }
 
@@ -99,9 +120,8 @@ impl OpenAiCompatEngine {
     }
 }
 
-#[async_trait]
-impl AiEngine for OpenAiCompatEngine {
-    async fn complete(&self, messages: &[ChatMessage]) -> Result<String> {
+impl OpenAiCompatEngine {
+    fn request(&self, messages: &[ChatMessage], stream: bool) -> Result<RequestBuilder> {
         let request_tokens = count_messages(messages);
         if request_tokens
             > self
@@ -124,6 +144,7 @@ impl AiEngine for OpenAiCompatEngine {
             top_p: (!is_reasoning_model).then_some(0.1),
             max_tokens: (!is_reasoning_model).then_some(self.config.tokens_max_output),
             max_completion_tokens: is_reasoning_model.then_some(self.config.tokens_max_output),
+            stream: stream.then_some(true),
         };
 
         let mut request = self.client.post(self.chat_url()).json(&payload);
@@ -140,21 +161,17 @@ impl AiEngine for OpenAiCompatEngine {
             request = request.header(key, value);
         }
 
-        let response = request.send().await.map_err(|error| {
-            if error.is_timeout() {
-                anyhow::anyhow!(
-                    "request to {} timed out after {}s - raise AIC_HTTP_TIMEOUT or reduce the staged diff",
-                    self.config.ai_provider,
-                    self.config.http_timeout
-                )
-            } else {
-                anyhow::Error::new(error).context("failed to call AI provider")
-            }
-        })?;
-        let status = response.status();
-        let body = response.text().await?;
+        Ok(request)
+    }
 
+    async fn send(&self, request: RequestBuilder) -> Result<Response> {
+        let response = request
+            .send()
+            .await
+            .map_err(|error| self.transport_error(error))?;
+        let status = response.status();
         if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
             return Err(normalize_provider_error(
                 &self.config.ai_provider,
                 &self.config.model,
@@ -163,6 +180,27 @@ impl AiEngine for OpenAiCompatEngine {
             )
             .into());
         }
+        Ok(response)
+    }
+
+    fn transport_error(&self, error: reqwest::Error) -> anyhow::Error {
+        if error.is_timeout() {
+            anyhow::anyhow!(
+                "request to {} timed out after {}s - raise AIC_HTTP_TIMEOUT or reduce the staged diff",
+                self.config.ai_provider,
+                self.config.http_timeout
+            )
+        } else {
+            anyhow::Error::new(error).context("failed to call AI provider")
+        }
+    }
+}
+
+#[async_trait]
+impl AiEngine for OpenAiCompatEngine {
+    async fn complete(&self, messages: &[ChatMessage]) -> Result<String> {
+        let response = self.send(self.request(messages, false)?).await?;
+        let body = response.text().await?;
 
         let response: ChatResponse = serde_json::from_str(&body)
             .with_context(|| format!("failed to parse AI response: {body}"))?;
@@ -175,6 +213,67 @@ impl AiEngine for OpenAiCompatEngine {
             .ok_or(crate::errors::AicError::EmptyMessage)?;
 
         Ok(content)
+    }
+
+    async fn complete_streaming(
+        &self,
+        messages: &[ChatMessage],
+        on_delta: DeltaFn<'_>,
+    ) -> Result<String> {
+        let mut response = self.send(self.request(messages, true)?).await?;
+        let mut parser = SseParser::default();
+        let mut text = String::new();
+        let mut done = false;
+
+        while !done {
+            let events = match response
+                .chunk()
+                .await
+                .map_err(|error| self.transport_error(error))?
+            {
+                Some(chunk) => parser.push(&chunk),
+                None => {
+                    done = true;
+                    parser.finish()
+                }
+            };
+            for data in events {
+                if data == "[DONE]" {
+                    done = true;
+                    break;
+                }
+                let event: StreamChunk = serde_json::from_str(&data)
+                    .with_context(|| format!("failed to parse AI stream event: {data}"))?;
+                if let Some(error) = event.error {
+                    return Err(normalize_provider_error(
+                        &self.config.ai_provider,
+                        &self.config.model,
+                        None,
+                        &serde_json::json!({ "error": error }).to_string(),
+                    )
+                    .into());
+                }
+                if let Some(delta) = event
+                    .choices
+                    .first()
+                    .and_then(|choice| choice.delta.content.as_deref())
+                    .filter(|delta| !delta.is_empty())
+                {
+                    text.push_str(delta);
+                    on_delta(delta);
+                }
+            }
+        }
+
+        let content = sanitize_model_output(&text);
+        if content.is_empty() {
+            return Err(crate::errors::AicError::EmptyMessage.into());
+        }
+        Ok(content)
+    }
+
+    fn streams(&self) -> bool {
+        true
     }
 }
 

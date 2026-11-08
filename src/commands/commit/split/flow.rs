@@ -146,13 +146,15 @@ pub(crate) async fn generate_confirm_and_commit(
         let progress = |event: generator::GenerationProgress| {
             spinner.on_generation_progress(event, "commit message")
         };
-        let commit_message = generator::generate_commit_message(
+        let on_delta = |delta: &str| spinner.push_delta(delta);
+        let commit_message = generator::generate_commit_message_streaming(
             config,
             diff,
             full_gitmoji_spec,
             context,
             staged_files,
             Some(&progress),
+            Some(&on_delta),
         )
         .await;
         spinner.finish_and_clear();

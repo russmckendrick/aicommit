@@ -34,10 +34,7 @@ async fn openai_compatible_engine_reads_chat_response() {
         ..Config::default()
     };
     let engine = OpenAiCompatEngine::new(config).unwrap();
-    let response = engine
-        .complete(&[ChatMessage::user("diff")])
-        .await
-        .unwrap();
+    let response = engine.complete(&[ChatMessage::user("diff")]).await.unwrap();
 
     assert_eq!(response, "feat: add cli");
 }
@@ -63,10 +60,7 @@ async fn azure_openai_engine_uses_api_key_header() {
         ..Config::default()
     };
     let engine = OpenAiCompatEngine::new(config).unwrap();
-    let response = engine
-        .complete(&[ChatMessage::user("diff")])
-        .await
-        .unwrap();
+    let response = engine.complete(&[ChatMessage::user("diff")]).await.unwrap();
 
     assert_eq!(response, "feat: add azure openai");
 }
@@ -141,10 +135,7 @@ async fn groq_engine_uses_openai_compatible_base_url_and_bearer_auth() {
         ..Config::default()
     };
     let engine = OpenAiCompatEngine::new(config).unwrap();
-    let response = engine
-        .complete(&[ChatMessage::user("diff")])
-        .await
-        .unwrap();
+    let response = engine.complete(&[ChatMessage::user("diff")]).await.unwrap();
 
     assert_eq!(response, "feat: add groq support");
 }
@@ -169,10 +160,7 @@ async fn ollama_engine_uses_openai_compatible_base_url_without_api_key() {
         ..Config::default()
     };
     let engine = OpenAiCompatEngine::new(config).unwrap();
-    let response = engine
-        .complete(&[ChatMessage::user("diff")])
-        .await
-        .unwrap();
+    let response = engine.complete(&[ChatMessage::user("diff")]).await.unwrap();
 
     assert_eq!(response, "feat: add ollama support");
 }
@@ -369,4 +357,147 @@ async fn generate_commit_message_synthesizes_chunked_diff() {
         |event| matches!(event, generator::GenerationProgress::Chunk { total, .. } if *total > 1)
     ));
     assert!(events.contains(&generator::GenerationProgress::Synthesizing));
+}
+
+fn sse_body(events: &[&str]) -> String {
+    events
+        .iter()
+        .map(|event| format!("data: {event}\n\n"))
+        .collect()
+}
+
+#[tokio::test]
+async fn openai_compatible_engine_streams_deltas() {
+    let server = MockServer::start().await;
+    let body = sse_body(&[
+        r#"{"choices":[{"delta":{"role":"assistant"}}]}"#,
+        r#"{"choices":[{"delta":{"content":"feat: "}}]}"#,
+        r#"{"choices":[{"delta":{"content":"stream it"}}]}"#,
+        "[DONE]",
+    ]);
+    Mock::given(method("POST"))
+        .and(path("/v1/chat/completions"))
+        .and(body_string_contains("\"stream\":true"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("content-type", "text/event-stream")
+                .set_body_string(body),
+        )
+        .mount(&server)
+        .await;
+
+    let config = Config {
+        api_key: Some("key".to_owned()),
+        api_url: Some(format!("{}/v1", server.uri())),
+        ..Config::default()
+    };
+    let engine = OpenAiCompatEngine::new(config).unwrap();
+    let deltas = std::sync::Mutex::new(Vec::new());
+    let on_delta = |delta: &str| deltas.lock().unwrap().push(delta.to_owned());
+    let response = engine
+        .complete_streaming(&[ChatMessage::user("diff")], &on_delta)
+        .await
+        .unwrap();
+
+    assert!(engine.streams());
+    assert_eq!(response, "feat: stream it");
+    assert_eq!(*deltas.lock().unwrap(), vec!["feat: ", "stream it"]);
+}
+
+#[tokio::test]
+async fn openai_compatible_stream_surfaces_http_errors() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/chat/completions"))
+        .respond_with(ResponseTemplate::new(401).set_body_json(serde_json::json!({
+            "error": { "message": "bad key" }
+        })))
+        .mount(&server)
+        .await;
+
+    let config = Config {
+        api_key: Some("key".to_owned()),
+        api_url: Some(format!("{}/v1", server.uri())),
+        ..Config::default()
+    };
+    let engine = OpenAiCompatEngine::new(config).unwrap();
+    let error = engine
+        .complete_streaming(&[ChatMessage::user("diff")], &|_| {})
+        .await
+        .unwrap_err();
+    let error = error.downcast::<aicommit::errors::AicError>().unwrap();
+    assert!(matches!(
+        error,
+        aicommit::errors::AicError::Authentication(_)
+    ));
+}
+
+#[tokio::test]
+async fn anthropic_engine_streams_text_deltas() {
+    let server = MockServer::start().await;
+    let body = [
+        "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{}}\n\n",
+        "event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\n",
+        "event: ping\ndata: {\"type\":\"ping\"}\n\n",
+        "event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"fix: \"}}\n\n",
+        "event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"handle sse\"}}\n\n",
+        "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n",
+    ]
+    .concat();
+    Mock::given(method("POST"))
+        .and(path("/v1/messages"))
+        .and(body_string_contains("\"stream\":true"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("content-type", "text/event-stream")
+                .set_body_string(body),
+        )
+        .mount(&server)
+        .await;
+
+    let config = Config {
+        ai_provider: "anthropic".to_owned(),
+        api_key: Some("key".to_owned()),
+        api_url: Some(format!("{}/v1", server.uri())),
+        ..Config::default()
+    };
+    let engine = AnthropicEngine::new(config).unwrap();
+    let deltas = std::sync::Mutex::new(Vec::new());
+    let on_delta = |delta: &str| deltas.lock().unwrap().push(delta.to_owned());
+    let response = engine
+        .complete_streaming(&[ChatMessage::user("diff")], &on_delta)
+        .await
+        .unwrap();
+
+    assert_eq!(response, "fix: handle sse");
+    assert_eq!(*deltas.lock().unwrap(), vec!["fix: ", "handle sse"]);
+}
+
+#[tokio::test]
+async fn anthropic_stream_error_event_is_reported() {
+    let server = MockServer::start().await;
+    let body = "event: error\ndata: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}\n\n";
+    Mock::given(method("POST"))
+        .and(path("/v1/messages"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("content-type", "text/event-stream")
+                .set_body_string(body),
+        )
+        .mount(&server)
+        .await;
+
+    let config = Config {
+        ai_provider: "anthropic".to_owned(),
+        api_key: Some("key".to_owned()),
+        api_url: Some(format!("{}/v1", server.uri())),
+        ..Config::default()
+    };
+    let engine = AnthropicEngine::new(config).unwrap();
+    assert!(
+        engine
+            .complete_streaming(&[ChatMessage::user("diff")], &|_| {})
+            .await
+            .is_err()
+    );
 }
