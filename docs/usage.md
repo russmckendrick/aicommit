@@ -1,10 +1,16 @@
 # Usage
 
-Generate a commit message from staged files:
+Generate a commit message:
+
+```sh
+aic
+```
+
+In an interactive terminal this opens the [terminal UI](tui.md). The rest of this section describes the quick prompt flow, which you get with `aic --fast`, with `AIC_TUI=false`, or whenever `aic` is not attached to a terminal:
 
 ```sh
 git add <files>
-aic
+aic --fast
 ```
 
 In an interactive terminal, if files are already staged, `aic` first shows a lightweight preflight where you can continue, unstage selected files, or abort.
@@ -77,13 +83,7 @@ If a push is rejected after the commit has already been created locally, `aic` n
 
 ## Terminal UI
 
-Open a full-screen terminal UI to stage hunks, watch the message being written, edit it, and split commits:
-
-```sh
-aic --tui
-```
-
-Set `AIC_TUI=true` to make it the default. See [Terminal UI](tui.md) for screens and key bindings.
+`aic` opens a full-screen terminal UI by default when it runs in a terminal: stage hunks, watch the message being written, edit it, split commits, and change settings. `aic --fast` skips it for one run; `AIC_TUI=false` skips it by default, and `aic --tui` then opens it on demand. See [Terminal UI](tui.md) for screens and key bindings.
 
 ## Interactive Diff Splitting
 

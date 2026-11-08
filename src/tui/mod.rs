@@ -8,6 +8,7 @@
 mod app;
 mod editor;
 mod highlight;
+mod settings;
 pub mod theme;
 mod view;
 
@@ -67,7 +68,7 @@ impl Drop for TerminalGuard {
 pub async fn run_commit(input: TuiInput) -> Result<Outcome> {
     let (tx, mut rx) = mpsc::unbounded_channel();
     let mut app = app::App::new(input, tx)?;
-    if !app.staged_files.is_empty() {
+    if !app.staged_files.is_empty() && !app.input.first_run {
         // Open straight into a streaming message: the first thing people see.
         app.start_generation();
     }
@@ -80,6 +81,18 @@ pub async fn run_commit(input: TuiInput) -> Result<Outcome> {
             dirty = true;
         }
         app.tick();
+        if app.needs_clear {
+            // Clear the screen and blank both buffers so the next draw
+            // repaints every cell. `Terminal::clear` would also query the
+            // cursor position, which some terminals never answer.
+            execute!(
+                guard.terminal.backend_mut(),
+                crossterm::terminal::Clear(crossterm::terminal::ClearType::All)
+            )?;
+            guard.terminal.swap_buffers();
+            app.needs_clear = false;
+            dirty = true;
+        }
         if dirty || app.animating() {
             guard.terminal.draw(|frame| view::draw(frame, &mut app))?;
             dirty = false;
@@ -99,7 +112,7 @@ pub async fn run_commit(input: TuiInput) -> Result<Outcome> {
             match tokio::task::block_in_place(event::read)? {
                 Event::Key(key) => app.handle_key(key),
                 Event::Mouse(mouse) => app.handle_mouse(mouse),
-                Event::Resize(_, _) => {}
+                Event::Resize(_, _) => app.needs_clear = true,
                 _ => continue,
             }
             dirty = true;
@@ -176,6 +189,7 @@ mod tests {
                 theme: "github-dark".to_owned(),
                 ..Config::default()
             },
+            first_run: false,
             extra_args: Vec::new(),
             context: String::new(),
             full_gitmoji_spec: false,
@@ -265,5 +279,52 @@ mod tests {
         assert!(split.contains("notes.md #1"));
         assert!(split.contains("same file"));
         assert!(split.contains("feat: add generated commit message"));
+    }
+
+    #[allow(clippy::await_holding_lock)]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn settings_screen_renders_and_saves_changes() {
+        let _lock = cwd_test_lock().lock().unwrap_or_else(|e| e.into_inner());
+        let repo = repo();
+        let previous = std::env::current_dir().unwrap();
+        std::env::set_current_dir(repo.path()).unwrap();
+
+        let (tx, _rx) = mpsc::unbounded_channel();
+        let mut first_run_input = input();
+        first_run_input.config.ai_provider = "openai".to_owned();
+        first_run_input.first_run = true;
+        let mut app = App::new(first_run_input, tx).unwrap();
+        app.config_path = repo.path().join(".aicommit");
+        if let Some(settings) = app.settings.as_mut() {
+            settings.path = app.config_path.clone();
+        }
+        let first_run = render(&mut app, 120, 34);
+
+        // Toggle GitMoji off (fields: provider, model, key, url, emoji).
+        for _ in 0..2 {
+            app.handle_key(crossterm::event::KeyEvent::new(
+                crossterm::event::KeyCode::Down,
+                crossterm::event::KeyModifiers::NONE,
+            ));
+        }
+        app.handle_key(crossterm::event::KeyEvent::new(
+            crossterm::event::KeyCode::Enter,
+            crossterm::event::KeyModifiers::NONE,
+        ));
+        let saved = std::fs::read_to_string(repo.path().join(".aicommit")).unwrap_or_default();
+        let after = render(&mut app, 120, 34);
+        std::env::set_current_dir(previous).unwrap();
+
+        println!("{first_run}\n\n{after}");
+        assert_eq!(app.screen, Screen::Settings);
+        assert!(first_run.contains("◇ aic · settings"));
+        assert!(first_run.contains("Welcome to aic."));
+        assert!(first_run.contains("▌ API key"));
+        assert!(first_run.contains("not set"));
+        assert!(first_run.contains("‹ ") || first_run.contains("openai"));
+        assert!(first_run.contains("GitMoji prefix"));
+        assert!(first_run.contains("Open this UI by default"));
+        assert!(saved.contains("AIC_EMOJI = false"), "{saved}");
+        assert!(after.contains("○ off"));
     }
 }

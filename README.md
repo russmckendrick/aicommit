@@ -20,25 +20,24 @@ aic setup
 
 ## Usage
 
-Stage your changes and run `aic` - it generates a conventional commit message, shows it for confirmation, and commits on approval:
+Run `aic` in a repository with changes:
 
 ```sh
-git add -p
 aic
 ```
 
-In an interactive terminal, if files are already staged, `aic` lets you continue, unstage selected files, or abort before generation starts.
-If nothing is staged, `aic` lets you stage all changed files, choose files interactively, or cancel.
-With `--yes`, it stages all changed files automatically.
-In the normal interactive flow, `aic` can also split one staged change set into multiple file-group commits when the work clearly spans separate concerns.
+In a terminal, `aic` opens a full-screen terminal UI. Stage individual hunks with `space`, watch the message stream in, edit it, split the staged set into several commits by moving hunks between columns, and change your provider, model, and API key in settings (`,`). With no API key configured, it opens on settings so you can add one. See [docs/tui.md](docs/tui.md).
 
-### Terminal UI
+### Quick prompt flow
 
 ```sh
-aic --tui
+git add -p
+aic --fast
 ```
 
-Opens a full-screen terminal UI: stage individual hunks, watch the message stream in, edit it, and split the staged set into several commits by moving hunks between columns. Set `AIC_TUI=true` to make it the default. See [docs/tui.md](docs/tui.md).
+`--fast` (or `AIC_TUI=false`) skips the terminal UI: `aic` generates a message, shows it for confirmation, and commits on approval. If files are already staged it lets you continue, unstage selected files, or abort; if nothing is staged it lets you stage all changed files, choose files, or cancel. It can also offer to split the staged set into several commits.
+
+Scripts, pipes, Git hooks, `--yes`, `--dry-run`, `--amend`, `--json`, and `--quiet` always use the prompt-free CLI path. With `--yes`, `aic` stages all changed files automatically.
 
 ### Flags
 
@@ -49,7 +48,8 @@ Opens a full-screen terminal UI: stage individual hunks, watch the message strea
 | `-d`, `--dry-run` | Print the message without committing |
 | `--amend` | Regenerate and amend the last commit |
 | `--fgm` | Use the full GitMoji specification |
-| `--tui` | Open the interactive terminal UI |
+| `-f`, `--fast` | Skip the terminal UI and use the quick prompt flow |
+| `--tui` | Open the terminal UI even when `AIC_TUI=false` |
 | `--json` / `-q`, `--quiet` | Print only the result (JSON or plain text) for scripts and agents |
 
 ### Review staged changes
@@ -127,7 +127,7 @@ aic completions zsh        # Generate shell completions
 - **History** - browse past generated messages, PR drafts, and reviews
 - **Large diff handling** - automatic chunking and synthesis
 - **Custom prompts** - swap the system prompt without recompiling
-- **Terminal UI** - stage hunks, stream messages, and split commits in a full-screen UI (`aic --tui`)
+- **Terminal UI** - stage hunks, stream messages, and split commits in a full-screen UI (the default in a terminal)
 - **Split commits** - turn one staged change set into multiple commits, hunk by hunk, when concerns are separate
 - **Streaming** - see the message as it is written with OpenAI-compatible and Anthropic providers
 - **Automation** - `--json` and `--quiet` output for scripts, CI, and coding agents

@@ -223,6 +223,48 @@ async fn fetch_anthropic_models(url: &str, config: &Config) -> Result<Vec<String
     Ok(models)
 }
 
+/// Models offered for `provider` in pickers: the built-in suggestions first,
+/// then chat models from the `aic models --refresh` cache, without duplicates.
+pub fn model_choices(provider: &str) -> Vec<String> {
+    let mut choices = crate::config::model_list(provider)
+        .iter()
+        .map(|model| (*model).to_owned())
+        .collect::<Vec<_>>();
+    let cached = global_model_cache_path()
+        .ok()
+        .and_then(|path| read_cache(&path).ok())
+        .and_then(|cache| cache.models.get(provider).cloned())
+        .unwrap_or_default();
+    let skip = [
+        "audio",
+        "tts",
+        "transcribe",
+        "realtime",
+        "image",
+        "search",
+        "embedding",
+        "moderation",
+        "whisper",
+        "dall-e",
+    ];
+    for model in cached {
+        let lower = model.to_lowercase();
+        let dated = lower
+            .rsplit('-')
+            .next()
+            .is_some_and(|tail| tail.len() >= 4 && tail.chars().all(|c| c.is_ascii_digit()));
+        if skip.iter().any(|word| lower.contains(word))
+            || dated
+            || lower.contains("-20")
+            || choices.contains(&model)
+        {
+            continue;
+        }
+        choices.push(model);
+    }
+    choices
+}
+
 fn read_cache(path: &std::path::Path) -> Result<ModelCache> {
     let content = fs::read_to_string(path)?;
     Ok(serde_json::from_str(&content)?)

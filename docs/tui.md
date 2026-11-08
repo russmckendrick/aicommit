@@ -1,6 +1,9 @@
 # Terminal UI
 
-`aic --tui` opens a full-screen terminal UI for the commit workflow. Set `AIC_TUI=true` to open it whenever you run plain `aic` in a terminal.
+`aic` opens a full-screen terminal UI for the commit workflow whenever it runs in an interactive terminal.
+
+- `aic --fast` skips it for one run and uses the quick prompt flow.
+- `AIC_TUI=false` makes the prompt flow the default; `aic --tui` then opens the UI on demand.
 
 It never commits on its own. When you press commit, the TUI closes and the normal `aic` flow creates the commit, records history, and offers to push, exactly as the prompt-based flow does.
 
@@ -44,12 +47,39 @@ On terminals at least 100 columns wide the tree and diff sit side by side; narro
 | `ctrl-s` | Commit while editing |
 | `s` | Split the staged changes into several commits |
 | `c` | Commit |
-| `t` | Switch to the next theme |
+| `t` | Switch to the next theme for this session |
+| `,` | Settings |
 | `ctrl-k` / `:` | Command palette (type to filter, `enter` to run) |
 | `?` | Show all shortcuts |
 | `q` / `ctrl-c` | Quit without committing (staging changes are kept) |
 
 The mouse works too: click a row to select it, click it again to stage or unstage it, and scroll the tree or the diff.
+
+## Settings screen
+
+Press `,` (or choose **Settings** in the command palette) to change your configuration without leaving the UI. Changes are saved to `~/.aicommit` as soon as you make them, using the same validation as `aic config set`.
+
+| Group | Settings |
+|-------|----------|
+| AI provider | Provider, model, API key, API URL |
+| Messages | GitMoji prefix, body bullets, one line only, omit scope, match repo style, language |
+| Workflow | Offer to push, open this UI by default |
+| Appearance | Theme, icons |
+
+| Key | Action |
+|-----|--------|
+| `↑` `↓` / `j` `k` | Select a setting |
+| `enter` / `space` | Toggle an on/off setting, or edit a text setting |
+| `←` `→` / `h` `l` | Choose a provider, model, theme, or icon set |
+| `enter` on Model | Type any model ID |
+| `⌫` | Clear a text setting back to its default |
+| `esc` / `,` | Back to the commit |
+
+Changing the provider resets the model to that provider's default. The model list combines `aic`'s suggestions with chat models from `aic models --refresh`. API keys are masked. If an `AIC_*` environment variable is set for a key, the screen says so, because the environment wins over the config file.
+
+### First run
+
+If the configured provider needs an API key and none is set, `aic` opens straight onto the settings screen with a short welcome, the API key field selected. Add a key (or switch to a local provider such as `ollama` or `claude-code`), press `esc`, and `aic` starts writing your message. `q` quits.
 
 ## Split screen
 

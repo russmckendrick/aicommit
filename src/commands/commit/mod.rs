@@ -34,12 +34,33 @@ pub async fn run(
     amend: bool,
     provider_override: Option<String>,
     output_mode: OutputMode,
-    tui_requested: bool,
+    interface: Interface,
 ) -> Result<()> {
     git::assert_git_repo()?;
     let config = Config::load_with_provider_override(provider_override.as_deref())?;
+    let key_missing = config.provider_needs_api_key() && config.api_key.is_none();
 
-    if config.provider_needs_api_key() && config.api_key.is_none() {
+    // TUI first: an interactive `aic` opens the terminal UI unless --fast or
+    // AIC_TUI=false asks for the prompt flow. Anything non-interactive
+    // (pipes, hooks, --yes, --dry-run, --amend, --json) stays CLI.
+    let interactive = !skip_confirmation
+        && !dry_run
+        && !amend
+        && !output_mode.is_machine()
+        && crate::tui::available();
+    let use_tui = interactive
+        && match interface {
+            Interface::Tui => true,
+            Interface::Fast => false,
+            Interface::Auto => config.tui,
+        };
+    if interface == Interface::Tui && !interactive {
+        ui::warn(
+            "the terminal UI needs an interactive terminal and can't be combined with --yes, --dry-run, --amend, --json, or --quiet; using the standard flow",
+        );
+    }
+
+    if key_missing && !use_tui {
         bail!(AicError::MissingApiKey(config.ai_provider));
     }
 
@@ -57,19 +78,22 @@ pub async fn run(
         .await;
     }
 
-    let wants_tui = tui_requested || config.tui;
-    let tui_allowed = !skip_confirmation && !dry_run && !amend && crate::tui::available();
-    if tui_requested && !tui_allowed {
-        ui::warn(
-            "the terminal UI needs an interactive terminal and can't be combined with --yes, --dry-run, or --amend; using the standard flow",
-        );
+    if use_tui {
+        if !key_missing {
+            enforce_pre_commit_sync_guard(&config, dry_run).await?;
+        }
+        return run_tui(
+            &config,
+            extra_args,
+            &context,
+            full_gitmoji_spec,
+            key_missing,
+            provider_override.as_deref(),
+        )
+        .await;
     }
 
     enforce_pre_commit_sync_guard(&config, dry_run).await?;
-
-    if wants_tui && tui_allowed {
-        return run_tui(&config, extra_args, &context, full_gitmoji_spec).await;
-    }
 
     ui::section(if amend {
         "Amend session"
@@ -141,6 +165,17 @@ pub async fn run(
     .await
 }
 
+/// Which frontend the user asked for on the command line.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Interface {
+    /// Follow `AIC_TUI` (default: terminal UI when interactive).
+    Auto,
+    /// `--tui`: always the terminal UI when interactive.
+    Tui,
+    /// `--fast`: always the prompt-based flow.
+    Fast,
+}
+
 /// Hand the session to the terminal UI, then perform whatever it decided
 /// through the same commit, split, history, and push code as the prompt flow.
 async fn run_tui(
@@ -148,17 +183,23 @@ async fn run_tui(
     extra_args: Vec<String>,
     context: &str,
     full_gitmoji_spec: bool,
+    first_run: bool,
+    provider_override: Option<&str>,
 ) -> Result<()> {
     if git::staged_files()?.is_empty() && git::changed_files()?.is_empty() {
         bail!(AicError::NoChanges);
     }
     let outcome = crate::tui::run_commit(crate::tui::TuiInput {
         config: config.clone(),
+        first_run,
         extra_args: extra_args.clone(),
         context: enrich_context_with_branch(context),
         full_gitmoji_spec,
     })
     .await?;
+    // Settings may have changed inside the TUI.
+    let config =
+        &Config::load_with_provider_override(provider_override).unwrap_or_else(|_| config.clone());
 
     match outcome {
         crate::tui::Outcome::Commit { message, files } => {

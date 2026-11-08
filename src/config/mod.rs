@@ -107,7 +107,7 @@ impl Default for Config {
             gitpush: true,
             remote_icon_style: "auto".to_owned(),
             hook_auto_uncomment: false,
-            tui: false,
+            tui: true,
             theme: "auto".to_owned(),
             icons: "unicode".to_owned(),
             repo_style: true,

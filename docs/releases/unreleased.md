@@ -2,11 +2,14 @@
 
 ## Terminal UI
 
-- New `aic --tui` opens a full-screen terminal UI built with `ratatui`. Set `AIC_TUI=true` to open it by default. See [Terminal UI](../tui.md).
+- `aic` now opens a full-screen terminal UI, built with `ratatui`, whenever it runs in an interactive terminal. See [Terminal UI](../tui.md).
+- New `-f`/`--fast` flag skips the terminal UI and uses the quick prompt flow. `AIC_TUI=false` makes the prompt flow the default, and `--tui` opens the UI on demand. Scripts, pipes, hooks, `--yes`, `--dry-run`, `--amend`, `--json`, and `--quiet` never open it.
+- Settings screen (`,`): change provider, model, API key, API URL, message style, push, theme, and icons, saved straight to `~/.aicommit`.
+- First run: when the provider needs an API key and none is set, `aic` opens on the settings screen with the key field selected instead of exiting with an error.
 - Commit screen: a staged/unstaged tree where `space` stages or unstages individual hunks, a syntax-highlighted diff with word-level changes, and a message panel that starts writing as soon as the TUI opens, streaming where the provider supports it.
 - Split screen: proposed commits appear as columns; move hunks between them with `←`/`→` or by dragging with the mouse, add or merge commits, and messages for changed commits are rewritten automatically.
 - Command palette (`ctrl-k`), help overlay (`?`), live theme switching (`t`), subject-length counter, stale-message warning, mouse support, and a layout that adapts to the terminal width.
-- New config keys: `AIC_TUI`, `AIC_THEME` (`auto` or any `aic map` theme), and `AIC_ICONS` (`unicode` or `nerd`).
+- New config keys: `AIC_TUI` (default `true`), `AIC_THEME` (`auto` or any `aic map` theme), and `AIC_ICONS` (`unicode` or `nerd`).
 - The TUI never commits by itself: the normal flow creates the commit, records history, and offers to push.
 
 ## Streaming

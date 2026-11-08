@@ -75,6 +75,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     match app.screen {
         Screen::Commit => draw_commit(frame, app, body),
         Screen::Split => draw_split(frame, app, body),
+        Screen::Settings => draw_settings(frame, app, body),
     }
     draw_footer(frame, app, footer);
 
@@ -134,6 +135,7 @@ fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
             match app.screen {
                 Screen::Commit => "commit",
                 Screen::Split => "split",
+                Screen::Settings => "settings",
             },
             Style::default().fg(palette.fg),
         ),
@@ -184,6 +186,28 @@ fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn hints_for(app: &App) -> Vec<(&'static str, &'static str)> {
+    if let Some(settings) = &app.settings
+        && app.screen == Screen::Settings
+    {
+        if settings.editing.is_some() {
+            return vec![("enter", "save"), ("esc", "cancel")];
+        }
+        let field = settings.field();
+        let mut hints = vec![("↑↓", "select")];
+        match field.kind {
+            super::settings::FieldKind::Bool => hints.push(("enter", "toggle")),
+            super::settings::FieldKind::Choice if field.key == "AIC_MODEL" => {
+                hints.extend([("←→", "choose"), ("enter", "type a model")])
+            }
+            super::settings::FieldKind::Choice => hints.push(("←→", "choose")),
+            _ => hints.extend([("enter", "edit"), ("⌫", "clear")]),
+        }
+        hints.push(("esc", "done"));
+        if settings.first_run {
+            hints.push(("q", "quit"));
+        }
+        return hints;
+    }
     if let Some(split) = &app.split
         && app.screen == Screen::Split
     {
@@ -213,7 +237,12 @@ fn hints_for(app: &App) -> Vec<(&'static str, &'static str)> {
     if app.is_generating() {
         hints.push(("esc", "cancel"));
     }
-    hints.extend([("t", "theme"), ("^k", "palette"), ("?", "help")]);
+    hints.extend([
+        ("t", "theme"),
+        (",", "settings"),
+        ("^k", "palette"),
+        ("?", "help"),
+    ]);
     hints
 }
 
@@ -1047,6 +1076,13 @@ fn draw_help(frame: &mut Frame, app: &App, area: Rect) {
             ]);
             rows
         }
+        Screen::Settings => vec![
+            ("↑↓ / j k", "select a setting"),
+            ("enter / space", "toggle, or edit text"),
+            ("←→ / h l", "choose provider, model, theme, icons"),
+            ("⌫", "clear a text value"),
+            ("esc / ,", "back to the commit"),
+        ],
         Screen::Split => vec![
             ("↑↓ / j k", "select hunk"),
             ("tab / h l", "change column"),
@@ -1092,4 +1128,211 @@ fn draw_help(frame: &mut Frame, app: &App, area: Rect) {
         })
         .collect();
     frame.render_widget(Paragraph::new(lines), inner.inner(Margin::new(0, 1)));
+}
+
+// ---------------------------------------------------------------------
+// Settings screen
+// ---------------------------------------------------------------------
+
+fn draw_settings(frame: &mut Frame, app: &mut App, area: Rect) {
+    use super::settings::{FIELDS, FieldKind, display_value, env_override, field_applies};
+
+    let palette = app.palette.clone();
+    let Some(state) = app.settings.as_ref() else {
+        return;
+    };
+    let config = &app.input.config;
+
+    let banner_height = if state.first_run { 4 } else { 0 };
+    let [banner, list_area, help_area] = Layout::vertical([
+        Constraint::Length(banner_height),
+        Constraint::Min(6),
+        Constraint::Length(4),
+    ])
+    .areas(area);
+
+    if state.first_run {
+        let lines = vec![
+            Line::from(vec![
+                Span::styled(
+                    "Welcome to aic. ",
+                    Style::default()
+                        .fg(palette.bright)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!(
+                        "{} needs an API key before it can write messages.",
+                        config.ai_provider
+                    ),
+                    Style::default().fg(palette.fg),
+                ),
+            ]),
+            Line::styled(
+                "Press enter to add one, or choose a local provider such as ollama or claude-code.",
+                Style::default().fg(palette.muted),
+            ),
+        ];
+        frame.render_widget(
+            Paragraph::new(lines)
+                .wrap(Wrap { trim: false })
+                .block(block(&palette, "", true)),
+            banner,
+        );
+    }
+
+    let outer = block(
+        &palette,
+        Line::styled(" Settings ", Style::default().fg(palette.muted)),
+        false,
+    )
+    .title(
+        Line::styled(
+            format!(" {} ", home_relative(&state.path)),
+            Style::default().fg(palette.faint),
+        )
+        .right_aligned(),
+    );
+    let inner = outer.inner(list_area);
+    frame.render_widget(outer, list_area);
+
+    let label_width = FIELDS
+        .iter()
+        .map(|f| f.label.chars().count())
+        .max()
+        .unwrap_or(10)
+        + 2;
+    let mut lines = Vec::new();
+    let mut selected_line = 0;
+    let mut group = "";
+    for (index, field) in FIELDS.iter().enumerate() {
+        if field.group != group {
+            if !group.is_empty() {
+                lines.push(Line::from(""));
+            }
+            group = field.group;
+            lines.push(Line::styled(
+                group.to_owned(),
+                Style::default()
+                    .fg(palette.muted)
+                    .add_modifier(Modifier::BOLD),
+            ));
+        }
+        let selected = index == state.selected;
+        if selected {
+            selected_line = lines.len();
+        }
+        let applies = field_applies(field, config);
+        let base = if selected {
+            Style::default().bg(palette.selection)
+        } else {
+            Style::default()
+        };
+        let mut spans = vec![
+            Span::styled(
+                if selected { "▌ " } else { "  " },
+                Style::default().fg(palette.accent),
+            ),
+            Span::styled(
+                format!("{:<label_width$}", field.label),
+                base.fg(if applies { palette.fg } else { palette.faint }),
+            ),
+        ];
+        if !applies {
+            spans.push(Span::styled(
+                format!("not used by {}", config.ai_provider),
+                base.fg(palette.faint).add_modifier(Modifier::ITALIC),
+            ));
+        } else if selected && let Some(editor) = &state.editing {
+            spans.push(Span::styled("  ", base));
+            let text = editor.lines().join(" ");
+            let shown = if field.kind == FieldKind::Secret {
+                "•".repeat(text.chars().count())
+            } else {
+                text
+            };
+            spans.push(Span::styled(shown, base.fg(palette.bright)));
+            spans.push(Span::styled("▌", base.fg(palette.accent)));
+        } else {
+            let value = display_value(field, config);
+            // Choices draw their own two-column "‹ " lead; align the rest.
+            if field.kind != FieldKind::Choice {
+                spans.push(Span::styled("  ", base));
+            }
+            match field.kind {
+                FieldKind::Bool => {
+                    let on = value == "true";
+                    spans.push(Span::styled(
+                        if on { "● on " } else { "○ off" },
+                        base.fg(if on { palette.add } else { palette.faint }),
+                    ));
+                }
+                FieldKind::Choice => {
+                    spans.push(Span::styled(
+                        if selected { "‹ " } else { "  " },
+                        base.fg(palette.accent),
+                    ));
+                    spans.push(Span::styled(value, base.fg(palette.bright)));
+                    if selected {
+                        spans.push(Span::styled(" ›", base.fg(palette.accent)));
+                    }
+                }
+                FieldKind::Secret if value == "not set" => {
+                    spans.push(Span::styled(value, base.fg(palette.warn)));
+                }
+                _ => spans.push(Span::styled(
+                    value.clone(),
+                    base.fg(if value == "default" {
+                        palette.faint
+                    } else {
+                        palette.fg
+                    }),
+                )),
+            }
+            if env_override(field.key) {
+                spans.push(Span::styled(
+                    format!("  ({} set in environment)", field.key),
+                    base.fg(palette.warn),
+                ));
+            }
+        }
+        let width = spans.iter().map(|span| span.width()).sum::<usize>();
+        spans.push(Span::styled(
+            " ".repeat((inner.width as usize).saturating_sub(width)),
+            base,
+        ));
+        lines.push(Line::from(spans));
+    }
+    let height = inner.height as usize;
+    let offset = selected_line.saturating_sub(height.saturating_sub(2));
+    frame.render_widget(Paragraph::new(lines).scroll((offset as u16, 0)), inner);
+
+    let field = state.field();
+    let help = vec![
+        Line::from(vec![
+            Span::styled(field.key, Style::default().fg(palette.accent)),
+            Span::styled(
+                format!(
+                    "  {}",
+                    crate::config::config_description(field.key).unwrap_or("")
+                ),
+                Style::default().fg(palette.muted),
+            ),
+        ]),
+        Line::styled(field.help, Style::default().fg(palette.fg)),
+    ];
+    frame.render_widget(
+        Paragraph::new(help)
+            .wrap(Wrap { trim: false })
+            .block(block(&palette, "", false)),
+        help_area,
+    );
+}
+
+fn home_relative(path: &std::path::Path) -> String {
+    let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
+    match home.and_then(|home| path.strip_prefix(&home).ok().map(|rest| rest.to_path_buf())) {
+        Some(rest) => format!("~/{}", rest.display()),
+        None => path.display().to_string(),
+    }
 }

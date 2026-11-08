@@ -76,7 +76,9 @@ AIC_REPO_STYLE
 
 `AIC_HTTP_TIMEOUT` caps each API request to the HTTP providers (`openai`, `azure-openai`, `anthropic`, `groq`, `ollama`) in seconds. It defaults to `120`; set it to `0` to disable the timeout entirely, or raise it if a slow local model (for example Ollama on a large prompt) needs more time. Local CLI providers (`claude-code`, `codex`, `copilot`, `apple`) are not affected.
 
-`AIC_TUI` (default `false`) makes plain `aic` open the [terminal UI](tui.md), as if `--tui` were passed. It is ignored when stdin or stdout is not a terminal, and with `--yes`, `--dry-run`, `--amend`, `--json`, or `--quiet`.
+`AIC_TUI` (default `true`) makes plain `aic` open the [terminal UI](tui.md) in an interactive terminal. Set it to `false` to use the quick prompt flow by default; `aic --tui` still opens the terminal UI, and `aic --fast` skips it for one run regardless of this setting. The terminal UI is never used when stdin or stdout is not a terminal, or with `--yes`, `--dry-run`, `--amend`, `--json`, or `--quiet`.
+
+Most keys can also be changed from the terminal UI's settings screen (`,`), which writes to the same `~/.aicommit` file.
 
 `AIC_THEME` sets the terminal UI colours. `auto` (the default) picks `github-dark` or `github-light` from the terminal background (via `COLORFGBG`, falling back to dark). Any `aic map` theme name also works: `github-dark`, `github-light`, `classic-dark`, `classic-light`, `solarized-dark`, `solarized-light`, `monokai`, or `dracula`.
 

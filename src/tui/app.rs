@@ -19,7 +19,11 @@ use crate::{
     prompt::SplitPlanGroup,
 };
 
-use super::{editor::TextEditor, theme::Palette};
+use super::{
+    editor::TextEditor,
+    settings::{self, FieldKind, SettingsState},
+    theme::Palette,
+};
 
 pub const MAX_GROUPS: usize = 6;
 const REGENERATE_DEBOUNCE: Duration = Duration::from_millis(700);
@@ -41,6 +45,8 @@ pub enum Outcome {
 
 pub struct TuiInput {
     pub config: Config,
+    /// Open on the settings screen because no API key is configured.
+    pub first_run: bool,
     pub extra_args: Vec<String>,
     /// Context already enriched with branch information.
     pub context: String,
@@ -101,6 +107,7 @@ pub enum Focus {
 pub enum Screen {
     Commit,
     Split,
+    Settings,
 }
 
 pub enum Gen {
@@ -159,12 +166,13 @@ pub enum Action {
     Split,
     Commit,
     Theme,
+    Settings,
     Help,
     Quit,
 }
 
 impl Action {
-    pub const ALL: [Action; 10] = [
+    pub const ALL: [Action; 11] = [
         Action::Generate,
         Action::Edit,
         Action::ToggleStage,
@@ -173,6 +181,7 @@ impl Action {
         Action::Split,
         Action::Commit,
         Action::Theme,
+        Action::Settings,
         Action::Help,
         Action::Quit,
     ];
@@ -187,6 +196,7 @@ impl Action {
             Action::Split => "Split into several commits",
             Action::Commit => "Commit",
             Action::Theme => "Next theme",
+            Action::Settings => "Settings: provider, model, API key, style",
             Action::Help => "Keyboard shortcuts",
             Action::Quit => "Quit without committing",
         }
@@ -202,6 +212,7 @@ impl Action {
             Action::Split => "s",
             Action::Commit => "c",
             Action::Theme => "t",
+            Action::Settings => ",",
             Action::Help => "?",
             Action::Quit => "q",
         }
@@ -265,6 +276,12 @@ pub struct App {
     pub hits: Vec<(Rect, Hit)>,
     pub started: Instant,
     pub outcome: Option<Outcome>,
+    pub settings: Option<SettingsState>,
+    pub config_path: std::path::PathBuf,
+    /// Force a full repaint on the next frame (after streaming, theme
+    /// changes, or screen switches) so terminals that disagree about emoji
+    /// widths never keep stale cells.
+    pub needs_clear: bool,
     next_id: u64,
     pub tx: mpsc::UnboundedSender<AppEvent>,
 }
@@ -299,11 +316,19 @@ impl App {
             hits: Vec::new(),
             started: Instant::now(),
             outcome: None,
+            settings: None,
+            config_path: crate::config::ConfigPaths::discover()
+                .map(|paths| paths.global)
+                .unwrap_or_else(|_| std::path::PathBuf::from(".aicommit")),
+            needs_clear: false,
             next_id: 0,
             tx,
             input,
         };
         app.reload()?;
+        if app.input.first_run {
+            app.open_settings(true);
+        }
         Ok(app)
     }
 
@@ -708,6 +733,7 @@ impl App {
                     Ok(message) => {
                         self.message.set_text(&message);
                         self.generation = Gen::Idle;
+                        self.needs_clear = true;
                     }
                     Err(error) => {
                         self.generation = Gen::Failed(error);
@@ -814,6 +840,7 @@ impl App {
         match self.screen {
             Screen::Commit => self.handle_commit_key(key),
             Screen::Split => self.handle_split_key(key),
+            Screen::Settings => self.handle_settings_key(key),
         }
     }
 
@@ -846,9 +873,10 @@ impl App {
                 let action = state.matches().get(state.selected).copied();
                 self.palette_overlay = None;
                 if let Some(action) = action {
-                    if self.screen == Screen::Split {
+                    if self.screen != Screen::Commit {
                         self.screen = Screen::Commit;
                         self.split = None;
+                        self.settings = None;
                     }
                     self.run_action(action);
                 }
@@ -871,6 +899,7 @@ impl App {
             Action::Split => self.start_split(),
             Action::Commit => self.commit(),
             Action::Theme => self.next_theme(),
+            Action::Settings => self.open_settings(false),
             Action::Help => self.help = true,
             Action::Quit => {
                 self.cancel_generation();
@@ -889,6 +918,7 @@ impl App {
             .unwrap_or(0);
         let next = &self.theme_names[(current + 1) % self.theme_names.len()];
         self.palette = super::theme::palette(next);
+        self.needs_clear = true;
         self.toast(format!("Theme: {}", self.palette.name), false);
     }
 
@@ -945,6 +975,7 @@ impl App {
             KeyCode::Char('s') => self.run_action(Action::Split),
             KeyCode::Char('c') => self.run_action(Action::Commit),
             KeyCode::Char('t') => self.run_action(Action::Theme),
+            KeyCode::Char(',') => self.run_action(Action::Settings),
             KeyCode::Char('?') => self.run_action(Action::Help),
             KeyCode::Char(':') => self.open_palette(),
             KeyCode::Char('q') => self.run_action(Action::Quit),
@@ -1049,6 +1080,130 @@ impl App {
                 }
             }
             KeyCode::Enter => self.commit_split(),
+            _ => {}
+        }
+    }
+
+    pub fn open_settings(&mut self, first_run: bool) {
+        self.cancel_generation();
+        self.settings = Some(SettingsState::new(self.config_path.clone(), first_run));
+        self.screen = Screen::Settings;
+        self.needs_clear = true;
+    }
+
+    fn close_settings(&mut self) {
+        let first_run = self.settings.as_ref().is_some_and(|s| s.first_run);
+        if first_run
+            && self.input.config.provider_needs_api_key()
+            && self.input.config.api_key.is_none()
+        {
+            self.toast(
+                "Add an API key first, or pick a provider that doesn't need one (q quits)",
+                true,
+            );
+            return;
+        }
+        self.settings = None;
+        self.screen = Screen::Commit;
+        self.needs_clear = true;
+        if first_run && !self.staged_files.is_empty() && self.message.is_empty() {
+            self.start_generation();
+        }
+    }
+
+    fn save_setting(&mut self, key: &str, value: &str) {
+        let path = self.config_path.clone();
+        match settings::save(&path, key, value) {
+            Ok(config) => {
+                let theme_changed = config.theme != self.input.config.theme
+                    || config.icons != self.input.config.icons;
+                self.input.config = config;
+                if theme_changed {
+                    self.palette = super::theme::palette(&self.input.config.theme);
+                    self.needs_clear = true;
+                }
+                let note = if settings::env_override(key) {
+                    format!("Saved {key}, but the {key} environment variable still wins")
+                } else {
+                    format!("Saved {key}")
+                };
+                self.toast(note, settings::env_override(key));
+            }
+            Err(error) => self.toast(format!("Couldn't save {key}: {error}"), true),
+        }
+    }
+
+    fn handle_settings_key(&mut self, key: KeyEvent) {
+        let Some(state) = self.settings.as_mut() else {
+            self.screen = Screen::Commit;
+            return;
+        };
+        let field = state.field();
+
+        if let Some(editor) = state.editing.as_mut() {
+            match key.code {
+                KeyCode::Esc => state.editing = None,
+                KeyCode::Enter => {
+                    let value = editor.text();
+                    state.editing = None;
+                    self.save_setting(field.key, value.trim());
+                }
+                _ => {
+                    editor.handle_key(key);
+                }
+            }
+            return;
+        }
+
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char(',') => {
+                if key.code == KeyCode::Char('q') && state.first_run {
+                    self.outcome = Some(Outcome::Quit);
+                } else {
+                    self.close_settings();
+                }
+            }
+            KeyCode::Char('?') => self.help = true,
+            KeyCode::Up | KeyCode::Char('k') => {
+                state.selected = state.selected.saturating_sub(1);
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                state.selected = (state.selected + 1).min(settings::FIELDS.len() - 1);
+            }
+            KeyCode::Left | KeyCode::Right | KeyCode::Char('h') | KeyCode::Char('l')
+                if field.kind == FieldKind::Choice =>
+            {
+                let step = if matches!(key.code, KeyCode::Left | KeyCode::Char('h')) {
+                    -1
+                } else {
+                    1
+                };
+                if let Some(value) = settings::cycle(field.key, &self.input.config, step) {
+                    self.save_setting(field.key, &value);
+                }
+            }
+            KeyCode::Enter | KeyCode::Char(' ') => match field.kind {
+                FieldKind::Bool => {
+                    let current = self.input.config.get_key(field.key).unwrap_or_default();
+                    let next = if current == "true" { "false" } else { "true" };
+                    self.save_setting(field.key, next);
+                }
+                FieldKind::Choice if field.key != "AIC_MODEL" => {
+                    if let Some(value) = settings::cycle(field.key, &self.input.config, 1) {
+                        self.save_setting(field.key, &value);
+                    }
+                }
+                FieldKind::Secret => state.editing = Some(TextEditor::new("")),
+                _ => {
+                    let current = self.input.config.get_key(field.key).unwrap_or_default();
+                    state.editing = Some(TextEditor::new(&current));
+                }
+            },
+            KeyCode::Backspace | KeyCode::Delete
+                if matches!(field.kind, FieldKind::Text | FieldKind::Secret) =>
+            {
+                self.save_setting(field.key, "");
+            }
             _ => {}
         }
     }

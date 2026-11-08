@@ -31,8 +31,11 @@ pub struct Cli {
     #[command(flatten)]
     output: OutputArgs,
 
-    #[arg(long, conflicts_with_all = ["yes", "dry_run", "amend", "json", "quiet"])]
+    #[arg(long, conflicts_with_all = ["yes", "dry_run", "amend", "json", "quiet", "fast"])]
     tui: bool,
+
+    #[arg(short = 'f', long)]
+    fast: bool,
 
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     git_args: Vec<String>,
@@ -310,7 +313,13 @@ pub async fn run() -> Result<()> {
                 cli.amend,
                 cli.provider,
                 mode,
-                cli.tui,
+                if cli.fast {
+                    commands::commit::Interface::Fast
+                } else if cli.tui {
+                    commands::commit::Interface::Tui
+                } else {
+                    commands::commit::Interface::Auto
+                },
             )
             .await
         }
