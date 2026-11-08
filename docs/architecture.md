@@ -65,7 +65,7 @@ Prompt templates live in `prompts/`:
 
 - `commit-system.md` - system prompt for commit message generation. Supports scope hints derived from staged file paths.
 - `commit-system-apple.md` - compact commit prompt for the `apple` provider's small on-device model. It has no style examples (the model copies them) and tells the model not to restate the contents of added files as changes.
-- `split-system.md` - system prompt for grouping one staged change set into multiple file-based commits.
+- `split-system.md` - system prompt for grouping the hunks of one staged change set into multiple commits. Hunks are referenced by `path#n` IDs from `src/git/diff.rs`.
 - `review-system.md` - system prompt for `aic review` diff analysis.
 
 Use `AIC_PROMPT_FILE` to point at a custom commit prompt template.

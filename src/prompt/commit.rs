@@ -19,7 +19,10 @@ const FULL_GITMOJI_HELP: &str = "If an emoji is useful, use one GitMoji prefix t
 pub struct SplitPlanGroup {
     pub title: String,
     pub rationale: String,
+    /// Files touched by `hunks`, in diff order (for display).
     pub files: Vec<String>,
+    /// Hunk IDs (`path#n`) this commit contains.
+    pub hunks: Vec<String>,
 }
 
 pub fn build_messages(

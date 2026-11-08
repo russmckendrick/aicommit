@@ -86,17 +86,22 @@ aic
 
 `aic` will:
 
-- analyze the staged change set and suggest 2-4 commit groups
-- let you keep the suggested groups or build them manually
+- analyze the staged change set hunk by hunk and suggest 2-4 commit groups
+- let you keep the suggested groups or build them manually (by whole file)
 - generate one commit message per group
 - preview the whole commit sequence before creating anything
 
-Limitations in v1:
+The split is hunk-level: one file can contribute different hunks to different commits. When that happens the preview says so, for example `src/ui.rs: hunks 1, 3 (file split across commits)`. New, deleted, renamed, mode-changed, and binary files always move as a whole.
 
-- splitting is file-based, not hunk-based
-- split flow is only offered in the normal interactive `aic` path
-- split flow is skipped when a staged file also has unstaged changes
-- `--yes`, `--dry-run`, and `--amend` stay single-commit
+Splitting only changes the index, never the working tree, so it is safe when a file also has unstaged changes: those stay in your working tree, uncommitted. If a commit fails part-way (for example a `commit-msg` hook rejects it), the commits already made are kept and the rest of the original staged changes are left staged.
+
+Files excluded by `.aicommitignore` are never assigned to a group. They stay staged after the split, so you can commit them separately.
+
+Limitations:
+
+- split flow is only offered in the normal interactive `aic` path, and needs at least two hunks
+- manual grouping in the prompt flow works on whole files
+- `--yes`, `--dry-run`, `--amend`, `--json`, and `--quiet` stay single-commit
 
 ## Command Help
 

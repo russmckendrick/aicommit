@@ -20,33 +20,35 @@ const ACCEPT_OPTION: &str = "Accept";
 const REGENERATE_OPTION: &str = "Regenerate";
 const EDIT_OPTION: &str = "Edit";
 
-pub(crate) fn should_offer_split(
-    staged_file_count: usize,
-    skip_confirmation: bool,
-    dry_run: bool,
-    amend: bool,
-) -> bool {
-    staged_file_count >= 2 && !skip_confirmation && !dry_run && !amend
+/// The split offer is interactive-only; whether there is anything to split
+/// (at least two hunks) is decided once the staged diff is parsed.
+pub(crate) fn should_offer_split(skip_confirmation: bool, dry_run: bool, amend: bool) -> bool {
+    !skip_confirmation && !dry_run && !amend
+}
+
+/// The staged diff restricted to files the split flow may plan (files
+/// hidden by `.aicommitignore` stay staged but are never assigned).
+fn plannable(staged: &git::StagedDiff, staged_files: &[String]) -> git::StagedDiff {
+    git::StagedDiff {
+        files: staged
+            .files
+            .iter()
+            .filter(|file| staged_files.contains(&file.path))
+            .cloned()
+            .collect(),
+    }
 }
 
 pub(crate) async fn maybe_execute_split_flow(
     config: &Config,
-    diff: &str,
     extra_args: &[String],
     context: &str,
     full_gitmoji_spec: bool,
     staged_files: &[String],
 ) -> Result<bool> {
-    if staged_files.len() < 2 {
-        return Ok(false);
-    }
-
-    let partially_staged = git::partially_staged_files(staged_files)?;
-    if !partially_staged.is_empty() {
-        ui::warn(format!(
-            "split flow is unavailable because these files also have unstaged changes: {}",
-            partially_staged.join(", ")
-        ));
+    let staged = git::staged_patch()?;
+    let plan_input = plannable(&staged, staged_files);
+    if plan_input.hunk_ids().len() < 2 {
         return Ok(false);
     }
 
@@ -73,7 +75,7 @@ pub(crate) async fn maybe_execute_split_flow(
     let progress =
         |event: generator::GenerationProgress| spinner.on_generation_progress(event, "split plan");
     let suggested_groups =
-        generator::generate_split_plan(config, diff, context, staged_files, Some(&progress)).await;
+        generator::generate_split_plan(config, &plan_input, context, Some(&progress)).await;
     spinner.finish_and_clear();
 
     let suggested_groups = match suggested_groups {
@@ -86,14 +88,20 @@ pub(crate) async fn maybe_execute_split_flow(
         }
     };
 
-    let groups = choose_split_groups(&suggested_groups, staged_files)?;
+    let groups = choose_split_groups(&suggested_groups, &plan_input)?;
     let Some(groups) = groups else {
         return Ok(false);
     };
 
-    let mut drafts =
-        generate_split_commit_drafts(config, &groups, context, full_gitmoji_spec, extra_args)
-            .await?;
+    let mut drafts = generate_split_commit_drafts(
+        config,
+        &staged,
+        &groups,
+        context,
+        full_gitmoji_spec,
+        extra_args,
+    )
+    .await?;
 
     loop {
         render_split_commit_preview(&drafts);
@@ -109,12 +117,13 @@ pub(crate) async fn maybe_execute_split_flow(
 
         match selection.as_str() {
             CREATE_COMMITS_OPTION => {
-                create_split_commits(config, &drafts, extra_args).await?;
+                create_split_commits(config, &staged, &drafts, extra_args).await?;
                 return Ok(true);
             }
             REGENERATE_ALL_MESSAGES_OPTION => {
                 drafts = generate_split_commit_drafts(
                     config,
+                    &staged,
                     &groups,
                     context,
                     full_gitmoji_spec,
@@ -220,11 +229,10 @@ mod tests {
 
     #[test]
     fn split_prompt_is_only_offered_for_interactive_multi_file_commits() {
-        assert!(should_offer_split(2, false, false, false));
-        assert!(!should_offer_split(1, false, false, false));
-        assert!(!should_offer_split(2, true, false, false));
-        assert!(!should_offer_split(2, false, true, false));
-        assert!(!should_offer_split(2, false, false, true));
+        assert!(should_offer_split(false, false, false));
+        assert!(!should_offer_split(true, false, false));
+        assert!(!should_offer_split(false, true, false));
+        assert!(!should_offer_split(false, false, true));
     }
 
     #[test]

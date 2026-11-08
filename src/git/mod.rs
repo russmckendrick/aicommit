@@ -5,6 +5,7 @@ pub(crate) fn cwd_test_lock() -> &'static std::sync::Mutex<()> {
 }
 
 mod branch;
+pub mod diff;
 mod exec;
 mod history;
 mod hooks;
@@ -17,6 +18,9 @@ pub use branch::{
     commits_since, current_branch, diff_since, files_since, head_hash, head_short_hash,
     merge_base_with_head, resolve_base_ref, ticket_from_branch,
 };
+pub use diff::{
+    FileDiff, StagedDiff, apply_to_index, read_tree, reset_index_to_head, staged_patch, write_tree,
+};
 pub use exec::{GitOutput, run_git, run_git_in};
 pub use history::{
     CommitInfo, assert_no_merges, commit_diff, commit_files, last_commit_change_summaries,
@@ -25,8 +29,8 @@ pub use history::{
 pub use hooks::{hooks_path, remove_hook_if_owned, write_hook};
 pub use remote::{GitProvider, GitRemoteMetadata, commit, push, remote_metadata, remotes};
 pub use repo::{
-    ChangeSummary, add_files, assert_clean_worktree, assert_git_repo, changed_files, clear_index,
-    partially_staged_files, repo_root, staged_change_summaries, staged_diff, staged_files,
+    ChangeSummary, add_files, assert_clean_worktree, assert_git_repo, changed_files,
+    is_excluded_from_diff, repo_root, staged_change_summaries, staged_diff, staged_files,
     unstage_files,
 };
 pub use sync::{

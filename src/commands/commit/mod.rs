@@ -99,10 +99,9 @@ pub async fn run(
     let context = enrich_context_with_branch(&context);
 
     if commit_input.source == CommitInputSource::Diff
-        && should_offer_split(files.len(), skip_confirmation, dry_run, amend)
+        && should_offer_split(skip_confirmation, dry_run, amend)
         && maybe_execute_split_flow(
             &config,
-            &commit_input.content,
             &effective_args,
             &context,
             full_gitmoji_spec,

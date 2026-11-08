@@ -76,20 +76,6 @@ pub fn unstage_files(files: &[String]) -> Result<()> {
     Ok(())
 }
 
-pub fn clear_index() -> Result<()> {
-    let root = repo_root()?;
-    run_git_dynamic_in(
-        &root,
-        vec![
-            "reset".to_owned(),
-            "HEAD".to_owned(),
-            "--".to_owned(),
-            ".".to_owned(),
-        ],
-    )?;
-    Ok(())
-}
-
 pub fn staged_diff(files: &[String]) -> Result<String> {
     let root = repo_root()?;
     let files = files
@@ -120,26 +106,6 @@ pub fn staged_change_summaries(files: &[String]) -> Result<Vec<ChangeSummary>> {
         ],
         files,
     )
-}
-
-pub fn partially_staged_files(staged_files: &[String]) -> Result<Vec<String>> {
-    if staged_files.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let root = repo_root()?;
-    let unstaged = run_git_in(&root, ["diff", "--name-only", "--relative"])?;
-    let unstaged = parse_lines(&unstaged.stdout)
-        .into_iter()
-        .collect::<std::collections::BTreeSet<_>>();
-    let mut partial = staged_files
-        .iter()
-        .filter(|file| unstaged.contains(*file))
-        .cloned()
-        .collect::<Vec<_>>();
-    partial.sort();
-    partial.dedup();
-    Ok(partial)
 }
 
 pub fn assert_clean_worktree() -> Result<()> {
@@ -190,7 +156,7 @@ pub(crate) fn change_summaries_from_args(
     Ok(parse_name_status(&run_git_dynamic_in(root, args)?.stdout))
 }
 
-fn is_excluded_from_diff(file: &str) -> bool {
+pub fn is_excluded_from_diff(file: &str) -> bool {
     let lower = file.to_lowercase();
     lower.contains(".lock")
         || lower.contains("-lock.")
@@ -259,38 +225,6 @@ mod tests {
 
     use super::*;
     use crate::git::cwd_test_lock;
-
-    #[test]
-    fn detects_partially_staged_files() {
-        let _cwd = hold_cwd_for_test();
-        let repo = init_repo();
-        std::fs::write(repo.path().join("src.txt"), "base\nstaged\nunstaged\n").unwrap();
-        run_git_test(repo.path(), ["add", "src.txt"]);
-        std::fs::write(
-            repo.path().join("src.txt"),
-            "base\nstaged\nunstaged\nmore\n",
-        )
-        .unwrap();
-
-        let _dir = CurrentDirGuard::enter(repo.path());
-        let partial = partially_staged_files(&["src.txt".to_owned()]).unwrap();
-
-        assert_eq!(partial, vec!["src.txt".to_owned()]);
-    }
-
-    #[test]
-    fn clear_index_unstages_files() {
-        let _cwd = hold_cwd_for_test();
-        let repo = init_repo();
-        std::fs::write(repo.path().join("extra.txt"), "hello\n").unwrap();
-        run_git_test(repo.path(), ["add", "extra.txt"]);
-
-        let _dir = CurrentDirGuard::enter(repo.path());
-        clear_index().unwrap();
-        let staged_after = staged_files().unwrap();
-
-        assert!(staged_after.is_empty());
-    }
 
     #[test]
     fn unstage_files_removes_only_selected_files_from_index() {

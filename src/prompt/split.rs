@@ -117,5 +117,5 @@ fn split_metadata(context: &str, staged_files: &[String]) -> String {
         context.trim().to_owned()
     };
 
-    format!("User context: {context_line}\nStaged files:\n{file_lines}")
+    format!("User context: {context_line}\nStaged files and their hunk IDs:\n{file_lines}")
 }

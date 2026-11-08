@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 
-use crate::{prompt::SplitPlanGroup, ui};
+use crate::{git::StagedDiff, prompt::SplitPlanGroup, ui};
 
 const ABORT_OPTION: &str = "Abort";
 const USE_SUGGESTED_GROUPS_OPTION: &str = "Use suggested groups";
@@ -9,9 +9,9 @@ const KEEP_ONE_COMMIT_OPTION: &str = "Keep one commit";
 
 pub(super) fn choose_split_groups(
     suggested_groups: &[SplitPlanGroup],
-    staged_files: &[String],
+    staged: &StagedDiff,
 ) -> Result<Option<Vec<SplitPlanGroup>>> {
-    render_split_groups(suggested_groups, "Suggested split groups");
+    render_split_groups(suggested_groups, staged, "Suggested split groups");
     let selection = ui::select(
         "How would you like to use these groups?",
         vec![
@@ -25,8 +25,8 @@ pub(super) fn choose_split_groups(
     match selection.as_str() {
         USE_SUGGESTED_GROUPS_OPTION => Ok(Some(suggested_groups.to_vec())),
         BUILD_GROUPS_MANUALLY_OPTION => {
-            let manual = build_manual_split_groups(staged_files)?;
-            render_split_groups(&manual, "Manual split groups");
+            let manual = build_manual_split_groups(staged)?;
+            render_split_groups(&manual, staged, "Manual split groups");
             Ok(Some(manual))
         }
         KEEP_ONE_COMMIT_OPTION => Ok(None),
@@ -35,8 +35,14 @@ pub(super) fn choose_split_groups(
     }
 }
 
-fn build_manual_split_groups(staged_files: &[String]) -> Result<Vec<SplitPlanGroup>> {
-    let mut remaining = staged_files.to_vec();
+/// Manual grouping works on whole files; the TUI split screen can move
+/// individual hunks.
+fn build_manual_split_groups(staged: &StagedDiff) -> Result<Vec<SplitPlanGroup>> {
+    let mut remaining = staged
+        .files
+        .iter()
+        .map(|file| file.path.clone())
+        .collect::<Vec<_>>();
     let mut groups = Vec::new();
     let mut index = 1;
 
@@ -56,6 +62,7 @@ fn build_manual_split_groups(staged_files: &[String]) -> Result<Vec<SplitPlanGro
         groups.push(SplitPlanGroup {
             title: format!("Commit {index}"),
             rationale: "Manually grouped files".to_owned(),
+            hunks: staged.hunk_ids_for_files(&selection),
             files: selection,
         });
         index += 1;
@@ -65,6 +72,7 @@ fn build_manual_split_groups(staged_files: &[String]) -> Result<Vec<SplitPlanGro
         groups.push(SplitPlanGroup {
             title: format!("Commit {index}"),
             rationale: "Remaining files".to_owned(),
+            hunks: staged.hunk_ids_for_files(&remaining),
             files: remaining,
         });
     }
@@ -72,9 +80,15 @@ fn build_manual_split_groups(staged_files: &[String]) -> Result<Vec<SplitPlanGro
     Ok(groups)
 }
 
-pub(super) fn render_split_groups(groups: &[SplitPlanGroup], title: &str) {
+pub(super) fn render_split_groups(groups: &[SplitPlanGroup], staged: &StagedDiff, title: &str) {
     ui::blank_line();
     ui::section(title);
+    let shared = staged.shared_files(
+        &groups
+            .iter()
+            .map(|group| group.hunks.clone())
+            .collect::<Vec<_>>(),
+    );
     for (index, group) in groups.iter().enumerate() {
         ui::blank_line();
         ui::headline(format!("Split commit {}: {}", index + 1, group.title));
@@ -83,5 +97,22 @@ pub(super) fn render_split_groups(groups: &[SplitPlanGroup], title: &str) {
         for line in ui::summarize_files(&group.files, 4, 3) {
             ui::bullet(line);
         }
+        for path in shared.iter().filter(|path| group.files.contains(path)) {
+            ui::bullet(format!(
+                "{path}: {} (file split across commits)",
+                shared_hunk_label(path, &group.hunks)
+            ));
+        }
+    }
+}
+
+fn shared_hunk_label(path: &str, hunks: &[String]) -> String {
+    let numbers = hunks
+        .iter()
+        .filter_map(|id| id.strip_prefix(path)?.strip_prefix('#'))
+        .collect::<Vec<_>>();
+    match numbers.as_slice() {
+        [one] => format!("hunk {one}"),
+        many => format!("hunks {}", many.join(", ")),
     }
 }
