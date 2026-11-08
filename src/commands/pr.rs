@@ -5,6 +5,7 @@ use crate::{
     errors::AicError,
     generator, git,
     history_store::{self, HistoryEntry},
+    output::{self, OutputMode, PullRequestOutput},
     ui,
 };
 
@@ -13,6 +14,7 @@ pub async fn run(
     base: Option<String>,
     skip_confirmation: bool,
     provider_override: Option<String>,
+    output_mode: OutputMode,
 ) -> Result<()> {
     git::assert_git_repo()?;
     let config = Config::load_with_provider_override(provider_override.as_deref())?;
@@ -79,6 +81,24 @@ pub async fn run(
         spinner.finish_and_clear();
 
         let draft = draft?;
+        if output_mode.is_machine() {
+            finish(&config, &draft.title, &draft.body, &changed_files)?;
+            return output::emit(
+                output_mode,
+                &PullRequestOutput {
+                    schema: output::SCHEMA_VERSION,
+                    kind: "pr",
+                    title: draft.title.trim().to_owned(),
+                    body: draft.body.trim().to_owned(),
+                    base: base_ref.clone(),
+                    commits: commits.len(),
+                    files: changed_files.clone(),
+                    provider: config.ai_provider.clone(),
+                    model: config.model.clone(),
+                },
+                &pr_message(&draft.title, &draft.body),
+            );
+        }
         preview(&draft.title, &draft.body);
         if skip_confirmation {
             return finish(&config, &draft.title, &draft.body, &changed_files);

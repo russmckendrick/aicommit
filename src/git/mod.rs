@@ -14,8 +14,8 @@ pub mod stats;
 mod sync;
 
 pub use branch::{
-    commits_since, current_branch, diff_since, files_since, head_short_hash, merge_base_with_head,
-    resolve_base_ref, ticket_from_branch,
+    commits_since, current_branch, diff_since, files_since, head_hash, head_short_hash,
+    merge_base_with_head, resolve_base_ref, ticket_from_branch,
 };
 pub use exec::{GitOutput, run_git, run_git_in};
 pub use history::{

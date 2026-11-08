@@ -5,6 +5,7 @@ use crate::{
     config::Config,
     errors::AicError,
     git, history_store,
+    output::{self, OutputMode, ReviewOutput},
     prompt::{build_review_messages, detect_scope_hints, review_system_prompt},
     token::{count_messages, count_tokens, split_diff},
     ui,
@@ -12,7 +13,11 @@ use crate::{
 
 const TOKEN_ADJUSTMENT: usize = 20;
 
-pub async fn run(context: String, provider_override: Option<String>) -> Result<()> {
+pub async fn run(
+    context: String,
+    provider_override: Option<String>,
+    output_mode: OutputMode,
+) -> Result<()> {
     git::assert_git_repo()?;
     let config = Config::load_with_provider_override(provider_override.as_deref())?;
 
@@ -21,7 +26,9 @@ pub async fn run(context: String, provider_override: Option<String>) -> Result<(
     }
 
     ui::section("Review session");
-    super::commit::ensure_staged_files(false, false).await?;
+    if !output_mode.is_machine() {
+        super::commit::ensure_staged_files(false, false).await?;
+    }
     let staged = git::staged_files()?;
     if staged.is_empty() {
         bail!(AicError::NoChanges);
@@ -63,6 +70,21 @@ pub async fn run(context: String, provider_override: Option<String>) -> Result<(
 
     let review = review?;
     ui::markdown_card("AI review", &review);
+
+    if output_mode.is_machine() {
+        return output::emit(
+            output_mode,
+            &ReviewOutput {
+                schema: output::SCHEMA_VERSION,
+                kind: "review",
+                review: review.clone(),
+                files: staged.clone(),
+                provider: config.ai_provider.clone(),
+                model: config.model.clone(),
+            },
+            &review,
+        );
+    }
 
     let history_saved = match history_store::append_entry(&history_store::HistoryEntry {
         timestamp: history_store::now_iso8601(),

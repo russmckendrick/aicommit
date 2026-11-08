@@ -43,6 +43,14 @@ Generate and display the message without committing:
 aic --dry-run
 ```
 
+Print only the message, or a JSON object, for scripts and coding agents (see [Automation](automation.md)):
+
+```sh
+aic --quiet
+aic --json
+aic --json --yes   # also commits, and reports the commit hash
+```
+
 Regenerate and amend the last commit message:
 
 ```sh

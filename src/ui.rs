@@ -23,23 +23,61 @@ const DEFAULT_ROOT_LIMIT: usize = 4;
 // is live - `finish_and_clear` it first).
 static LAST_LINE_BLANK: AtomicBool = AtomicBool::new(true);
 
+// Machine output (`--json` / `--quiet`): stdout carries only the final
+// result, so every human-facing line, card, and spinner from this module is
+// suppressed and interactive prompts refuse to run.
+static MACHINE_OUTPUT: AtomicBool = AtomicBool::new(false);
+
+pub fn set_machine_output(enabled: bool) {
+    MACHINE_OUTPUT.store(enabled, Ordering::Relaxed);
+}
+
+pub fn machine_output() -> bool {
+    MACHINE_OUTPUT.load(Ordering::Relaxed)
+}
+
+macro_rules! out {
+    ($($arg:tt)*) => {
+        if !machine_output() {
+            println!($($arg)*);
+        }
+    };
+}
+
+fn ensure_interactive(message: &str) -> Result<()> {
+    if machine_output() {
+        anyhow::bail!(
+            "`{message}` needs an interactive prompt, which is not available with --json or --quiet; pass --yes or stage changes first"
+        );
+    }
+    Ok(())
+}
+
+fn new_spinner() -> ProgressBar {
+    if machine_output() {
+        ProgressBar::hidden()
+    } else {
+        ProgressBar::new_spinner()
+    }
+}
+
 fn mark_printed() {
     LAST_LINE_BLANK.store(false, Ordering::Relaxed);
 }
 
 fn ensure_blank_line() {
     if !LAST_LINE_BLANK.swap(true, Ordering::Relaxed) {
-        println!();
+        out!();
     }
 }
 
 pub fn info(message: impl AsRef<str>) {
-    println!("{}", message.as_ref());
+    out!("{}", message.as_ref());
     mark_printed();
 }
 
 pub fn success(message: impl AsRef<str>) {
-    println!("{} {}", style("✔").green(), style(message.as_ref()).green());
+    out!("{} {}", style("✔").green(), style(message.as_ref()).green());
     mark_printed();
 }
 
@@ -53,12 +91,12 @@ pub fn warn(message: impl AsRef<str>) {
 
 pub fn section(title: impl AsRef<str>) {
     ensure_blank_line();
-    println!("{} {}", style("◇").cyan(), style(title.as_ref()).bold());
+    out!("{} {}", style("◇").cyan(), style(title.as_ref()).bold());
     mark_printed();
 }
 
 pub fn session_step(message: impl AsRef<str>) {
-    println!(
+    out!(
         "{} {}",
         style("•").cyan().dim(),
         style(message.as_ref()).dim()
@@ -67,18 +105,18 @@ pub fn session_step(message: impl AsRef<str>) {
 }
 
 pub fn blank_line() {
-    println!();
+    out!();
     LAST_LINE_BLANK.store(true, Ordering::Relaxed);
 }
 
 pub fn bullet(message: impl AsRef<str>) {
-    println!("  {} {}", style("•").cyan().dim(), message.as_ref());
+    out!("  {} {}", style("•").cyan().dim(), message.as_ref());
     mark_printed();
 }
 
 pub fn secondary(message: impl AsRef<str>) {
     for line in message.as_ref().lines() {
-        println!("  {}", style(line).dim());
+        out!("  {}", style(line).dim());
     }
     mark_printed();
 }
@@ -97,7 +135,7 @@ pub fn metadata_row(items: &[String]) {
 }
 
 pub fn headline(message: impl AsRef<str>) {
-    println!("  {}", style(message.as_ref()).bold());
+    out!("  {}", style(message.as_ref()).bold());
     mark_printed();
 }
 
@@ -132,7 +170,7 @@ pub fn file_metadata(files: &[String]) {
 }
 
 pub fn spinner(message: impl Into<String>) -> ProgressBar {
-    let pb = ProgressBar::new_spinner();
+    let pb = new_spinner();
     pb.set_style(
         ProgressStyle::with_template("{spinner:.cyan} {msg}")
             .unwrap_or_else(|_| ProgressStyle::default_spinner()),
@@ -276,7 +314,7 @@ impl StatusState {
 
 impl StatusSpinner {
     pub fn start(stage: impl Into<String>, pool: StatusPool) -> Self {
-        let bar = ProgressBar::new_spinner();
+        let bar = new_spinner();
         bar.set_style(
             ProgressStyle::with_template("{spinner:.cyan} {msg} {elapsed:.dim}")
                 .unwrap_or_else(|_| ProgressStyle::default_spinner()),
@@ -427,7 +465,7 @@ impl Drop for StatusSpinner {
 pub fn primary_card(title: &str, body: &str) {
     ensure_blank_line();
     for line in render_card_lines(title, body, card_width()) {
-        println!("{line}");
+        out!("{line}");
     }
     mark_printed();
 }
@@ -435,7 +473,7 @@ pub fn primary_card(title: &str, body: &str) {
 pub fn markdown_card(title: &str, body: &str) {
     ensure_blank_line();
     for line in render_markdown_card_lines(title, body, card_width()) {
-        println!("{line}");
+        out!("{line}");
     }
     mark_printed();
 }
@@ -468,6 +506,7 @@ pub fn hyperlink(text: &str, url: &str) -> String {
 }
 
 pub fn confirm(message: &str, default: bool) -> Result<bool> {
+    ensure_interactive(message)?;
     let answer = Confirm::new(message).with_default(default).prompt()?;
     mark_printed();
     Ok(answer)
@@ -477,18 +516,21 @@ pub fn select<T>(message: &str, options: Vec<T>) -> Result<T>
 where
     T: Clone + Display,
 {
+    ensure_interactive(message)?;
     let answer = Select::new(message, options).prompt()?;
     mark_printed();
     Ok(answer)
 }
 
 pub fn multiselect(message: &str, options: Vec<String>) -> Result<Vec<String>> {
+    ensure_interactive(message)?;
     let answer = MultiSelect::new(message, options).prompt()?;
     mark_printed();
     Ok(answer)
 }
 
 pub fn text(message: &str, initial: Option<&str>) -> Result<String> {
+    ensure_interactive(message)?;
     let prompt = Text::new(message);
     let prompt = if let Some(initial) = initial {
         prompt.with_initial_value(initial)
@@ -501,6 +543,7 @@ pub fn text(message: &str, initial: Option<&str>) -> Result<String> {
 }
 
 pub fn editor(message: &str, initial: &str) -> Result<String> {
+    ensure_interactive(message)?;
     let answer = Editor::new(message)
         .with_predefined_text(initial)
         .with_file_extension(".md")

@@ -19,6 +19,12 @@ help = "Generate and print the message without committing"
 [root.args.amend]
 help = "Regenerate and amend the last commit message"
 
+[root.args.json]
+help = "Print the result as JSON; implies non-interactive (commits only with --yes)"
+
+[root.args.quiet]
+help = "Print only the generated message; implies non-interactive (commits only with --yes)"
+
 [root.args.git_args]
 help = "Arguments passed through to git commit"
 long_help = """
@@ -109,6 +115,12 @@ Examples:
 [root.commands.review.args.context]
 help = "Focus the review on a specific concern (for example, 'focus on security')"
 
+[root.commands.review.args.json]
+help = "Print the review as JSON"
+
+[root.commands.review.args.quiet]
+help = "Print only the review Markdown"
+
 [root.commands.pr]
 about = "Generate a pull request title and description"
 long_about = """
@@ -127,6 +139,12 @@ help = "Additional pull request context to include in the prompt"
 
 [root.commands.pr.args.base]
 help = "Base branch or ref to diff against"
+
+[root.commands.pr.args.json]
+help = "Print the draft as JSON"
+
+[root.commands.pr.args.quiet]
+help = "Print only the title and description"
 
 [root.commands.pr.args.yes]
 help = "Skip confirmation and print the final PR text"

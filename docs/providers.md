@@ -22,6 +22,16 @@ apple
 
 `apple` is an experimental local-binary provider for Apple's on-device Foundation Model. It runs the `fm respond` CLI that ships with macOS, so nothing leaves the machine and no API key is needed.
 
+## Streaming
+
+| Provider | Streams |
+|----------|---------|
+| `openai`, `azure-openai`, `groq`, `ollama`, custom OpenAI-compatible | Yes (server-sent events) |
+| `anthropic` | Yes (server-sent events) |
+| `claude-code`, `codex`, `copilot`, `apple` | No: the whole message arrives at once |
+
+Only the request that produces the final message streams. Chunk summaries for large diffs are always single responses. A custom OpenAI-compatible endpoint must support `"stream": true` on chat completions.
+
 ```mermaid
 flowchart TD
     Config["AIC_AI_PROVIDER"] --> Provider{"Provider"}

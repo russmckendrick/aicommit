@@ -16,6 +16,11 @@ pub fn current_branch() -> Option<String> {
     current_branch_in(&root)
 }
 
+pub fn head_hash() -> Result<String> {
+    let root = repo_root()?;
+    Ok(run_git_in(&root, ["rev-parse", "HEAD"])?.stdout)
+}
+
 pub fn head_short_hash() -> Result<String> {
     let root = repo_root()?;
     Ok(run_git_in(&root, ["rev-parse", "--short", "HEAD"])?.stdout)

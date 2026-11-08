@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand};
 use clap_complete::Shell;
 
-use crate::commands;
+use crate::{commands, output::OutputMode};
 
 #[derive(Debug, Parser)]
 #[command(name = "aic", version)]
@@ -28,8 +28,28 @@ pub struct Cli {
     #[arg(long)]
     amend: bool,
 
+    #[command(flatten)]
+    output: OutputArgs,
+
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     git_args: Vec<String>,
+}
+
+#[derive(Debug, Args)]
+struct OutputArgs {
+    #[arg(long, conflicts_with = "quiet")]
+    json: bool,
+
+    #[arg(short = 'q', long)]
+    quiet: bool,
+}
+
+impl OutputArgs {
+    fn mode(&self) -> OutputMode {
+        let mode = OutputMode::from_flags(self.json, self.quiet);
+        crate::ui::set_machine_output(mode.is_machine());
+        mode
+    }
 }
 
 #[derive(Debug, Subcommand)]
@@ -94,6 +114,9 @@ struct CompletionsCommand {
 struct ReviewCommand {
     #[arg(short = 'c', long, default_value = "")]
     context: String,
+
+    #[command(flatten)]
+    output: OutputArgs,
 }
 
 #[derive(Debug, Args)]
@@ -106,6 +129,9 @@ struct PrCommand {
 
     #[arg(short = 'y', long)]
     yes: bool,
+
+    #[command(flatten)]
+    output: OutputArgs,
 }
 
 #[derive(Debug, Args)]
@@ -231,10 +257,19 @@ pub async fn run() -> Result<()> {
             Ok(())
         }
         Some(Command::Review(command)) => {
-            commands::review::run(command.context, cli.provider).await
+            let mode = command.output.mode();
+            commands::review::run(command.context, cli.provider, mode).await
         }
         Some(Command::Pr(command)) => {
-            commands::pr::run(command.context, command.base, command.yes, cli.provider).await
+            let mode = command.output.mode();
+            commands::pr::run(
+                command.context,
+                command.base,
+                command.yes,
+                cli.provider,
+                mode,
+            )
+            .await
         }
         Some(Command::History(command)) => commands::history::run(
             command.count,
@@ -262,6 +297,7 @@ pub async fn run() -> Result<()> {
             }
         },
         None => {
+            let mode = cli.output.mode();
             commands::commit::run(
                 cli.git_args,
                 cli.context,
@@ -270,6 +306,7 @@ pub async fn run() -> Result<()> {
                 cli.dry_run,
                 cli.amend,
                 cli.provider,
+                mode,
             )
             .await
         }

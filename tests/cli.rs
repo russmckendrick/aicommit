@@ -1214,3 +1214,96 @@ fn models_command_shows_apple_provider_note_for_override() {
         .stdout(predicate::str::contains("`fm respond`"))
         .stdout(predicate::str::contains("capped at 6000 tokens"));
 }
+
+#[test]
+fn json_prints_message_without_committing() {
+    let repo = init_repo();
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+    let head_before = git_stdout(repo.path(), ["rev-list", "--all", "--count"]);
+
+    let output = Command::cargo_bin("aic")
+        .unwrap()
+        .current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "test")
+        .env("AIC_GITPUSH", "false")
+        .arg("--json")
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{output:?}");
+
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value["schema"], 1);
+    assert_eq!(value["kind"], "commit");
+    assert_eq!(value["subject"], "feat: add generated commit message");
+    assert_eq!(value["files"], json!(["src.txt"]));
+    assert_eq!(value["committed"], false);
+    assert!(value["commit"].is_null());
+    assert_eq!(
+        git_stdout(repo.path(), ["rev-list", "--all", "--count"]),
+        head_before
+    );
+}
+
+#[test]
+fn json_with_yes_commits_and_reports_the_hash() {
+    let repo = init_repo();
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+
+    let output = Command::cargo_bin("aic")
+        .unwrap()
+        .current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "test")
+        .env("AIC_GITPUSH", "false")
+        .args(["--json", "--yes"])
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{output:?}");
+
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value["committed"], true);
+    assert_eq!(
+        value["commit"].as_str().unwrap(),
+        git_stdout(repo.path(), ["rev-parse", "HEAD"])
+    );
+}
+
+#[test]
+fn quiet_prints_only_the_message() {
+    let repo = init_repo();
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+    run_git(repo.path(), ["add", "src.txt"]);
+
+    Command::cargo_bin("aic")
+        .unwrap()
+        .current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "test")
+        .arg("--quiet")
+        .assert()
+        .success()
+        .stdout("feat: add generated commit message\n");
+}
+
+#[test]
+fn json_without_staged_changes_fails_instead_of_prompting() {
+    let repo = init_repo();
+    fs::write(repo.path().join("src.txt"), "hello\n").unwrap();
+
+    Command::cargo_bin("aic")
+        .unwrap()
+        .current_dir(repo.path())
+        .env("AIC_AI_PROVIDER", "test")
+        .arg("--json")
+        .assert()
+        .failure()
+        .stdout("");
+}
+
+#[test]
+fn json_and_quiet_conflict() {
+    Command::cargo_bin("aic")
+        .unwrap()
+        .args(["--json", "--quiet"])
+        .assert()
+        .failure();
+}
