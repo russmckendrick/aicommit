@@ -125,7 +125,7 @@ pub const FIELDS: &[Field] = &[
         label: "Icons",
         group: "Appearance",
         kind: FieldKind::Choice,
-        help: "auto uses Nerd Font icons when AIC_REMOTE_ICON_STYLE does (the default); unicode works in any font.",
+        help: "auto: Nerd Font icons that work in any Nerd Font. nerd: also the newest OpenAI and Claude logos (Nerd Fonts 3.5+). unicode: any font.",
     },
 ];
 

@@ -85,7 +85,15 @@ Being behind the upstream no longer stops `aic` from starting in the terminal UI
 
 ## Icons
 
-With `AIC_ICONS=auto` (the default) the terminal UI uses Nerd Font icons whenever `AIC_REMOTE_ICON_STYLE` does, which is also its default: file-type icons in the tree, git icons for branches and commits, provider logos in the header (OpenAI, Claude, GitHub Copilot, Azure, and Apple; Ollama and Groq, which have no Nerd Font logo, get a generic icon in their brand colour), and the Git host icon (GitHub, GitLab, and others) in push prompts. The OpenAI and Claude logos need Nerd Fonts 3.5 or later; older Nerd Fonts show a placeholder box for them. Set `AIC_ICONS=unicode` if your terminal font is not a Nerd Font, or `AIC_ICONS=nerd` to force them.
+With `AIC_ICONS=auto` (the default) the terminal UI uses Nerd Font icons whenever `AIC_REMOTE_ICON_STYLE` does, which is also its default: file-type icons in the tree, git icons for branches and commits, provider icons in brand colours in the header, and the Git host icon (GitHub, GitLab, and others) in push prompts. `auto` only uses icons that every Nerd Font has, including the copy of the symbols built into terminals such as Ghostty.
+
+| `AIC_ICONS` | Icons |
+|-------------|-------|
+| `auto` (default) | Widely supported Nerd Font icons. GitHub Copilot, Azure, and Apple show their logos; OpenAI and Codex show a robot; Anthropic and Claude Code show `✻`. |
+| `nerd` | Everything in `auto`, plus the real OpenAI and Claude logos. These need Nerd Fonts 3.5 or later as your terminal's font; older fonts and Ghostty's built-in symbols draw them as `�`. |
+| `unicode` | Plain symbols that work in any font. |
+
+To check whether your terminal can draw the OpenAI and Claude logos, run `printf '\uec81  \uec82\n'`. If you see two logos rather than `�`, `AIC_ICONS=nerd` will work. Ollama and Groq have no Nerd Font logo and always use a generic icon in their brand colour.
 
 ## Settings screen
 

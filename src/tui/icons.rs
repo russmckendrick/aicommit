@@ -8,18 +8,30 @@ use ratatui::style::Color;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Icons {
     pub nerd: bool,
+    /// Use the newest brand logos (OpenAI, Claude), which need Nerd Fonts
+    /// 3.5+. Terminals with older or built-in symbol fonts (Ghostty's
+    /// default, for example) draw them as replacement boxes.
+    pub logos: bool,
 }
 
 impl Icons {
     /// `AIC_ICONS`: `nerd`, `unicode`, or `auto` (follow
     /// `AIC_REMOTE_ICON_STYLE`, whose default already uses Nerd Fonts).
     pub fn from_config(icons: &str, remote_icon_style: &str) -> Self {
-        let nerd = match icons {
-            "nerd" => true,
-            "unicode" => false,
-            _ => matches!(remote_icon_style, "auto" | "nerd-font"),
-        };
-        Self { nerd }
+        match icons {
+            "nerd" => Self {
+                nerd: true,
+                logos: true,
+            },
+            "unicode" => Self {
+                nerd: false,
+                logos: false,
+            },
+            _ => Self {
+                nerd: matches!(remote_icon_style, "auto" | "nerd-font"),
+                logos: false,
+            },
+        }
     }
 
     fn pick(self, nerd: &'static str, plain: &'static str) -> &'static str {
@@ -93,25 +105,32 @@ fn rgb_color(rgb: u32) -> Color {
 
 /// Display name, glyph, and brand colour for an AI provider.
 ///
-/// Nerd Fonts 3.5 has real logos for OpenAI (`cod-openai`, also used for
-/// Codex), Claude (`cod-claude`, for Anthropic and Claude Code), GitHub
-/// Copilot, Azure, and Apple. It has none for Ollama or Groq, which use a
-/// generic glyph in their brand colour.
+/// Nerd Fonts 3.5 added real OpenAI (`cod-openai`, also used for Codex) and
+/// Claude (`cod-claude`, for Anthropic and Claude Code) logos; those appear
+/// only with `AIC_ICONS=nerd`, and `auto` uses long-standing glyphs instead.
+/// Copilot, Azure, and Apple logos are older and always used. Ollama and
+/// Groq have no Nerd Font logo.
 pub fn provider(icons: Icons, provider: &str) -> (&'static str, &'static str, Color) {
-    let (name, nerd, plain, rgb) = match provider {
-        "openai" => ("OpenAI", "\u{ec81}", "◎", 0x10a37f),
-        "azure-openai" => ("Azure OpenAI", "\u{ebd8}", "◎", 0x0078d4),
-        "anthropic" => ("Anthropic", "\u{ec82}", "✻", 0xd97757),
-        "claude-code" => ("Claude Code", "\u{ec82}", "✻", 0xd97757),
-        "codex" => ("Codex", "\u{ec81}", "◎", 0x10a37f),
-        "copilot" => ("GitHub Copilot", "\u{f4b8}", "◉", 0x8957e5),
-        "groq" => ("Groq", "\u{f0e7}", "⚡", 0xf55036),
-        "ollama" => ("Ollama", "\u{f233}", "◉", 0xc9d1d9),
-        "apple" => ("Apple Intelligence", "\u{f179}", "◉", 0xa2aaad),
-        "test" => ("Test", "\u{f0668}", "◇", 0x8b949e),
-        _ => ("Custom", "\u{f06a9}", "◎", 0x8b949e),
+    // (name, newest logo, long-standing Nerd Font glyph, plain, colour)
+    let (name, logo, nerd, plain, rgb) = match provider {
+        "openai" => ("OpenAI", "\u{ec81}", "\u{f06a9}", "◎", 0x10a37f),
+        "azure-openai" => ("Azure OpenAI", "\u{ebd8}", "\u{ebd8}", "◎", 0x0078d4),
+        "anthropic" => ("Anthropic", "\u{ec82}", "✻", "✻", 0xd97757),
+        "claude-code" => ("Claude Code", "\u{ec82}", "✻", "✻", 0xd97757),
+        "codex" => ("Codex", "\u{ec81}", "\u{f06a9}", "◎", 0x10a37f),
+        "copilot" => ("GitHub Copilot", "\u{f4b8}", "\u{f4b8}", "◉", 0x8957e5),
+        "groq" => ("Groq", "\u{f0e7}", "\u{f0e7}", "⚡", 0xf55036),
+        "ollama" => ("Ollama", "\u{f233}", "\u{f233}", "◉", 0xc9d1d9),
+        "apple" => ("Apple Intelligence", "\u{f179}", "\u{f179}", "◉", 0xa2aaad),
+        "test" => ("Test", "\u{f0668}", "\u{f0668}", "◇", 0x8b949e),
+        _ => ("Custom", "\u{f06a9}", "\u{f06a9}", "◎", 0x8b949e),
     };
-    (name, if icons.nerd { nerd } else { plain }, rgb_color(rgb))
+    let glyph = match (icons.nerd, icons.logos) {
+        (true, true) => logo,
+        (true, false) => nerd,
+        _ => plain,
+    };
+    (name, glyph, rgb_color(rgb))
 }
 
 #[cfg(test)]
@@ -121,6 +140,8 @@ mod tests {
     #[test]
     fn auto_follows_the_remote_icon_style() {
         assert!(Icons::from_config("auto", "auto").nerd);
+        assert!(!Icons::from_config("auto", "auto").logos);
+        assert!(Icons::from_config("nerd", "auto").logos);
         assert!(Icons::from_config("auto", "nerd-font").nerd);
         assert!(!Icons::from_config("auto", "emoji").nerd);
         assert!(!Icons::from_config("unicode", "auto").nerd);
@@ -129,8 +150,18 @@ mod tests {
 
     #[test]
     fn file_icons_only_with_nerd_fonts() {
-        assert!(Icons { nerd: false }.file("src/main.rs").is_none());
-        let nerd = Icons { nerd: true };
+        assert!(
+            Icons {
+                nerd: false,
+                logos: false
+            }
+            .file("src/main.rs")
+            .is_none()
+        );
+        let nerd = Icons {
+            nerd: true,
+            logos: false,
+        };
         assert_eq!(nerd.file("src/main.rs").unwrap().0, "\u{e7a8}");
         assert_eq!(nerd.file("web/App.tsx").unwrap().0, "\u{e628}");
         assert_eq!(nerd.file("Cargo.lock").unwrap().0, "\u{f023}");
@@ -140,9 +171,22 @@ mod tests {
 
     #[test]
     fn providers_have_names_and_fallback_glyphs() {
-        let plain = Icons { nerd: false };
-        assert_eq!(provider(Icons { nerd: true }, "openai").1, "\u{ec81}");
-        assert_eq!(provider(Icons { nerd: true }, "anthropic").1, "\u{ec82}");
+        let plain = Icons {
+            nerd: false,
+            logos: false,
+        };
+        let safe = Icons {
+            nerd: true,
+            logos: false,
+        };
+        let latest = Icons {
+            nerd: true,
+            logos: true,
+        };
+        assert_eq!(provider(latest, "openai").1, "\u{ec81}");
+        assert_eq!(provider(latest, "anthropic").1, "\u{ec82}");
+        assert_eq!(provider(safe, "openai").1, "\u{f06a9}");
+        assert_eq!(provider(safe, "anthropic").1, "✻");
         assert_eq!(provider(plain, "anthropic").0, "Anthropic");
         assert_eq!(provider(plain, "openai").1, "◎");
         assert_eq!(provider(plain, "unknown").0, "Custom");
