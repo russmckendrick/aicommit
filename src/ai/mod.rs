@@ -44,7 +44,7 @@ impl ChatMessage {
 pub trait AiEngine: Send + Sync {
     /// Send chat messages and return the model's text response.
     /// Used for commit generation, review, and any other text completion task.
-    async fn generate_commit_message(&self, messages: &[ChatMessage]) -> Result<String>;
+    async fn complete(&self, messages: &[ChatMessage]) -> Result<String>;
 }
 
 pub fn engine_from_config(config: &Config) -> Result<Box<dyn AiEngine>> {
@@ -69,7 +69,7 @@ struct TestEngine;
 
 #[async_trait]
 impl AiEngine for TestEngine {
-    async fn generate_commit_message(&self, messages: &[ChatMessage]) -> Result<String> {
+    async fn complete(&self, messages: &[ChatMessage]) -> Result<String> {
         let system = messages
             .iter()
             .find(|message| message.role == "system")

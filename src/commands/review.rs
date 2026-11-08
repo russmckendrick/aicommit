@@ -127,7 +127,7 @@ async fn generate_review(
             total: 1,
         });
         let messages = build_review_messages(config, &chunks[0], context)?;
-        return engine.generate_commit_message(&messages).await;
+        return engine.complete(&messages).await;
     }
 
     let mut partial_reviews = Vec::with_capacity(chunks.len());
@@ -142,7 +142,7 @@ async fn generate_review(
             chunks.len()
         );
         let messages = build_review_messages(config, chunk, &chunk_context)?;
-        partial_reviews.push(engine.generate_commit_message(&messages).await?);
+        partial_reviews.push(engine.complete(&messages).await?);
     }
 
     report(GenerationProgress::Synthesizing);
@@ -174,5 +174,5 @@ async fn generate_review(
         synthesis_parts.join("\n\n")
     );
     let messages = build_review_messages(config, &synthesis_input, context)?;
-    engine.generate_commit_message(&messages).await
+    engine.complete(&messages).await
 }

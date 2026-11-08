@@ -35,7 +35,7 @@ async fn openai_compatible_engine_reads_chat_response() {
     };
     let engine = OpenAiCompatEngine::new(config).unwrap();
     let response = engine
-        .generate_commit_message(&[ChatMessage::user("diff")])
+        .complete(&[ChatMessage::user("diff")])
         .await
         .unwrap();
 
@@ -64,7 +64,7 @@ async fn azure_openai_engine_uses_api_key_header() {
     };
     let engine = OpenAiCompatEngine::new(config).unwrap();
     let response = engine
-        .generate_commit_message(&[ChatMessage::user("diff")])
+        .complete(&[ChatMessage::user("diff")])
         .await
         .unwrap();
 
@@ -142,7 +142,7 @@ async fn groq_engine_uses_openai_compatible_base_url_and_bearer_auth() {
     };
     let engine = OpenAiCompatEngine::new(config).unwrap();
     let response = engine
-        .generate_commit_message(&[ChatMessage::user("diff")])
+        .complete(&[ChatMessage::user("diff")])
         .await
         .unwrap();
 
@@ -170,7 +170,7 @@ async fn ollama_engine_uses_openai_compatible_base_url_without_api_key() {
     };
     let engine = OpenAiCompatEngine::new(config).unwrap();
     let response = engine
-        .generate_commit_message(&[ChatMessage::user("diff")])
+        .complete(&[ChatMessage::user("diff")])
         .await
         .unwrap();
 
@@ -208,7 +208,7 @@ async fn anthropic_engine_uses_messages_api_and_flattens_text_blocks() {
     };
     let engine = AnthropicEngine::new(config).unwrap();
     let response = engine
-        .generate_commit_message(&[
+        .complete(&[
             ChatMessage::system("system rules"),
             ChatMessage::user("diff"),
             ChatMessage::assistant("assistant example"),

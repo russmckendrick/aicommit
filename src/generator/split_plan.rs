@@ -61,7 +61,7 @@ pub async fn generate_split_plan(
             },
         );
         let messages = build_split_plan_messages(config, &chunks[0], context, staged_files)?;
-        let response = engine.generate_commit_message(&messages).await?;
+        let response = engine.complete(&messages).await?;
         return parse_split_plan_response(&response, staged_files);
     }
 
@@ -82,13 +82,13 @@ pub async fn generate_split_plan(
             index + 1,
             chunks.len(),
         )?;
-        partial_summaries.push(engine.generate_commit_message(&messages).await?);
+        partial_summaries.push(engine.complete(&messages).await?);
     }
 
     report(progress, GenerationProgress::Synthesizing);
     let synthesis_messages =
         build_split_synthesis_messages(config, &partial_summaries, context, staged_files)?;
-    let response = engine.generate_commit_message(&synthesis_messages).await?;
+    let response = engine.complete(&synthesis_messages).await?;
     parse_split_plan_response(&response, staged_files)
 }
 

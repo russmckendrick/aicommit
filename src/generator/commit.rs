@@ -65,7 +65,7 @@ pub async fn generate_commit_message(
         );
         let chat_messages =
             build_messages(config, &chunks[0], full_gitmoji_spec, context, staged_files)?;
-        let message = engine.generate_commit_message(&chat_messages).await?;
+        let message = engine.complete(&chat_messages).await?;
         return Ok(finish_message(config, full_gitmoji_spec, message));
     }
 
@@ -86,7 +86,7 @@ pub async fn generate_commit_message(
             &chunk_context,
             staged_files,
         )?;
-        summaries.push(engine.generate_commit_message(&chat_messages).await?);
+        summaries.push(engine.complete(&chat_messages).await?);
     }
 
     report(progress, GenerationProgress::Synthesizing);
@@ -109,7 +109,7 @@ pub async fn generate_commit_message(
         &synthesis_context,
         staged_files,
     )?;
-    let message = engine.generate_commit_message(&chat_messages).await?;
+    let message = engine.complete(&chat_messages).await?;
     Ok(finish_message(config, full_gitmoji_spec, message))
 }
 

@@ -143,7 +143,7 @@ fn run_command(
 
 #[async_trait]
 impl AiEngine for CommandEngine {
-    async fn generate_commit_message(&self, messages: &[ChatMessage]) -> Result<String> {
+    async fn complete(&self, messages: &[ChatMessage]) -> Result<String> {
         let (args, prompt) = self.invocation(messages);
         let program = self
             .resolved_program()
@@ -357,7 +357,7 @@ mod tests {
         );
 
         let response = engine
-            .generate_commit_message(&test_messages())
+            .complete(&test_messages())
             .await
             .unwrap();
 
@@ -401,7 +401,7 @@ mod tests {
         let large_diff = "+ a reasonably long changed line of diff content\n".repeat(10_000);
         let messages = vec![ChatMessage::user(large_diff)];
 
-        let response = engine.generate_commit_message(&messages).await.unwrap();
+        let response = engine.complete(&messages).await.unwrap();
         assert_eq!(response, "feat: survive large prompts");
     }
 
@@ -419,7 +419,7 @@ mod tests {
         );
 
         let error = engine
-            .generate_commit_message(&test_messages())
+            .complete(&test_messages())
             .await
             .unwrap_err()
             .to_string();
@@ -443,7 +443,7 @@ mod tests {
         );
 
         let error = engine
-            .generate_commit_message(&test_messages())
+            .complete(&test_messages())
             .await
             .unwrap_err()
             .to_string();
@@ -466,7 +466,7 @@ mod tests {
         );
 
         let error = engine
-            .generate_commit_message(&test_messages())
+            .complete(&test_messages())
             .await
             .unwrap_err()
             .to_string();
@@ -490,7 +490,7 @@ mod tests {
         );
 
         let error = engine
-            .generate_commit_message(&test_messages())
+            .complete(&test_messages())
             .await
             .unwrap_err()
             .to_string();
@@ -557,7 +557,7 @@ mod tests {
         let engine = apple_engine(command.program, command.args);
 
         let error = engine
-            .generate_commit_message(&test_messages())
+            .complete(&test_messages())
             .await
             .unwrap_err()
             .to_string();

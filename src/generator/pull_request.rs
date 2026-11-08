@@ -65,7 +65,7 @@ pub async fn generate_pull_request(
             commits,
             changed_files,
         )?;
-        let response = engine.generate_commit_message(&messages).await?;
+        let response = engine.complete(&messages).await?;
         return parse_pull_request_response(&response);
     }
 
@@ -90,7 +90,7 @@ pub async fn generate_pull_request(
             index + 1,
             chunks.len(),
         )?;
-        partial_summaries.push(engine.generate_commit_message(&messages).await?);
+        partial_summaries.push(engine.complete(&messages).await?);
     }
 
     report(progress, GenerationProgress::Synthesizing);
@@ -104,6 +104,6 @@ pub async fn generate_pull_request(
         commits,
         changed_files,
     )?;
-    let response = engine.generate_commit_message(&synthesis_messages).await?;
+    let response = engine.complete(&synthesis_messages).await?;
     parse_pull_request_response(&response)
 }

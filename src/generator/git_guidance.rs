@@ -68,7 +68,7 @@ pub async fn generate_git_guidance(config: &Config, request: &GitGuidanceRequest
         Err(_) => return fallback,
     };
 
-    match engine.generate_commit_message(&messages).await {
+    match engine.complete(&messages).await {
         Ok(output) if !output.trim().is_empty() => output.trim().to_owned(),
         _ => fallback,
     }

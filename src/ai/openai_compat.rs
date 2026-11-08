@@ -101,7 +101,7 @@ impl OpenAiCompatEngine {
 
 #[async_trait]
 impl AiEngine for OpenAiCompatEngine {
-    async fn generate_commit_message(&self, messages: &[ChatMessage]) -> Result<String> {
+    async fn complete(&self, messages: &[ChatMessage]) -> Result<String> {
         let request_tokens = count_messages(messages);
         if request_tokens
             > self
