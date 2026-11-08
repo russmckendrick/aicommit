@@ -9,6 +9,7 @@ This folder is the detailed documentation entry point for `aic`, the Rust CLI fo
 - [Configuration](configuration.md): set provider, model, prompt, token, hook, and output behavior.
 - [Providers](providers.md): choose between OpenAI, Azure OpenAI, Anthropic, Groq, Ollama, Claude Code, Codex, GitHub Copilot CLI, and Apple Foundation Models.
 - [Terminal UI](tui.md): the interactive `aic --tui` screens, key bindings, and themes.
+- [Demo tapes](tapes/README.md): `vhs` scripts that record the terminal UI demos.
 - [Automation](automation.md): use `--json` and `--quiet` from scripts, CI, and coding agents.
 - [Hooks](hooks.md): install or remove the Git `prepare-commit-msg` hook.
 - [Visualization](map.md): generate SVG treemaps, timelines, heatmaps, and activity graphs.
