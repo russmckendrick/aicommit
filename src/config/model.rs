@@ -19,12 +19,30 @@ const APPLE_MAX_TOKENS_INPUT: usize = 6_000;
 pub fn default_model_for_provider(provider: &str) -> &'static str {
     match provider {
         "claude-code" | "codex" | "copilot" | "apple" => "default",
-        "anthropic" => "claude-sonnet-4-20250514",
-        "groq" => "llama-3.1-8b-instant",
-        "ollama" => "llama3.2",
-        "azure-openai" => "gpt-5.4-mini",
-        _ => "gpt-5.4-mini",
+        "anthropic" => "claude-sonnet-5-5",
+        "groq" => "openai/gpt-oss-20b",
+        "ollama" => "gpt-oss:20b",
+        "azure-openai" => "gpt-6-luna",
+        _ => "gpt-6-luna",
     }
+}
+
+/// Defaults shipped by earlier releases. A config still holding one of these
+/// was never chosen deliberately, so switching provider replaces it.
+fn previous_default_models(provider: &str) -> &'static [&'static str] {
+    match provider {
+        "anthropic" => &["claude-sonnet-4-20250514"],
+        "groq" => &["llama-3.1-8b-instant", "llama3-70b-8192"],
+        "ollama" => &["llama3.2", "mistral"],
+        "openai" | "azure-openai" => &["gpt-5.4-mini", "gpt-4o-mini"],
+        _ => &[],
+    }
+}
+
+/// Whether `model` is the current or a previous default for `provider`.
+pub fn is_default_model_for_provider(provider: &str, model: &str) -> bool {
+    model == default_model_for_provider(provider)
+        || previous_default_models(provider).contains(&model)
 }
 
 pub fn default_api_url_for_provider(provider: &str) -> Option<&'static str> {
@@ -48,19 +66,19 @@ pub fn model_list(provider: &str) -> &'static [&'static str] {
     match provider {
         "claude-code" | "codex" | "copilot" | "apple" => &["default"],
         "anthropic" => &[
-            "claude-sonnet-4-20250514",
-            "claude-opus-4-20250514",
-            "claude-3-7-sonnet-latest",
-            "claude-3-5-haiku-latest",
+            "claude-sonnet-5-5",
+            "claude-haiku-5-5",
+            "claude-opus-5-5",
+            "claude-fable-5-1",
         ],
         "groq" => &[
-            "llama-3.1-8b-instant",
-            "llama-3.3-70b-versatile",
+            "openai/gpt-oss-20b",
             "openai/gpt-oss-120b",
+            "llama-3.3-70b-versatile",
         ],
-        "ollama" => &["llama3.2", "qwen3-coder", "gpt-oss:20b"],
-        "azure-openai" => &["gpt-5.4-mini", "gpt-5.4", "gpt-5.4-nano"],
-        _ => &["gpt-5.4-mini", "gpt-5.4", "gpt-5.4-nano"],
+        "ollama" => &["gpt-oss:20b", "qwen3:14b", "llama3.2"],
+        "azure-openai" => &["gpt-6-luna", "gpt-6.1-sol", "gpt-6-astra", "gpt-5.4-mini"],
+        _ => &["gpt-6-luna", "gpt-6.1-sol", "gpt-6-astra", "gpt-5.4-mini"],
     }
 }
 

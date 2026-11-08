@@ -135,7 +135,8 @@ impl OpenAiCompatEngine {
         let is_reasoning_model = self.config.model.starts_with("o1")
             || self.config.model.starts_with("o3")
             || self.config.model.starts_with("o4")
-            || self.config.model.starts_with("gpt-5");
+            || self.config.model.starts_with("gpt-5")
+            || self.config.model.starts_with("gpt-6");
 
         let payload = ChatRequest {
             model: &self.config.model,

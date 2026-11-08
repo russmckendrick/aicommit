@@ -41,7 +41,7 @@ long_about = """
 Read and update global aic configuration stored in ~/.aicommit.
 
 Examples:
-  aic config set AIC_MODEL=gpt-5.4-mini
+  aic config set AIC_MODEL=gpt-6-luna
   aic config get AIC_MODEL AIC_AI_PROVIDER
   aic config describe
 """

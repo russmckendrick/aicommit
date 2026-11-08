@@ -139,7 +139,7 @@ aic completions zsh        # Generate shell completions
 Set values globally with `aic config set` or per-invocation with environment variables:
 
 ```sh
-aic config set AIC_MODEL=gpt-5.4-mini AIC_EMOJI=true
+aic config set AIC_MODEL=gpt-6-luna AIC_EMOJI=true
 AIC_LANGUAGE=french aic
 ```
 

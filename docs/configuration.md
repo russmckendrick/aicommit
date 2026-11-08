@@ -17,7 +17,7 @@ flowchart LR
 Set global values:
 
 ```sh
-aic config set AIC_API_KEY=<key> AIC_MODEL=gpt-5.4-mini
+aic config set AIC_API_KEY=<key> AIC_MODEL=gpt-6-luna
 ```
 
 Read values:
@@ -101,7 +101,7 @@ messages = ["asking git to be reasonable"]
 Example one-off environment override:
 
 ```sh
-AIC_MODEL=gpt-5.4-mini aic
+AIC_MODEL=gpt-6.1-sol aic
 ```
 
 `aic` intentionally does not read local `.env` files. Project `.env` files often contain unrelated application secrets, cookies, or service credentials, so configuration should be set with `aic config set` or explicit process environment variables instead.
@@ -110,11 +110,11 @@ AIC_MODEL=gpt-5.4-mini aic
 
 For Azure OpenAI, set `AIC_AI_PROVIDER=azure-openai`, set `AIC_API_URL` to your Azure OpenAI v1 endpoint, and use your deployment name as `AIC_MODEL`.
 
-For Anthropic, set `AIC_AI_PROVIDER=anthropic` and `AIC_API_KEY`, then optionally override the default `claude-sonnet-4-20250514` model with `AIC_MODEL`.
+For Anthropic, set `AIC_AI_PROVIDER=anthropic` and `AIC_API_KEY`, then optionally override the default `claude-sonnet-5-5` model with `AIC_MODEL`.
 
-For Groq, set `AIC_AI_PROVIDER=groq` and `AIC_API_KEY`, then optionally override the default `llama-3.1-8b-instant` model with `AIC_MODEL`.
+For Groq, set `AIC_AI_PROVIDER=groq` and `AIC_API_KEY`, then optionally override the default `openai/gpt-oss-20b` model with `AIC_MODEL`.
 
-For Ollama, set `AIC_AI_PROVIDER=ollama` and optionally override the default `llama3.2` model with `AIC_MODEL`. `AIC_API_KEY` is not required for the default local Ollama server.
+For Ollama, set `AIC_AI_PROVIDER=ollama` and optionally override the default `gpt-oss:20b` model with `AIC_MODEL`. `AIC_API_KEY` is not required for the default local Ollama server.
 
 For local CLI providers, set `AIC_AI_PROVIDER=claude-code`, `AIC_AI_PROVIDER=codex`, or `AIC_AI_PROVIDER=copilot` and leave `AIC_MODEL=default`. These providers use the installed `claude`, `codex`, or `copilot` binary from `PATH` and rely on that CLI's existing login state instead of `AIC_API_KEY`.
 

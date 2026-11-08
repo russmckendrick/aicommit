@@ -882,14 +882,16 @@ fn models_command_supports_anthropic_provider_override() {
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("AIC_MODEL", "gpt-5.4-mini")
+        .env("HOME", repo.path())
+        .env("USERPROFILE", repo.path())
         .arg("models")
         .arg("--provider")
         .arg("anthropic")
         .assert()
         .success()
         .stdout(predicate::str::contains("Available models for anthropic"))
-        .stdout(predicate::str::contains("❯ claude-sonnet-4-20250514"))
-        .stdout(predicate::str::contains("claude-opus-4-20250514"));
+        .stdout(predicate::str::contains("❯ claude-sonnet-5-5"))
+        .stdout(predicate::str::contains("claude-opus-5-5"));
 }
 
 #[test]
@@ -900,13 +902,15 @@ fn models_command_supports_groq_provider_override() {
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("AIC_MODEL", "gpt-5.4-mini")
+        .env("HOME", repo.path())
+        .env("USERPROFILE", repo.path())
         .arg("models")
         .arg("--provider")
         .arg("groq")
         .assert()
         .success()
         .stdout(predicate::str::contains("Available models for groq"))
-        .stdout(predicate::str::contains("❯ llama-3.1-8b-instant"))
+        .stdout(predicate::str::contains("❯ openai/gpt-oss-20b"))
         .stdout(predicate::str::contains("llama-3.3-70b-versatile"));
 }
 
@@ -918,14 +922,16 @@ fn models_command_supports_ollama_provider_override() {
     cmd.current_dir(repo.path())
         .env("AIC_AI_PROVIDER", "openai")
         .env("AIC_MODEL", "gpt-5.4-mini")
+        .env("HOME", repo.path())
+        .env("USERPROFILE", repo.path())
         .arg("models")
         .arg("--provider")
         .arg("ollama")
         .assert()
         .success()
         .stdout(predicate::str::contains("Available models for ollama"))
-        .stdout(predicate::str::contains("❯ llama3.2"))
-        .stdout(predicate::str::contains("qwen3-coder"));
+        .stdout(predicate::str::contains("❯ gpt-oss:20b"))
+        .stdout(predicate::str::contains("qwen3:14b"));
 }
 
 #[test]

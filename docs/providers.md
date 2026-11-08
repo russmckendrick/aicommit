@@ -62,10 +62,10 @@ flowchart TD
 Configure OpenAI:
 
 ```sh
-aic config set AIC_AI_PROVIDER=openai AIC_API_KEY=<key> AIC_MODEL=gpt-5.4-mini
+aic config set AIC_AI_PROVIDER=openai AIC_API_KEY=<key> AIC_MODEL=gpt-6-luna
 ```
 
-The default OpenAI model is `gpt-5.4-mini`, the cost-efficient GPT-5.4 variant.
+The default OpenAI model is `gpt-6-luna`, the low-cost, high-volume GPT-6 tier. Use `gpt-6.1-sol` for harder diffs, or `gpt-6-astra` for the flagship model. GPT-5 and GPT-6 models are sent `max_completion_tokens` and no sampling parameters.
 
 Use a custom compatible endpoint:
 
@@ -86,7 +86,7 @@ For Azure OpenAI, `AIC_MODEL` is the deployment name used by your Azure OpenAI r
 Configure Anthropic:
 
 ```sh
-aic config set AIC_AI_PROVIDER=anthropic AIC_API_KEY=<key> AIC_MODEL=claude-sonnet-4-20250514
+aic config set AIC_AI_PROVIDER=anthropic AIC_API_KEY=<key> AIC_MODEL=claude-sonnet-5-5
 ```
 
 Anthropic defaults to `https://api.anthropic.com/v1`. Override `AIC_API_URL` only if you need a proxy or gateway in front of the Anthropic API.
@@ -94,7 +94,7 @@ Anthropic defaults to `https://api.anthropic.com/v1`. Override `AIC_API_URL` onl
 Configure Groq:
 
 ```sh
-aic config set AIC_AI_PROVIDER=groq AIC_API_KEY=<key> AIC_MODEL=llama-3.1-8b-instant
+aic config set AIC_AI_PROVIDER=groq AIC_API_KEY=<key> AIC_MODEL=openai/gpt-oss-20b
 ```
 
 Groq defaults to `https://api.groq.com/openai/v1` and uses the same chat-completions flow as other OpenAI-compatible providers.
@@ -102,7 +102,7 @@ Groq defaults to `https://api.groq.com/openai/v1` and uses the same chat-complet
 Configure Ollama:
 
 ```sh
-aic config set AIC_AI_PROVIDER=ollama AIC_MODEL=llama3.2
+aic config set AIC_AI_PROVIDER=ollama AIC_MODEL=gpt-oss:20b
 ```
 
 Ollama defaults to `http://localhost:11434/v1` and does not require `AIC_API_KEY`. Override `AIC_API_URL` if your Ollama server is running on another host or port.

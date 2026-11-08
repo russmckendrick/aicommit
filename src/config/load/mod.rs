@@ -4,7 +4,10 @@ use anyhow::Result;
 
 use super::{
     Config, ConfigPaths,
-    model::{default_model_for_provider, is_local_cli_provider, provider_max_tokens_input},
+    model::{
+        default_model_for_provider, is_default_model_for_provider, is_local_cli_provider,
+        provider_max_tokens_input,
+    },
     validate::validate_config,
 };
 
@@ -25,7 +28,7 @@ pub fn load_from_with_provider_override(
         let previous_model = config.model.clone();
         apply_value(&mut config, "AIC_AI_PROVIDER", provider)?;
         if is_local_cli_provider(&config.ai_provider)
-            || previous_model == default_model_for_provider(&previous_provider)
+            || is_default_model_for_provider(&previous_provider, &previous_model)
         {
             config.model = default_model_for_provider(&config.ai_provider).to_owned();
         }
@@ -159,7 +162,7 @@ mod tests {
                 .unwrap();
 
         assert_eq!(config.ai_provider, "ollama");
-        assert_eq!(config.model, "llama3.2");
+        assert_eq!(config.model, "gpt-oss:20b");
     }
 
     #[test]
@@ -213,7 +216,7 @@ mod tests {
                 .unwrap();
 
         assert_eq!(config.ai_provider, "anthropic");
-        assert_eq!(config.model, "claude-sonnet-4-20250514");
+        assert_eq!(config.model, "claude-sonnet-5-5");
     }
 
     #[test]

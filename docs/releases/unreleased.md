@@ -33,3 +33,17 @@
 
 - Generated commit messages now follow the habits of the repository they land in. `aic` reads the last 50 non-merge commit subjects and tells the model which scopes are already in use, how descriptions are cased, whether subjects end with a full stop, and how long subjects usually are.
 - Needs at least 8 commits of history, and never overrides `AIC_EMOJI` or the commit convention. Turn it off with `AIC_REPO_STYLE=false`. Custom prompt files opt in with the new `{{repo_style}}` placeholder.
+
+## Updated default models
+
+| Provider | Previous default | New default |
+|----------|------------------|-------------|
+| `openai`, `azure-openai` | `gpt-5.4-mini` | `gpt-6-luna` |
+| `anthropic` | `claude-sonnet-4-20250514` | `claude-sonnet-5-5` |
+| `groq` | `llama-3.1-8b-instant` (retired by Groq) | `openai/gpt-oss-20b` |
+| `ollama` | `llama3.2` | `gpt-oss:20b` |
+
+- `aic setup` and `aic models` suggest current models: GPT-6 Luna, Sol, and Astra; Claude Sonnet, Haiku, and Opus 5.5 and Fable 5.1; GPT-OSS on Groq and Ollama.
+- Existing configs keep the model they have. To move to the new default, run `aic setup` or `aic config set AIC_MODEL=<model>`.
+- `--provider` still swaps in the new provider's default when your configured model is any current or earlier default.
+- GPT-6 models get the same request parameters as GPT-5 (`max_completion_tokens`, no sampling parameters).

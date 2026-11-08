@@ -99,6 +99,6 @@ mod tests {
         .unwrap();
 
         assert_eq!(config.ai_provider, "groq");
-        assert_eq!(config.model, "llama-3.1-8b-instant");
+        assert_eq!(config.model, "openai/gpt-oss-20b");
     }
 }
