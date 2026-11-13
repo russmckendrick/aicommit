@@ -34,6 +34,30 @@ pub fn available() -> bool {
     std::io::stdin().is_terminal() && stdout().is_terminal()
 }
 
+/// Environment variables that mark an automated runner, with the name shown
+/// to the user. Checked in order; `CI` is the generic fallback most systems set.
+const CI_MARKERS: &[(&str, &str)] = &[
+    ("TF_BUILD", "Azure Pipelines"),
+    ("GITHUB_ACTIONS", "GitHub Actions"),
+    ("CI", "CI"),
+];
+
+/// The automated runner `aic` is executing on, if any. Plain `aic` skips the
+/// terminal UI there, since some runners attach a pseudo-terminal and a
+/// full-screen UI would wait for input that never comes. `--tui` still wins.
+pub fn ci_runner() -> Option<&'static str> {
+    detect_ci_runner(|name| std::env::var(name).ok())
+}
+
+fn detect_ci_runner(var: impl Fn(&str) -> Option<String>) -> Option<&'static str> {
+    CI_MARKERS.iter().find_map(|(name, label)| {
+        let value = var(name)?;
+        let value = value.trim();
+        let off = value.is_empty() || value == "0" || value.eq_ignore_ascii_case("false");
+        (!off).then_some(*label)
+    })
+}
+
 struct TerminalGuard {
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
@@ -384,5 +408,41 @@ mod tests {
         assert!(result.contains("Pushing is off (AIC_GITPUSH=false)"));
         assert!(result.contains("next commit (1 file still changed)"));
         assert_eq!(screen_after, Screen::Commit);
+    }
+}
+
+#[cfg(test)]
+mod ci_tests {
+    use super::detect_ci_runner;
+
+    fn runner(vars: &[(&str, &str)]) -> Option<&'static str> {
+        detect_ci_runner(|name| {
+            vars.iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| (*value).to_owned())
+        })
+    }
+
+    #[test]
+    fn detects_known_ci_runners() {
+        assert_eq!(runner(&[]), None);
+        assert_eq!(runner(&[("TF_BUILD", "True")]), Some("Azure Pipelines"));
+        assert_eq!(
+            runner(&[("GITHUB_ACTIONS", "true")]),
+            Some("GitHub Actions")
+        );
+        assert_eq!(runner(&[("CI", "1")]), Some("CI"));
+        // The specific runner wins over the generic marker it also sets.
+        assert_eq!(
+            runner(&[("CI", "true"), ("GITHUB_ACTIONS", "true")]),
+            Some("GitHub Actions")
+        );
+    }
+
+    #[test]
+    fn ignores_ci_markers_that_are_switched_off() {
+        for value in ["", " ", "0", "false", "False"] {
+            assert_eq!(runner(&[("CI", value)]), None, "CI={value:?}");
+        }
     }
 }

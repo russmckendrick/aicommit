@@ -9,6 +9,8 @@ The whole workflow happens inside it: stage, write the message, commit, and push
 
 The TUI is not used when stdin or stdout is not a terminal, or with `--yes`, `--dry-run`, `--amend`, `--json`, or `--quiet`.
 
+On a CI runner plain `aic` uses the prompt flow as well, even when the runner attaches a terminal. A runner is detected from `TF_BUILD` (Azure Pipelines), `GITHUB_ACTIONS` (GitHub Actions), or the generic `CI` variable, unless the value is empty, `0`, or `false`. `aic --tui` still opens the terminal UI there.
+
 ## Commit screen
 
 ```text

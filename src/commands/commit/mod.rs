@@ -50,7 +50,9 @@ pub async fn run(
         && match interface {
             Interface::Tui => true,
             Interface::Fast => false,
-            Interface::Auto => config.tui,
+            // On a CI runner plain `aic` keeps to the prompt flow even when
+            // a pseudo-terminal is attached; `--tui` above still opts in.
+            Interface::Auto => config.tui && crate::tui::ci_runner().is_none(),
         };
     if interface == Interface::Tui && !interactive {
         ui::warn(
