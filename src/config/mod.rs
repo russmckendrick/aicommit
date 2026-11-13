@@ -22,7 +22,9 @@ pub use write::{set_global_config, write_global_config};
 pub const GLOBAL_CONFIG_FILE: &str = ".aicommit";
 pub const MODEL_CACHE_FILE: &str = ".aicommit-models.json";
 pub const STATUS_MESSAGES_FILE: &str = ".aicommit-status.toml";
-pub const REPO_IGNORE_FILE: &str = ".aicommitignore";
+/// Repository ignore files, read in this order with their patterns combined,
+/// so a later file's patterns (including `!` negations) win over an earlier one's.
+pub const REPO_IGNORE_FILES: &[&str] = &[".aicommitignore", ".aicignore"];
 pub const DEFAULT_MAX_TOKENS_INPUT: usize = 128_000;
 pub const DEFAULT_MAX_TOKENS_OUTPUT: usize = 500;
 pub const DEFAULT_HTTP_TIMEOUT_SECS: usize = 120;

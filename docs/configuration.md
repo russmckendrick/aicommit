@@ -90,7 +90,7 @@ Most keys can also be changed from the terminal UI's settings screen (`,`), whic
 
 When the staged diff exceeds the input token budget (`AIC_TOKENS_MAX_INPUT` minus `AIC_TOKENS_MAX_OUTPUT` and prompt overhead), `aic`, `aic review`, and `aic pr` split the diff into chunks, summarize each chunk with its own AI request, and synthesize the partial summaries into one final result. The spinner reports each stage (`Summarizing chunk 2/4`, `Synthesizing commit message`) so long runs are visibly progressing.
 
-Each chunk costs one AI request, so very large diffs take proportionally longer. To keep diffs small, exclude bulky generated files from AI input with `.aicommitignore` (see the Prompt Template section below), and note that lockfiles and common image formats are already filtered out of the staged diff automatically.
+Each chunk costs one AI request, so very large diffs take proportionally longer. To keep diffs small, exclude bulky generated files from AI input with `.aicommitignore` or `.aicignore` (see the Prompt Template section below), and note that lockfiles and common image formats are already filtered out of the staged diff automatically.
 
 While a generation runs, the spinner rotates through short status lines alongside the current stage. The built-in lines live in `src/status_messages.toml`; create `~/.aicommit-status.toml` with the same structure to replace any section with your own (sections you omit keep the defaults):
 
@@ -171,9 +171,11 @@ Prompt templates can use these placeholders:
 
 `{{repo_style}}` is filled from the current repository's last 50 non-merge commit subjects when there are at least 8 of them: scopes already in use, whether descriptions start with a lowercase or capital letter, whether subjects end with a full stop, and the typical subject length. It never overrides `AIC_EMOJI` or the commit convention. Set `AIC_REPO_STYLE=false` to leave it empty.
 
-Use `.aicommitignore` in a repository to exclude files from AI diff input:
+Use `.aicommitignore` or `.aicignore` in the repository root to exclude files from AI diff input. Both use `.gitignore` syntax:
 
 ```ignorelang
 path/to/large-asset.zip
 **/*.jpg
 ```
+
+The two names are interchangeable. If both files exist their patterns are combined, with `.aicignore` read second, so a `!pattern` in it can re-include something `.aicommitignore` excluded.

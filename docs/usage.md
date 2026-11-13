@@ -105,7 +105,7 @@ The split is hunk-level: one file can contribute different hunks to different co
 
 Splitting only changes the index, never the working tree, so it is safe when a file also has unstaged changes: those stay in your working tree, uncommitted. If a commit fails part-way (for example a `commit-msg` hook rejects it), the commits already made are kept and the rest of the original staged changes are left staged.
 
-Files excluded by `.aicommitignore` are never assigned to a group. They stay staged after the split, so you can commit them separately.
+Files excluded by `.aicommitignore` or `.aicignore` are never assigned to a group. They stay staged after the split, so you can commit them separately.
 
 Limitations:
 

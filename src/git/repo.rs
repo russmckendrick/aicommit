@@ -6,7 +6,7 @@ use std::{
 use anyhow::{Context, Result, bail};
 use ignore::gitignore::GitignoreBuilder;
 
-use crate::{config::REPO_IGNORE_FILE, errors::AicError};
+use crate::{config::REPO_IGNORE_FILES, errors::AicError};
 
 use super::exec::{run_git, run_git_dynamic_in, run_git_in};
 
@@ -127,16 +127,27 @@ pub(crate) fn parse_lines(input: &str) -> Vec<String> {
 }
 
 pub(crate) fn filter_ignored(root: &Path, files: Vec<String>) -> Result<Vec<String>> {
-    let ignore_path = root.join(REPO_IGNORE_FILE);
-    if !ignore_path.exists() {
+    let ignore_files: Vec<&str> = REPO_IGNORE_FILES
+        .iter()
+        .copied()
+        .filter(|name| root.join(name).exists())
+        .collect();
+    if ignore_files.is_empty() {
         return Ok(files);
     }
 
     let mut builder = GitignoreBuilder::new(root);
-    builder
-        .add(ignore_path)
-        .context("failed to read .aicommitignore")?;
-    let matcher = builder.build()?;
+    for name in &ignore_files {
+        // `add` returns `Some(error)` on failure and `None` on success, so it
+        // must not go through `Option::context`, which treats `None` as the
+        // failure.
+        if let Some(error) = builder.add(root.join(name)) {
+            return Err(error).context(format!("failed to read {name}"));
+        }
+    }
+    let matcher = builder
+        .build()
+        .with_context(|| format!("failed to parse {}", ignore_files.join(" and ")))?;
     Ok(files
         .into_iter()
         .filter(|file| !matcher.matched_path_or_any_parents(file, false).is_ignore())
@@ -225,6 +236,51 @@ mod tests {
 
     use super::*;
     use crate::git::cwd_test_lock;
+
+    #[test]
+    fn filter_ignored_applies_aicommitignore_patterns() {
+        let dir = TempDir::new().unwrap();
+        let files = vec![
+            "src/main.rs".to_owned(),
+            "dist/bundle.js".to_owned(),
+            "assets/photo.jpg".to_owned(),
+        ];
+
+        // No ignore file: everything passes through.
+        assert_eq!(filter_ignored(dir.path(), files.clone()).unwrap(), files);
+
+        // Either file name works on its own.
+        for name in REPO_IGNORE_FILES {
+            let path = dir.path().join(name);
+            std::fs::write(&path, "# bulky output\ndist/\n**/*.jpg\n").unwrap();
+            assert_eq!(
+                filter_ignored(dir.path(), files.clone()).unwrap(),
+                vec!["src/main.rs".to_owned()],
+                "{name} should be honoured"
+            );
+            std::fs::remove_file(path).unwrap();
+        }
+    }
+
+    #[test]
+    fn filter_ignored_combines_both_ignore_files() {
+        let dir = TempDir::new().unwrap();
+        let files = vec![
+            "src/main.rs".to_owned(),
+            "dist/bundle.js".to_owned(),
+            "assets/photo.jpg".to_owned(),
+            "assets/logo.jpg".to_owned(),
+        ];
+
+        std::fs::write(dir.path().join(".aicommitignore"), "dist/\n**/*.jpg\n").unwrap();
+        // The later file adds to the earlier one and can re-include with `!`.
+        std::fs::write(dir.path().join(".aicignore"), "src/\n!assets/logo.jpg\n").unwrap();
+
+        assert_eq!(
+            filter_ignored(dir.path(), files).unwrap(),
+            vec!["assets/logo.jpg".to_owned()]
+        );
+    }
 
     #[test]
     fn unstage_files_removes_only_selected_files_from_index() {
