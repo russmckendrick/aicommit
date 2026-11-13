@@ -1,0 +1,4 @@
+# Link the C runtime statically on Windows so aic.exe does not need the
+# Visual C++ Redistributable (vcruntime140.dll) to be installed.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

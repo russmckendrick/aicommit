@@ -62,6 +62,9 @@ Invoke-WebRequest -Uri "https://github.com/russmckendrick/aicommit/releases/late
 You can then move `aic.exe` to a directory in your `PATH`, or run it directly
 from the download location.
 
+From 0.1.2 the Windows binary is code-signed and does not need the Visual C++
+Redistributable.
+
 ### macOS
 
 Homebrew is recommended on macOS, but you can also download the macOS binaries

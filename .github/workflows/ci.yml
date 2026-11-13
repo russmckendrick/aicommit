@@ -59,6 +59,16 @@ jobs:
     needs: check
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ${{ matrix.os }}
+    # The Windows leg signs with the shared Certum account, and a TOTP code is
+    # single-use, so only one SimplySign login may run at a time. The other
+    # legs get a group of their own so they are never queued or cancelled.
+    concurrency:
+      group: ${{ matrix.os == 'windows-latest' && 'certum-simplysign' || format('build-{0}-{1}', github.ref, matrix.artifact) }}
+      cancel-in-progress: false
+    env:
+      # A flag, never the seed itself: job env is visible to every step,
+      # third-party actions included. Unset secrets mean an unsigned build.
+      SIGN_WINDOWS: ${{ secrets.CERTUM_OTP_URI != '' }}
     strategy:
       matrix:
         include:
@@ -92,6 +102,27 @@ jobs:
 
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Open the SimplySign session
+        if: runner.os == 'Windows' && env.SIGN_WINDOWS == 'true'
+        shell: pwsh
+        env:
+          CERTUM_USERNAME: ${{ secrets.CERTUM_USERNAME }}
+          CERTUM_OTP_URI: ${{ secrets.CERTUM_OTP_URI }}
+          CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
+        run: ./.github/scripts/Connect-SimplySign.ps1
+
+      - name: Sign the Windows executable
+        if: runner.os == 'Windows' && env.SIGN_WINDOWS == 'true'
+        shell: pwsh
+        env:
+          CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
+        run: |
+          $exe = "target/${{ matrix.target }}/release/aic.exe"
+          signtool sign /sha1 $env:CERTUM_CERT_SHA1 /fd SHA256 /tr http://time.certum.pl /td SHA256 $exe
+          if ($LASTEXITCODE -ne 0) { throw "signtool could not sign $exe" }
+          signtool verify /pa /v $exe
+          if ($LASTEXITCODE -ne 0) { throw "$exe does not carry a valid signature" }
 
       - name: Rename binary (Unix)
         if: matrix.os != 'windows-latest'
