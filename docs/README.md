@@ -18,7 +18,8 @@ This folder is the detailed documentation entry point for `aic`, the Rust CLI fo
 - [Roadmap](roadmap.md): see deferred v1 items.
 - [Plan - 0.1.0](plans/0.1.0.md): the plan behind 0.1.0, with what shipped and what is still open.
 - [Release Notes - Unreleased](releases/unreleased.md): upcoming changes not yet shipped in a tagged release.
-- [Release Notes - 0.1.0](releases/0.1.0.md): latest release notes.
+- [Release Notes - 0.1.1](releases/0.1.1.md): latest release notes.
+- [Release Notes - 0.1.0](releases/0.1.0.md): previous release notes.
 - [Release Notes - 0.0.10](releases/0.0.10.md): previous release notes.
 - [Release Notes - 0.0.9](releases/0.0.9.md): previous release notes.
 - [Release Notes - 0.0.8](releases/0.0.8.md): previous release notes.
